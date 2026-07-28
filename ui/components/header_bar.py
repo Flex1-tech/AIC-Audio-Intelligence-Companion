@@ -72,7 +72,7 @@ class HeaderBar(ft.Container):
             ),
             padding=ft.padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.border.only(bottom=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+            border=ft.Border.only(bottom=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
         )
 
     def update_telemetry(self):

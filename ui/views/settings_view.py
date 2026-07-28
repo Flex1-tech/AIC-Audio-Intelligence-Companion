@@ -10,7 +10,7 @@ class SettingsView(ft.Container):
     def __init__(self):
         self.vlc_path_input = ft.TextField(
             value=app_state.session.vlc_custom_path,
-            placeholder_text="Chemin d'accès vers vlc.exe (détection automatique par défaut)",
+            hint_text="Chemin d'accès vers vlc.exe (détection automatique par défaut)",
             border_color=ObsidianColors.BORDER_DARK,
             focused_border_color=ObsidianColors.PRIMARY,
             text_size=13,
@@ -37,7 +37,7 @@ class SettingsView(ft.Container):
                     padding=Spacing.LG,
                     border_radius=Radii.MD,
                     bgcolor=ObsidianColors.SURFACE_DARK,
-                    border=ft.border.all(1, ObsidianColors.BORDER_DARK),
+                    border=ft.Border.all(1, ObsidianColors.BORDER_DARK),
                 ),
 
                 ft.Container(height=15),
@@ -51,7 +51,7 @@ class SettingsView(ft.Container):
                     padding=Spacing.LG,
                     border_radius=Radii.MD,
                     bgcolor=ObsidianColors.SURFACE_DARK,
-                    border=ft.border.all(1, ObsidianColors.BORDER_DARK),
+                    border=ft.Border.all(1, ObsidianColors.BORDER_DARK),
                 ),
             ], spacing=Spacing.MD, expand=True),
             padding=Spacing.LG,

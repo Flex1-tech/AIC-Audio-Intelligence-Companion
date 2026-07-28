@@ -71,7 +71,7 @@ class TrackItem(ft.Container):
             padding=ft.padding.symmetric(horizontal=Spacing.MD, vertical=Spacing.SM),
             border_radius=Radii.MD,
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.border.all(1, ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.BORDER_DARK),
+            border=ft.Border.all(1, ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.BORDER_DARK),
         )
 
     def _handle_like(self, e):

@@ -25,13 +25,13 @@ class LibraryView(ft.Container):
             padding=Spacing.LG,
             border_radius=Radii.LG,
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.border.all(1, ObsidianColors.BORDER_DARK),
+            border=ft.Border.all(1, ObsidianColors.BORDER_DARK),
             on_click=lambda e: self.on_pick_files() if self.on_pick_files else None,
         )
 
         # 2. Barre de Recherche et Filtres
         self.search_entry = ft.TextField(
-            placeholder_text="Rechercher par nom de fichier...",
+            hint_text="Rechercher par nom de fichier...",
             prefix_icon=ft.Icons.SEARCH,
             border_color=ObsidianColors.BORDER_DARK,
             focused_border_color=ObsidianColors.PRIMARY,

@@ -49,7 +49,7 @@ class AIMetricsView(ft.Container):
             padding=Spacing.MD,
             border_radius=Radii.MD,
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.border.all(1, ObsidianColors.BORDER_DARK),
+            border=ft.Border.all(1, ObsidianColors.BORDER_DARK),
             expand=True,
         )
 

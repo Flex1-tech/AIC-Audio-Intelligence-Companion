@@ -29,13 +29,12 @@ class ActionBar(ft.Container):
             color=ObsidianColors.TEXT_SECONDARY,
         )
 
-        self.start_button = ft.ElevatedButton(
+        self.start_button = ft.FilledButton(
             content=ft.Row([
-                ft.Icon(ft.Icons.AUTO_AWESOME, size=18),
-                ft.Text("Générer la Playlist IA (MMR)", weight=ft.FontWeight.BOLD),
+                ft.Icon(ft.Icons.AUTO_AWESOME, size=18, color=ObsidianColors.BG_DARK),
+                ft.Text("Générer la Playlist IA (MMR)", weight=ft.FontWeight.BOLD, color=ObsidianColors.BG_DARK),
             ], spacing=8, alignment=ft.MainAxisAlignment.CENTER),
             style=ft.ButtonStyle(
-                color=ObsidianColors.BG_DARK,
                 bgcolor=ObsidianColors.PRIMARY,
                 padding=ft.padding.symmetric(horizontal=20, vertical=12),
                 shape=ft.RoundedRectangleBorder(radius=Radii.SM),
@@ -60,7 +59,7 @@ class ActionBar(ft.Container):
                     # Droite : Actions (Reset & Start)
                     ft.Row([
                         ft.OutlinedButton(
-                            text="Réinitialiser",
+                            content="Réinitialiser",
                             style=ft.ButtonStyle(
                                 color=ObsidianColors.TEXT_SECONDARY,
                                 side=ft.BorderSide(1, ObsidianColors.BORDER_DARK),
@@ -76,7 +75,7 @@ class ActionBar(ft.Container):
             ),
             padding=ft.padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.border.only(top=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+            border=ft.Border.only(top=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
         )
 
     def update_state(self):
