@@ -33,53 +33,51 @@ def main(page: ft.Page) -> None:
     file_picker = ft.FilePicker()
     page.services.append(file_picker)
 
-    # ── 4. Handlers d'événements UI ──────────────────────────────────────────
-    def handle_pick_files() -> None:
-        page.run_task(
-            file_picker.pick_files,
+    # ── 4. Handlers d'événements UI (FilePicker async en Flet v0.86+) ──────────
+    # En Flet 0.86+, pick_files / get_directory_path sont des coroutines
+    # qui retournent le résultat directement via await.
+    # L'attribut on_result n'existe plus — le résultat est capturé dans la coroutine.
+
+    async def handle_pick_files() -> None:
+        files = await file_picker.pick_files(
             allow_multiple=True,
             dialog_title="Sélectionner des fichiers audio pour AIC",
         )
+        if not files:
+            return
+        file_paths = [f.path for f in files if f.path]
+        if not file_paths:
+            return
+        _show_toast(f"Importation de {len(file_paths)} fichier(s)…")
 
-    def handle_pick_folder() -> None:
-        page.run_task(
-            file_picker.get_directory_path,
+        def on_complete_files(valid_count: int, invalid_count: int) -> None:
+            page.run_thread(
+                lambda: _show_toast(
+                    f"{valid_count} morceau(x) ajouté(s) ({invalid_count} ignoré(s))"
+                )
+            )
+            app_state.notify()
+
+        library_controller.import_files_async(file_paths, on_complete=on_complete_files)
+
+    async def handle_pick_folder() -> None:
+        folder_path = await file_picker.get_directory_path(
             dialog_title="Sélectionner un dossier musical pour AIC",
         )
-
-    def on_file_picker_result(e) -> None:
-        # Cas 1 : Sélection d'un dossier (get_directory_path -> e.path)
-        if getattr(e, "path", None):
-            folder_path = e.path
-            _show_toast(f"Balayage du dossier : {folder_path}…")
-
-            def on_complete_folder(valid_count: int, invalid_count: int) -> None:
-                page.run_thread(
-                    lambda: _show_toast(
-                        f"{valid_count} morceau(x) indexé(s) depuis le dossier ({invalid_count} ignoré(s))"
-                    )
-                )
-                app_state.notify()
-
-            library_controller.import_folder_async(folder_path, on_complete=on_complete_folder)
+        if not folder_path:
             return
+        _show_toast(f"Balayage du dossier : {folder_path}…")
 
-        # Cas 2 : Sélection de fichiers (pick_files -> e.files)
-        if getattr(e, "files", None):
-            file_paths = [f.path for f in e.files if f.path]
-            _show_toast(f"Importation de {len(file_paths)} fichier(s)…")
-
-            def on_complete_files(valid_count: int, invalid_count: int) -> None:
-                page.run_thread(
-                    lambda: _show_toast(
-                        f"{valid_count} morceau(x) ajouté(s) ({invalid_count} ignoré(s))"
-                    )
+        def on_complete_folder(valid_count: int, invalid_count: int) -> None:
+            page.run_thread(
+                lambda: _show_toast(
+                    f"{valid_count} morceau(x) indexé(s) depuis le dossier ({invalid_count} ignoré(s))"
                 )
-                app_state.notify()
+            )
+            app_state.notify()
 
-            library_controller.import_files_async(file_paths, on_complete=on_complete_files)
+        library_controller.import_folder_async(folder_path, on_complete=on_complete_folder)
 
-    file_picker.on_result = on_file_picker_result
 
     def handle_like_track(file_path: str) -> None:
         library_controller.toggle_like(file_path)

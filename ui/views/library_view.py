@@ -37,7 +37,7 @@ class LibraryView(ft.Container):
                             ft.Text("Parcourir Fichiers", size=12, weight=ft.FontWeight.BOLD, color=ObsidianColors.BG_DARK),
                         ], spacing=6),
                         style=ft.ButtonStyle(bgcolor=ObsidianColors.PRIMARY),
-                        on_click=lambda e: self.on_pick_files() if self.on_pick_files else None,
+                        on_click=lambda e: e.page.run_task(self.on_pick_files) if self.on_pick_files else None,
                     ),
                     ft.OutlinedButton(
                         content=ft.Row([
@@ -45,7 +45,7 @@ class LibraryView(ft.Container):
                             ft.Text("Scanner un Dossier", size=12, color=ObsidianColors.TEXT_PRIMARY),
                         ], spacing=6),
                         style=ft.ButtonStyle(side=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
-                        on_click=lambda e: self.on_pick_folder() if self.on_pick_folder else None,
+                        on_click=lambda e: e.page.run_task(self.on_pick_folder) if self.on_pick_folder else None,
                     ),
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=12),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6),
