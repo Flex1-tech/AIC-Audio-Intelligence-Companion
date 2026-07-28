@@ -35,13 +35,15 @@ def main(page: ft.Page) -> None:
 
     # ── 4. Handlers d'événements UI ──────────────────────────────────────────
     def handle_pick_files() -> None:
-        file_picker.pick_files(
+        page.run_task(
+            file_picker.pick_files,
             allow_multiple=True,
             dialog_title="Sélectionner des fichiers audio pour AIC",
         )
 
     def handle_pick_folder() -> None:
-        file_picker.get_directory_path(
+        page.run_task(
+            file_picker.get_directory_path,
             dialog_title="Sélectionner un dossier musical pour AIC",
         )
 
