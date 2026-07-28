@@ -1,0 +1,71 @@
+import flet as ft
+from ui.design_system.colors import ObsidianColors
+from ui.design_system.spacing import Radii, Spacing
+from core.state import app_state
+
+class AIMetricsView(ft.Container):
+    """
+    Vue Télémétrie IA et Moteur Vectoriel LanceDB.
+    """
+    def __init__(self):
+        self.log_list = ft.ListView(
+            expand=True,
+            spacing=6,
+        )
+
+        super().__init__(
+            content=ft.Column([
+                ft.Text("Télémétrie & Santé du Moteur IA", size=18, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_PRIMARY),
+                ft.Text("Supervision en temps réel des modèles Deep Learning et du cache vectoriel.", size=13, color=ObsidianColors.TEXT_MUTED),
+                ft.Container(height=10),
+
+                # Metric Cards Grid
+                ft.Row([
+                    self._build_card("Modèle ONNX", "MusiCNN (16kHz)", ft.Icons.AUTO_AWESOME, ObsidianColors.SUCCESS),
+                    self._build_card("Base Vectorielle", "LanceDB Active", ft.Icons.STORAGE, ObsidianColors.PRIMARY),
+                    self._build_card("Embeddings en Cache", f"{app_state.total_embeddings_in_db} morceaux", ft.Icons.GRID_VIEW, ObsidianColors.WARNING),
+                ], spacing=Spacing.MD),
+
+                ft.Container(height=15),
+                ft.Text("Journal des Événements du Moteur", size=15, weight=ft.FontWeight.W_600, color=ObsidianColors.TEXT_PRIMARY),
+
+                # Action Logs List
+                self.log_list,
+            ], spacing=Spacing.MD, expand=True),
+            padding=Spacing.LG,
+            expand=True,
+        )
+        self.refresh_metrics()
+
+    def _build_card(self, title: str, value: str, icon: ft.Icons, accent_color: str) -> ft.Container:
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(icon, size=20, color=accent_color),
+                    ft.Text(title, size=12, color=ObsidianColors.TEXT_MUTED),
+                ], spacing=8),
+                ft.Text(value, size=16, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_PRIMARY),
+            ], spacing=6),
+            padding=Spacing.MD,
+            border_radius=Radii.MD,
+            bgcolor=ObsidianColors.SURFACE_DARK,
+            border=ft.border.all(1, ObsidianColors.BORDER_DARK),
+            expand=True,
+        )
+
+    def refresh_metrics(self):
+        self.log_list.controls.clear()
+        for log in reversed(app_state.action_history[-20:]):
+            self.log_list.controls.append(
+                ft.Container(
+                    content=ft.Row([
+                        ft.Text(log.formatted_time, size=11, family="monospace", color=ObsidianColors.TEXT_MUTED),
+                        ft.Text(log.action_type, size=11, weight=ft.FontWeight.BOLD, color=ObsidianColors.PRIMARY),
+                        ft.Text(log.description, size=12, color=ObsidianColors.TEXT_PRIMARY, overflow=ft.TextOverflow.ELLIPSIS),
+                    ], spacing=10),
+                    padding=8,
+                    border_radius=Radii.SM,
+                    bgcolor=ObsidianColors.SURFACE_DARK,
+                )
+            )
+        self.update()
