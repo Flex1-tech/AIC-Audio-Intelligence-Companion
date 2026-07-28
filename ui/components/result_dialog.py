@@ -59,7 +59,7 @@ class ResultDialog(ft.AlertDialog):
                                 ft.Text(
                                     file_path,
                                     size=12,
-                                    family="monospace",
+                                    font_family="monospace",
                                     color=ObsidianColors.TEXT_SECONDARY,
                                 ),
                             ],

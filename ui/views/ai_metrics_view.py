@@ -59,7 +59,7 @@ class AIMetricsView(ft.Container):
             self.log_list.controls.append(
                 ft.Container(
                     content=ft.Row([
-                        ft.Text(log.formatted_time, size=11, family="monospace", color=ObsidianColors.TEXT_MUTED),
+                        ft.Text(log.formatted_time, size=11, font_family="monospace", color=ObsidianColors.TEXT_MUTED),
                         ft.Text(log.action_type, size=11, weight=ft.FontWeight.BOLD, color=ObsidianColors.PRIMARY),
                         ft.Text(log.description, size=12, color=ObsidianColors.TEXT_PRIMARY, overflow=ft.TextOverflow.ELLIPSIS),
                     ], spacing=10),

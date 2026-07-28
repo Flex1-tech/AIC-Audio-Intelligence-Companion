@@ -31,7 +31,7 @@ class TrackItem(ft.Container):
 
         # Hash Badge
         hash_badge = ft.Container(
-            content=ft.Text(track.short_hash, size=10, family="monospace", color=ObsidianColors.TEXT_MUTED),
+            content=ft.Text(track.short_hash, size=10, font_family="monospace", color=ObsidianColors.TEXT_MUTED),
             padding=ft.Padding.symmetric(horizontal=6, vertical=2),
             border_radius=Radii.SM,
             bgcolor=ObsidianColors.SURFACE_ELEVATED,
