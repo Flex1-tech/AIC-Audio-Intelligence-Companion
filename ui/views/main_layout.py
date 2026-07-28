@@ -15,6 +15,7 @@ class MainLayout(ft.Column):
     def __init__(
         self,
         on_pick_files=None,
+        on_pick_folder=None,
         on_like_track=None,
         on_delete_track=None,
         on_search=None,
@@ -27,6 +28,7 @@ class MainLayout(ft.Column):
 
         self.library_view = LibraryView(
             on_pick_files=on_pick_files,
+            on_pick_folder=on_pick_folder,
             on_like_track=on_like_track,
             on_delete_track=on_delete_track,
             on_search=on_search,

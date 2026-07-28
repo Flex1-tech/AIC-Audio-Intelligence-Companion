@@ -7,26 +7,52 @@ from core.state import app_state
 class LibraryView(ft.Container):
     """
     Vue principale du Hub Bibliothèque & Préférences Musicales.
-     Contient la zone d'importation (Dropzone), la barre de recherche et la liste des pistes.
+    Contient la zone d'importation (Dropzone), la sélection de fichiers/dossiers, la recherche et la liste des pistes.
     """
-    def __init__(self, on_pick_files=None, on_like_track=None, on_delete_track=None, on_search=None):
+    def __init__(
+        self,
+        on_pick_files=None,
+        on_pick_folder=None,
+        on_like_track=None,
+        on_delete_track=None,
+        on_search=None,
+    ):
         self.on_pick_files = on_pick_files
+        self.on_pick_folder = on_pick_folder
         self.on_like_track = on_like_track
         self.on_delete_track = on_delete_track
         self.on_search = on_search
 
-        # 1. Zone d'importation (Dropzone Card)
+        # 1. Zone d'importation (Dropzone Card avec choix Fichiers / Dossier)
         self.dropzone = ft.Container(
             content=ft.Column([
-                ft.Icon(ft.Icons.CLOUD_UPLOAD_OUTLINED, size=36, color=ObsidianColors.PRIMARY),
-                ft.Text("Ajouter des fichiers audio", size=15, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_PRIMARY),
-                ft.Text("Cliquez pour parcourir ou sélectionnez plusieurs morceaux audio (MP3, FLAC, WAV, OGG, AAC)", size=12, color=ObsidianColors.TEXT_MUTED, text_align=ft.TextAlign.CENTER),
+                ft.Icon(ft.Icons.CLOUD_UPLOAD_OUTLINED, size=34, color=ObsidianColors.PRIMARY),
+                ft.Text("Bibliothèque Musicale AIC", size=15, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_PRIMARY),
+                ft.Text("Sélectionnez des fichiers audio ou scannez un dossier complet (D:\\Musique, E:\\FLAC, etc.)", size=12, color=ObsidianColors.TEXT_MUTED, text_align=ft.TextAlign.CENTER),
+                ft.Container(height=4),
+                ft.Row([
+                    ft.FilledButton(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.AUDIO_FILE, size=16, color=ObsidianColors.BG_DARK),
+                            ft.Text("Parcourir Fichiers", size=12, weight=ft.FontWeight.BOLD, color=ObsidianColors.BG_DARK),
+                        ], spacing=6),
+                        style=ft.ButtonStyle(bgcolor=ObsidianColors.PRIMARY),
+                        on_click=lambda e: self.on_pick_files() if self.on_pick_files else None,
+                    ),
+                    ft.OutlinedButton(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.FOLDER_OPEN, size=16, color=ObsidianColors.TEXT_PRIMARY),
+                            ft.Text("Scanner un Dossier", size=12, color=ObsidianColors.TEXT_PRIMARY),
+                        ], spacing=6),
+                        style=ft.ButtonStyle(side=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+                        on_click=lambda e: self.on_pick_folder() if self.on_pick_folder else None,
+                    ),
+                ], alignment=ft.MainAxisAlignment.CENTER, spacing=12),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6),
             padding=Spacing.LG,
             border_radius=Radii.LG,
             bgcolor=ObsidianColors.SURFACE_DARK,
             border=ft.Border.all(1, ObsidianColors.BORDER_DARK),
-            on_click=lambda e: self.on_pick_files() if self.on_pick_files else None,
         )
 
         # 2. Barre de Recherche et Filtres
@@ -60,8 +86,8 @@ class LibraryView(ft.Container):
         self.empty_state = ft.Container(
             content=ft.Column([
                 ft.Icon(ft.Icons.MUSIC_OFF_OUTLINED, size=48, color=ObsidianColors.TEXT_DISABLED),
-                ft.Text("Aucun morceau importé", size=16, weight=ft.FontWeight.W_600, color=ObsidianColors.TEXT_SECONDARY),
-                ft.Text("Importez des fichiers audio pour commencer à entrainer l'assistant.", size=13, color=ObsidianColors.TEXT_MUTED),
+                ft.Text("Aucun morceau dans la bibliothèque", size=16, weight=ft.FontWeight.W_600, color=ObsidianColors.TEXT_SECONDARY),
+                ft.Text("Importez des fichiers ou scannez un dossier pour alimenter l'IA.", size=13, color=ObsidianColors.TEXT_MUTED),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
             alignment=ft.Alignment.CENTER,
             padding=40,

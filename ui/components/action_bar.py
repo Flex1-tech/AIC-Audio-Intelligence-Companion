@@ -11,16 +11,23 @@ class ActionBar(ft.Container):
         self.on_start_recommendation = on_start_recommendation
         self.on_reset = on_reset
 
-        # Slider MMR Lambda (0.0 = Diversité, 1.0 = Pertinence)
+        # Slider MMR Lambda (0.00 = Diversité, 1.00 = Pertinence)
         self.lambda_slider = ft.Slider(
             min=0.0,
             max=1.0,
-            divisions=10,
+            divisions=100,
             value=app_state.session.lambda_mmr,
             label="{value}",
             width=160,
             active_color=ObsidianColors.PRIMARY,
             on_change=self._handle_slider_change,
+        )
+
+        self.lambda_text = ft.Text(
+            f"λ = {app_state.session.lambda_mmr:.2f}",
+            size=12,
+            weight=ft.FontWeight.W_600,
+            color=ObsidianColors.PRIMARY,
         )
 
         self.status_text = ft.Text(
@@ -51,8 +58,9 @@ class ActionBar(ft.Container):
                         self.status_text,
                         ft.Container(width=1, height=20, bgcolor=ObsidianColors.BORDER_DARK),
                         ft.Row([
-                            ft.Text("MMR λ :", size=12, color=ObsidianColors.TEXT_MUTED),
+                            ft.Text("Balance MMR :", size=12, color=ObsidianColors.TEXT_MUTED),
                             self.lambda_slider,
+                            self.lambda_text,
                         ], spacing=6),
                     ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.CENTER),
 
@@ -96,7 +104,13 @@ class ActionBar(ft.Container):
             pass
 
     def _handle_slider_change(self, e):
-        app_state.session.lambda_mmr = round(e.control.value, 2)
+        val = round(float(e.control.value), 2)
+        app_state.session.lambda_mmr = val
+        self.lambda_text.value = f"λ = {val:.2f}"
+        try:
+            self.lambda_text.update()
+        except RuntimeError:
+            pass
 
     def _handle_start(self, e):
         if self.on_start_recommendation:

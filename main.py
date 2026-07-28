@@ -28,9 +28,10 @@ def main(page: ft.Page) -> None:
     library_controller = LibraryController()
     rec_controller = RecommendationController()
 
-    # ── 3. FilePicker natif Flet ─────────────────────────────────────────────
+    # ── 3. FilePicker Service Flet v0.86+ ───────────────────────────────────
+    # FilePicker est un Service control -> page.services.append(file_picker)
     file_picker = ft.FilePicker()
-    page.overlay.append(file_picker)
+    page.services.append(file_picker)
 
     # ── 4. Handlers d'événements UI ──────────────────────────────────────────
     def handle_pick_files() -> None:
@@ -39,21 +40,42 @@ def main(page: ft.Page) -> None:
             dialog_title="Sélectionner des fichiers audio pour AIC",
         )
 
+    def handle_pick_folder() -> None:
+        file_picker.get_directory_path(
+            dialog_title="Sélectionner un dossier musical pour AIC",
+        )
+
     def on_file_picker_result(e) -> None:
-        if not e.files:
-            return
-        file_paths = [f.path for f in e.files if f.path]
-        _show_toast(f"Importation de {len(file_paths)} fichier(s)…")
+        # Cas 1 : Sélection d'un dossier (get_directory_path -> e.path)
+        if getattr(e, "path", None):
+            folder_path = e.path
+            _show_toast(f"Balayage du dossier : {folder_path}…")
 
-        def on_complete(valid_count: int, invalid_count: int) -> None:
-            page.run_thread(
-                lambda: _show_toast(
-                    f"{valid_count} morceau(x) ajouté(s) ({invalid_count} ignoré(s))"
+            def on_complete_folder(valid_count: int, invalid_count: int) -> None:
+                page.run_thread(
+                    lambda: _show_toast(
+                        f"{valid_count} morceau(x) indexé(s) depuis le dossier ({invalid_count} ignoré(s))"
+                    )
                 )
-            )
-            app_state.notify()
+                app_state.notify()
 
-        library_controller.import_files_async(file_paths, on_complete=on_complete)
+            library_controller.import_folder_async(folder_path, on_complete=on_complete_folder)
+            return
+
+        # Cas 2 : Sélection de fichiers (pick_files -> e.files)
+        if getattr(e, "files", None):
+            file_paths = [f.path for f in e.files if f.path]
+            _show_toast(f"Importation de {len(file_paths)} fichier(s)…")
+
+            def on_complete_files(valid_count: int, invalid_count: int) -> None:
+                page.run_thread(
+                    lambda: _show_toast(
+                        f"{valid_count} morceau(x) ajouté(s) ({invalid_count} ignoré(s))"
+                    )
+                )
+                app_state.notify()
+
+            library_controller.import_files_async(file_paths, on_complete=on_complete_files)
 
     file_picker.on_result = on_file_picker_result
 
@@ -113,6 +135,7 @@ def main(page: ft.Page) -> None:
     # ── 5. Layout principal ──────────────────────────────────────────────────
     layout = MainLayout(
         on_pick_files=handle_pick_files,
+        on_pick_folder=handle_pick_folder,
         on_like_track=handle_like_track,
         on_delete_track=handle_delete_track,
         on_search=handle_search,
@@ -141,7 +164,7 @@ def main(page: ft.Page) -> None:
     threading.Thread(target=preload_background, daemon=True).start()
 
 
-# Import local utilisé dans _show_toast (après les imports principaux)
+# Import local utilisé dans _show_toast
 from ui.design_system.colors import ObsidianColors  # noqa: E402
 
 
