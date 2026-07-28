@@ -53,17 +53,17 @@ class LibraryView(ft.Container):
         self.track_list = ft.ListView(
             expand=True,
             spacing=Spacing.SM,
-            padding=ft.padding.only(right=6),
+            padding=ft.Padding.only(right=6),
         )
 
         # 4. État Vide (Empty State)
         self.empty_state = ft.Container(
             content=ft.Column([
                 ft.Icon(ft.Icons.MUSIC_OFF_OUTLINED, size=48, color=ObsidianColors.TEXT_DISABLED),
-                ft.Text("Aucun morceau importé", size=16, weight=ft.FontWeight.W600, color=ObsidianColors.TEXT_SECONDARY),
+                ft.Text("Aucun morceau importé", size=16, weight=ft.FontWeight.W_600, color=ObsidianColors.TEXT_SECONDARY),
                 ft.Text("Importez des fichiers audio pour commencer à entrainer l'assistant.", size=13, color=ObsidianColors.TEXT_MUTED),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
-            alignment=ft.alignment.center,
+            alignment=ft.Alignment.CENTER,
             padding=40,
         )
 

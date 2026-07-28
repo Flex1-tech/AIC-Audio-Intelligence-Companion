@@ -16,7 +16,7 @@ class HeaderBar(ft.Container):
                 ft.Icon(ft.Icons.AUTO_AWESOME, size=14, color=ObsidianColors.SUCCESS),
                 ft.Text("Musicnn ONNX", size=12, weight=ft.FontWeight.W_500, color=ObsidianColors.TEXT_PRIMARY),
             ], spacing=6, alignment=ft.MainAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
             border_radius=Radii.FULL,
             bgcolor=ObsidianColors.SUCCESS_BG,
         )
@@ -28,7 +28,7 @@ class HeaderBar(ft.Container):
                 ft.Icon(ft.Icons.STORAGE, size=14, color=ObsidianColors.PRIMARY),
                 self.db_text,
             ], spacing=6, alignment=ft.MainAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
             border_radius=Radii.FULL,
             bgcolor=ObsidianColors.PRIMARY_GLOW,
         )
@@ -70,7 +70,7 @@ class HeaderBar(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
+            padding=ft.Padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
             bgcolor=ObsidianColors.SURFACE_DARK,
             border=ft.Border.only(bottom=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
         )

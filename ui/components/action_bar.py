@@ -36,7 +36,7 @@ class ActionBar(ft.Container):
             ], spacing=8, alignment=ft.MainAxisAlignment.CENTER),
             style=ft.ButtonStyle(
                 bgcolor=ObsidianColors.PRIMARY,
-                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                padding=ft.Padding.symmetric(horizontal=20, vertical=12),
                 shape=ft.RoundedRectangleBorder(radius=Radii.SM),
             ),
             disabled=True,
@@ -73,7 +73,7 @@ class ActionBar(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
+            padding=ft.Padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
             bgcolor=ObsidianColors.SURFACE_DARK,
             border=ft.Border.only(top=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
         )

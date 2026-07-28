@@ -24,7 +24,7 @@ class TrackItem(ft.Container):
         # Format Badge (ex: MP3, FLAC)
         format_badge = ft.Container(
             content=ft.Text(track.audio_format or "AUDIO", size=10, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_SECONDARY),
-            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
             border_radius=Radii.SM,
             bgcolor=ObsidianColors.SURFACE_ELEVATED,
         )
@@ -32,7 +32,7 @@ class TrackItem(ft.Container):
         # Hash Badge
         hash_badge = ft.Container(
             content=ft.Text(track.short_hash, size=10, family="monospace", color=ObsidianColors.TEXT_MUTED),
-            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
             border_radius=Radii.SM,
             bgcolor=ObsidianColors.SURFACE_ELEVATED,
         )
@@ -68,7 +68,7 @@ class TrackItem(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=Spacing.MD, vertical=Spacing.SM),
+            padding=ft.Padding.symmetric(horizontal=Spacing.MD, vertical=Spacing.SM),
             border_radius=Radii.MD,
             bgcolor=ObsidianColors.SURFACE_DARK,
             border=ft.Border.all(1, ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.BORDER_DARK),
