@@ -78,7 +78,10 @@ class HeaderBar(ft.Container):
     def update_telemetry(self):
         """Mise à jour réactive des badges."""
         self.db_text.value = f"LanceDB ({app_state.total_embeddings_in_db} cache)"
-        self.update()
+        try:
+            self.update()
+        except RuntimeError:
+            pass
 
     def _handle_theme_toggle(self, e):
         if self.on_theme_toggle:

@@ -90,7 +90,10 @@ class ActionBar(ft.Container):
             self.status_text.color = ObsidianColors.TEXT_SECONDARY
 
         self.start_button.disabled = not ready or app_state.is_processing
-        self.update()
+        try:
+            self.update()
+        except RuntimeError:
+            pass
 
     def _handle_slider_change(self, e):
         app_state.session.lambda_mmr = round(e.control.value, 2)

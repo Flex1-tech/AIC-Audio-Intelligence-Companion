@@ -110,7 +110,10 @@ class LibraryView(ft.Container):
                 )
                 self.track_list.controls.append(item)
 
-        self.update()
+        try:
+            self.update()
+        except RuntimeError:
+            pass
 
     def _handle_search_change(self, e):
         if self.on_search:

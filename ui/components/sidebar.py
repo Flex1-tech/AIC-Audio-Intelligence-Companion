@@ -15,7 +15,7 @@ class Sidebar(ft.Container):
             label_type=ft.NavigationRailLabelType.ALL,
             min_width=72,
             min_extended_width=180,
-            bg_color=ObsidianColors.SURFACE_DARK,
+            bgcolor=ObsidianColors.SURFACE_DARK,
             group_alignment=-0.9,
             destinations=[
                 ft.NavigationRailDestination(

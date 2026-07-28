@@ -68,4 +68,7 @@ class AIMetricsView(ft.Container):
                     bgcolor=ObsidianColors.SURFACE_DARK,
                 )
             )
-        self.update()
+        try:
+            self.update()
+        except RuntimeError:
+            pass

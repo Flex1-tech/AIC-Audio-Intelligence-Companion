@@ -70,7 +70,10 @@ class MainLayout(ft.Column):
         elif index == 2:
             self.workspace_container.content = self.settings_view
         
-        self.workspace_container.update()
+        try:
+            self.workspace_container.update()
+        except RuntimeError:
+            pass
 
     def update_all(self):
         self.header_bar.update_telemetry()
