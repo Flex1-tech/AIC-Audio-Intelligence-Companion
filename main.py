@@ -39,7 +39,7 @@ def main(page: ft.Page) -> None:
             dialog_title="Sélectionner des fichiers audio pour AIC",
         )
 
-    def on_file_picker_result(e: ft.FilePickerResultEvent) -> None:
+    def on_file_picker_result(e) -> None:
         if not e.files:
             return
         file_paths = [f.path for f in e.files if f.path]
