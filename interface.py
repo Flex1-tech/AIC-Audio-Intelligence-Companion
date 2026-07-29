@@ -5,20 +5,34 @@ import customtkinter as ctk
 from func import find_vlc, is_audio_file, is_valid_media, open_file, show_toast
 from extraction import recommend_playlist, initialize_database, load_musicnn, make_m3u
 from pathlib import Path
-import threading 
+import threading
 
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # Chargement des images 
-        self.upload_icon = ctk.CTkImage(light_image=Image.open("assets/light_upload.png"),dark_image=Image.open("assets/dark_upload.png"), size=(30, 30))
-        self.start_icon = ctk.CTkImage(light_image=Image.open("assets/start.png"), dark_image=Image.open("assets/start_light.png"), size=(30, 30))
-        self.remove_icon = ctk.CTkImage(Image.open('assets/streamline--delete-1-remix.png'),size=(20,20))
-        self.heart_off = ctk.CTkImage(Image.open("assets/coeur_gris.png"), size=(30, 30))
-        self.heart_on = ctk.CTkImage(Image.open("assets/coeur_rouge.png"), size=(30, 30))
-        self.toast_icon = ctk.CTkImage(Image.open("assets/error.png"), size=(20, 20))
+        # Chargement des images
+        self.upload_icon = ctk.CTkImage(
+            light_image=Image.open("assets/light_upload.png"),
+            dark_image=Image.open("assets/dark_upload.png"),
+            size=(
+                30,
+                30))
+        self.start_icon = ctk.CTkImage(
+            light_image=Image.open("assets/start.png"),
+            dark_image=Image.open("assets/start_light.png"),
+            size=(
+                30,
+                30))
+        self.remove_icon = ctk.CTkImage(Image.open(
+            'assets/streamline--delete-1-remix.png'), size=(20, 20))
+        self.heart_off = ctk.CTkImage(Image.open(
+            "assets/coeur_gris.png"), size=(30, 30))
+        self.heart_on = ctk.CTkImage(Image.open(
+            "assets/coeur_rouge.png"), size=(30, 30))
+        self.toast_icon = ctk.CTkImage(
+            Image.open("assets/error.png"), size=(20, 20))
 
         # Chargement des outils de recommandation
         self.session = None
@@ -43,8 +57,8 @@ class App(ctk.CTk):
         self.geometry(f"{width}x{height}+{x}+{y}")
         self.title("Musical Recommender System")
         self.configure(border_color=("black", "white"))
-        
-        # Main Frame 
+
+        # Main Frame
         self.main_frame = ctk.CTkFrame(
             self,
             border_width=2,
@@ -55,15 +69,17 @@ class App(ctk.CTk):
 
         self.main_frame.grid_rowconfigure(0, weight=0)  # top_bar
         self.main_frame.grid_rowconfigure(1, weight=0)  # header
-        self.main_frame.grid_rowconfigure(2, weight=1)  # file_frame (prend l’espace)
+        self.main_frame.grid_rowconfigure(
+            2, weight=1)  # file_frame (prend l’espace)
         self.main_frame.grid_rowconfigure(3, weight=0)  # bottom_bar
 
         # Frame pour les bouton du bas
         self.bottom_bar = ctk.CTkFrame(
-            self.main_frame, 
+            self.main_frame,
             fg_color="transparent"
         )
-        self.bottom_bar_inner = ctk.CTkFrame(self.bottom_bar, fg_color="transparent")
+        self.bottom_bar_inner = ctk.CTkFrame(
+            self.bottom_bar, fg_color="transparent")
         self.bottom_bar_inner.pack(expand=True)
         self.import_button = ctk.CTkButton(
             self.bottom_bar_inner,
@@ -76,28 +92,33 @@ class App(ctk.CTk):
             command=self.import_files
         )
         self.start_button = ctk.CTkButton(
-            self.bottom_bar_inner, 
-            text="Commencez..!", 
-            font=("Arial", 18), 
-            state="disabled", 
-            fg_color="#FF8E25", 
+            self.bottom_bar_inner,
+            text="Commencez..!",
+            font=("Arial", 18),
+            state="disabled",
+            fg_color="#FF8E25",
             hover_color="#F36C19",
             image=self.start_icon,
             compound="left",
             command=self.start
         )
 
-
-
         # Barre de recherche
         self.search_visible = False
         self.search_after_id = None
         self.top_bar = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.search_entry = ctk.CTkEntry(self.top_bar, placeholder_text="Rechercher une musique...", width=250, font=("Arial", 14))
+        self.search_entry = ctk.CTkEntry(
+            self.top_bar,
+            placeholder_text="Rechercher une musique...",
+            width=250,
+            font=(
+                "Arial",
+                14))
         self.search_entry.pack(side="left", padx=10)
-        
+
         # Reinitialisation
-        self.reset_button = ctk.CTkButton(self.top_bar, text="Réinitialiser", font=("Arial", 14), command=self.reset, fg_color="#FF8E25", hover_color="#F36C19")
+        self.reset_button = ctk.CTkButton(self.top_bar, text="Réinitialiser", font=(
+            "Arial", 14), command=self.reset, fg_color="#FF8E25", hover_color="#F36C19")
         self.reset_button.pack(side="right", padx=10)
 
         # Button Start
@@ -105,13 +126,23 @@ class App(ctk.CTk):
         self.label = ctk.CTkLabel(
             self.main_frame,
             text="Écoutez. Likez. Découvrez.\nVotre musique, parfaitement orchestrée.",
-            font=("Arial", 19, "bold"),
+            font=(
+                "Arial",
+                19,
+                "bold"),
             justify="center",
-            anchor="center"
-        )
-        self.label.grid(row=1, column=0, pady=(50,1), sticky="ew")
+            anchor="center")
+        self.label.grid(row=1, column=0, pady=(50, 1), sticky="ew")
 
-        self.progress = ctk.CTkProgressBar(self.main_frame, mode="indeterminate", width=250, height=20, border_width=2, corner_radius=10, border_color="#F36C19", progress_color="#F36C19")
+        self.progress = ctk.CTkProgressBar(
+            self.main_frame,
+            mode="indeterminate",
+            width=250,
+            height=20,
+            border_width=2,
+            corner_radius=10,
+            border_color="#F36C19",
+            progress_color="#F36C19")
 
         self.center_button = ctk.CTkButton(
             self.main_frame,
@@ -127,10 +158,17 @@ class App(ctk.CTk):
 
         # événements
         self.search_entry.bind("<KeyRelease>", self.on_search)
-        self.search_entry.bind("<FocusIn>", lambda e: self.search_entry.configure(border_color="#F36C19"))
-        self.search_entry.bind("<FocusOut>", lambda e: self.search_entry.configure(border_color="#444"))
+        self.search_entry.bind(
+            "<FocusIn>",
+            lambda e: self.search_entry.configure(
+                border_color="#F36C19"))
+        self.search_entry.bind(
+            "<FocusOut>",
+            lambda e: self.search_entry.configure(
+                border_color="#444"))
         # Sur chaque widget cliquable, retirer le focus de la search bar
-        self.bind_all("<Button-1>", lambda e: self.focus_set() if not str(e.widget).startswith(str(self.search_entry)) else None)
+        self.bind_all("<Button-1>", lambda e: self.focus_set()
+                      if not str(e.widget).startswith(str(self.search_entry)) else None)
 
         threading.Thread(
             target=self.preload_resources,
@@ -152,10 +190,10 @@ class App(ctk.CTk):
             args=(file_paths,),
             daemon=True
         ).start()
-    
+
     def get_selected_files(self):
         return self.selected_files
-    
+
     def clear_selected_files(self):
         self.selected_files = {}
 
@@ -180,16 +218,15 @@ class App(ctk.CTk):
                 self.file_frame.grid_forget()
                 self.file_frame.destroy()
                 self.file_frame = None
-            
+
             self.label.configure(
-                text="Écoutez. Likez. Découvrez.\nVotre musique, parfaitement orchestrée."
-            )
+                text="Écoutez. Likez. Découvrez.\nVotre musique, parfaitement orchestrée.")
             self.center_button.grid(row=2, column=0)
             self.top_bar.grid_forget()
 
         else:
             self.label.configure(text=f"{count} fichier(s) importé(s)")
-        
+
         self.update_idletasks()
 
     def reset(self):
@@ -206,7 +243,6 @@ class App(ctk.CTk):
             self.file_frame.grid_forget()
             self.file_frame.destroy()
             self.file_frame = None
-        
 
         # 4. cacher la barre de recherche et la barre du bas
         self.bottom_bar.grid_forget()
@@ -219,8 +255,7 @@ class App(ctk.CTk):
 
         # 6. reset du label
         self.label.configure(
-            text="Écoutez. Likez. Découvrez.\nVotre musique, parfaitement orchestrée."
-        )
+            text="Écoutez. Likez. Découvrez.\nVotre musique, parfaitement orchestrée.")
 
         # 7. remettre le bouton au centre
         self.center_button.grid(row=2, column=0)
@@ -231,8 +266,7 @@ class App(ctk.CTk):
 
         # Changer l'image
         like_btn.configure(
-            image=self.heart_on if self.selected_files[file] else self.heart_off
-        )
+            image=self.heart_on if self.selected_files[file] else self.heart_off)
         self.update_start_button()
 
     def get_heart_icon(self, file):
@@ -241,12 +275,16 @@ class App(ctk.CTk):
     def load_files(self):
         try:
             files = open_file(self, self.selected_files)
-        except Exception as e:
+        except Exception:
             self.after(0, lambda: self.hide_loader())  # cacher le loader
             show_toast(self, "Erreur lors de l'ouverture des fichiers")
-        
-        if len(files) <=3:
-            self.after(0, lambda: show_toast(self, "Importez au moins 4 fichiers\n pour de meilleures recommandations!"))
+
+        if len(files) <= 3:
+            self.after(
+                0,
+                lambda: show_toast(
+                    self,
+                    "Importez au moins 4 fichiers\n pour de meilleures recommandations!"))
         if not files:
             self.after(0, self.on_files_cancelled)  # cacher le loader
         else:
@@ -272,6 +310,7 @@ class App(ctk.CTk):
         self.progress.stop()
 
         self.progress.place_forget()
+
     def rotate_loader(self):
         if not self.loading:
             return
@@ -294,7 +333,7 @@ class App(ctk.CTk):
         if not self.search_visible:
             self.top_bar.grid(row=0, column=0, sticky="ew", pady=10)
             self.search_visible = True
-        
+
         self.ensure_file_frame()
         self.add_new_files_to_ui(files)
         self.refresh_file_list()
@@ -312,7 +351,12 @@ class App(ctk.CTk):
                 height=230
             )
             self.center_button.grid_forget()
-            self.file_frame.grid(row=2, column=0, sticky="nsew", padx=100, pady=10)
+            self.file_frame.grid(
+                row=2,
+                column=0,
+                sticky="nsew",
+                padx=100,
+                pady=10)
 
     def update_import_button(self):
         # Afficher le bottom bar si pas déjà fait
@@ -321,19 +365,18 @@ class App(ctk.CTk):
 
         if not self.import_button.winfo_ismapped():
             self.import_button.pack(side="left", padx=10)
-    
+
         self.import_button.configure(state="normal")
 
     def on_files_cancelled(self):
         self.hide_loader()
         if len(self.selected_files) == 0:
-        # remettre le bouton
+            # remettre le bouton
             self.center_button.grid(row=2, column=0)
             self.center_button.configure(state="normal")
         else:
             self.update_import_button()
             self.import_button.configure(state="normal")
-
 
     def refresh_file_list(self):
         if not self.file_frame:
@@ -347,9 +390,9 @@ class App(ctk.CTk):
             should_show = (not search_text or search_text in nom)
             is_visible = bool(frame.winfo_manager())
             if not should_show and is_visible:
-                frame.pack_forget()  
+                frame.pack_forget()
             elif should_show and not is_visible:
-                frame.pack(fill="x", padx=10, pady=5) 
+                frame.pack(fill="x", padx=10, pady=5)
 
     def update_start_button(self):
         file_count = len(self.selected_files)
@@ -371,7 +414,7 @@ class App(ctk.CTk):
         new_state = "normal" if likes_count >= 3 else "disabled"
         if self.start_button.cget("state") != new_state:
             self.start_button.configure(state=new_state)
-        
+
     def add_new_files_to_ui(self, files):
         if not self.file_frame:
             return
@@ -439,7 +482,7 @@ class App(ctk.CTk):
         # Désactiver le bouton et afficher le loader
         self.start_button.configure(state="disabled")
         self.show_loader()
-        
+
         thread = threading.Thread(target=self._run_recommendation, daemon=True)
         thread.start()
 
@@ -453,11 +496,11 @@ class App(ctk.CTk):
                     0,
                     lambda: show_toast(
                         self,
-                            "Initialisation en cours..."
+                        "Initialisation en cours..."
                     )
                 )
                 return
-            
+
             # Generer la playlist recommandée
             playlist = recommend_playlist(
                 path_dict=self.get_selected_files(),
@@ -470,14 +513,15 @@ class App(ctk.CTk):
             # Mettre à jour l'interface dans le thread principal
             self.after(0, self._on_recommendation_success)
 
-        # Gérer les exceptions pour éviter que le thread ne plante silencieusement et pour informer l'utilisateur en cas d'erreur
+        # Gérer les exceptions pour éviter que le thread ne plante
+        # silencieusement et pour informer l'utilisateur en cas d'erreur
         except Exception as e:
 
-            self.after(0, partial(self._on_recommendation_error,e))
+            self.after(0, partial(self._on_recommendation_error, e))
 
     def _on_recommendation_success(self):
         """"Cette fonction est appelée dans le thread principal une fois que la recommandation est terminée avec succès. Elle met à jour l'interface utilisateur pour informer l'utilisateur et tente de lancer VLC."""
-        
+
         # Cacher le loader et afficher un message de succès
         self.hide_loader()
         show_toast(self, "Playlist générée : playlist.m3u8")
@@ -487,16 +531,21 @@ class App(ctk.CTk):
             vlc_path = find_vlc()
 
             if not vlc_path:
-                # Recommander d'ajouter VlC au PATH pour une meilleure expérience ou d'ouvrir le fichier playlist.m3u8 manuellement avec VLC
-                show_toast(self, "Astuce : Ajoutez VLC à votre PATH pour une meilleure expérience,\n ou ouvrez manuellement playlist.m3u8 avec VLC.")
+                # Recommander d'ajouter VlC au PATH pour une meilleure
+                # expérience ou d'ouvrir le fichier playlist.m3u8 manuellement
+                # avec VLC
+                show_toast(
+                    self,
+                    "Astuce : Ajoutez VLC à votre PATH pour une meilleure expérience,\n ou ouvrez manuellement playlist.m3u8 avec VLC.")
                 raise FileNotFoundError("VLC introuvable.")
-        
+
             subprocess.Popen([vlc_path, "playlist.m3u8"])
             show_toast(self, "VLC lancé avec succès !")
         except Exception as e:
             show_toast(self, f"Erreur imprévue : {e}")
 
-        # Quitter l'application après un délai pour laisser le temps à l'utilisateur de lire le toast
+        # Quitter l'application après un délai pour laisser le temps à
+        # l'utilisateur de lire le toast
         self.after(6000, self.destroy)
 
     def _on_recommendation_error(self, error):
@@ -535,10 +584,10 @@ class App(ctk.CTk):
             )
 
         except Exception as e:
-
+            err = e  # capturé avant la fermeture du bloc pour le lambda
             self.after(
                 0,
-                lambda: self._on_validation_error(e)
+                lambda: self._on_validation_error(err)
             )
 
     def on_validation_complete(
@@ -568,8 +617,7 @@ class App(ctk.CTk):
         if len(valid_files) <= 3:
             show_toast(
                 self,
-                "Importez au moins 4 fichiers\npour de meilleures recommandations!"
-            )
+                "Importez au moins 4 fichiers\npour de meilleures recommandations!")
 
         self.on_files_loaded(valid_files)
 
@@ -586,12 +634,12 @@ class App(ctk.CTk):
             )
 
         except Exception as e:
-
+            err_msg = str(e)  # capturé avant la fermeture du bloc pour le lambda
             self.after(
                 0,
                 lambda: show_toast(
                     self,
-                    f"Erreur initialisation : {e}"
+                    f"Erreur initialisation : {err_msg}"
                 )
             )
 

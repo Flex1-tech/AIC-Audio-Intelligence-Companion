@@ -1,6 +1,6 @@
 import flet as ft
 from ui.design_system.colors import ObsidianColors
-from ui.design_system.spacing import Radii, Spacing
+from ui.design_system.spacing import Radii
 from typing import Callable, Optional
 
 

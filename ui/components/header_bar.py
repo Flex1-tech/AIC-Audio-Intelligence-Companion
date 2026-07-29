@@ -3,25 +3,43 @@ from ui.design_system.colors import ObsidianColors
 from ui.design_system.spacing import Radii, Spacing
 from core.state import app_state
 
+
 class HeaderBar(ft.Container):
     """
     Header principal avec logo AIC, badges de télémétrie IA et commutateur de thème.
     """
+
     def __init__(self, on_theme_toggle=None):
         self.on_theme_toggle = on_theme_toggle
 
         # Badges d'état IA
         self.onnx_badge = ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.AUTO_AWESOME, size=14, color=ObsidianColors.SUCCESS),
-                ft.Text("Musicnn ONNX", size=12, weight=ft.FontWeight.W_500, color=ObsidianColors.TEXT_PRIMARY),
-            ], spacing=6, alignment=ft.MainAxisAlignment.CENTER),
-            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
+            content=ft.Row(
+                [
+                    ft.Icon(
+                        ft.Icons.AUTO_AWESOME,
+                        size=14,
+                        color=ObsidianColors.SUCCESS),
+                    ft.Text(
+                        "Musicnn ONNX",
+                        size=12,
+                        weight=ft.FontWeight.W_500,
+                        color=ObsidianColors.TEXT_PRIMARY),
+                ],
+                spacing=6,
+                alignment=ft.MainAxisAlignment.CENTER),
+            padding=ft.Padding.symmetric(
+                horizontal=10,
+                vertical=4),
             border_radius=Radii.FULL,
             bgcolor=ObsidianColors.SUCCESS_BG,
         )
 
-        self.db_text = ft.Text("LanceDB Active", size=12, weight=ft.FontWeight.W_500, color=ObsidianColors.TEXT_PRIMARY)
+        self.db_text = ft.Text(
+            "LanceDB Active",
+            size=12,
+            weight=ft.FontWeight.W_500,
+            color=ObsidianColors.TEXT_PRIMARY)
 
         self.db_badge = ft.Container(
             content=ft.Row([
@@ -39,14 +57,22 @@ class HeaderBar(ft.Container):
                     # Logo & Titre
                     ft.Row([
                         ft.Container(
-                            content=ft.Icon(ft.Icons.GRAPHIC_EQ, size=22, color=ObsidianColors.PRIMARY),
+                            content=ft.Icon(
+                                ft.Icons.GRAPHIC_EQ, size=22, color=ObsidianColors.PRIMARY),
                             padding=8,
                             border_radius=Radii.SM,
                             bgcolor=ObsidianColors.SURFACE_ELEVATED,
                         ),
                         ft.Column([
-                            ft.Text("AIC", size=16, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_PRIMARY),
-                            ft.Text("Audio Intelligence Companion", size=11, color=ObsidianColors.TEXT_MUTED),
+                            ft.Text(
+                                "AIC",
+                                size=16,
+                                weight=ft.FontWeight.BOLD,
+                                color=ObsidianColors.TEXT_PRIMARY),
+                            ft.Text(
+                                "Audio Intelligence Companion",
+                                size=11,
+                                color=ObsidianColors.TEXT_MUTED),
                         ], spacing=0),
                     ], spacing=12),
 
@@ -70,9 +96,12 @@ class HeaderBar(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.Padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
+            padding=ft.Padding.symmetric(
+                horizontal=Spacing.LG, vertical=Spacing.MD),
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.only(bottom=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+            border=ft.Border.only(
+                bottom=ft.BorderSide(
+                    1, ObsidianColors.BORDER_DARK)),
         )
 
     def update_telemetry(self):

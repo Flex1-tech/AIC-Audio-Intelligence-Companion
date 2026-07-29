@@ -3,10 +3,12 @@ from ui.design_system.colors import ObsidianColors
 from ui.design_system.spacing import Radii, Spacing
 from core.state import app_state
 
+
 class AIMetricsView(ft.Container):
     """
     Vue Télémétrie IA et Moteur Vectoriel LanceDB.
     """
+
     def __init__(self):
         self.log_list = ft.ListView(
             expand=True,
@@ -15,19 +17,42 @@ class AIMetricsView(ft.Container):
 
         super().__init__(
             content=ft.Column([
-                ft.Text("Télémétrie & Santé du Moteur IA", size=18, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_PRIMARY),
-                ft.Text("Supervision en temps réel des modèles Deep Learning et du cache vectoriel.", size=13, color=ObsidianColors.TEXT_MUTED),
+                ft.Text(
+                    "Télémétrie & Santé du Moteur IA",
+                    size=18,
+                    weight=ft.FontWeight.BOLD,
+                    color=ObsidianColors.TEXT_PRIMARY),
+                ft.Text(
+                    "Supervision en temps réel des modèles Deep Learning et du cache vectoriel.",
+                    size=13,
+                    color=ObsidianColors.TEXT_MUTED),
                 ft.Container(height=10),
 
                 # Metric Cards Grid
                 ft.Row([
-                    self._build_card("Modèle ONNX", "MusiCNN (16kHz)", ft.Icons.AUTO_AWESOME, ObsidianColors.SUCCESS),
-                    self._build_card("Base Vectorielle", "LanceDB Active", ft.Icons.STORAGE, ObsidianColors.PRIMARY),
-                    self._build_card("Embeddings en Cache", f"{app_state.total_embeddings_in_db} morceaux", ft.Icons.GRID_VIEW, ObsidianColors.WARNING),
+                    self._build_card(
+                        "Modèle ONNX",
+                        "MusiCNN (16kHz)",
+                        ft.Icons.AUTO_AWESOME,
+                        ObsidianColors.SUCCESS),
+                    self._build_card(
+                        "Base Vectorielle",
+                        "LanceDB Active",
+                        ft.Icons.STORAGE,
+                        ObsidianColors.PRIMARY),
+                    self._build_card(
+                        "Embeddings en Cache",
+                        f"{app_state.total_embeddings_in_db} morceaux",
+                        ft.Icons.GRID_VIEW,
+                        ObsidianColors.WARNING),
                 ], spacing=Spacing.MD),
 
                 ft.Container(height=15),
-                ft.Text("Journal des Événements du Moteur", size=15, weight=ft.FontWeight.W_600, color=ObsidianColors.TEXT_PRIMARY),
+                ft.Text(
+                    "Journal des Événements du Moteur",
+                    size=15,
+                    weight=ft.FontWeight.W_600,
+                    color=ObsidianColors.TEXT_PRIMARY),
 
                 # Action Logs List
                 self.log_list,
@@ -37,7 +62,12 @@ class AIMetricsView(ft.Container):
         )
         self.refresh_metrics()
 
-    def _build_card(self, title: str, value: str, icon: "ft.IconData", accent_color: str) -> ft.Container:
+    def _build_card(
+            self,
+            title: str,
+            value: str,
+            icon: "ft.IconData",
+            accent_color: str) -> ft.Container:
         return ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -58,16 +88,29 @@ class AIMetricsView(ft.Container):
         for log in reversed(app_state.action_history[-20:]):
             self.log_list.controls.append(
                 ft.Container(
-                    content=ft.Row([
-                        ft.Text(log.formatted_time, size=11, font_family="monospace", color=ObsidianColors.TEXT_MUTED),
-                        ft.Text(log.action_type, size=11, weight=ft.FontWeight.BOLD, color=ObsidianColors.PRIMARY),
-                        ft.Text(log.description, size=12, color=ObsidianColors.TEXT_PRIMARY, overflow=ft.TextOverflow.ELLIPSIS),
-                    ], spacing=10),
+                    content=ft.Row(
+                        [
+                            ft.Text(
+                                log.formatted_time,
+                                size=11,
+                                font_family="monospace",
+                                color=ObsidianColors.TEXT_MUTED),
+                            ft.Text(
+                                log.action_type,
+                                size=11,
+                                weight=ft.FontWeight.BOLD,
+                                color=ObsidianColors.PRIMARY),
+                            ft.Text(
+                                log.description,
+                                size=12,
+                                color=ObsidianColors.TEXT_PRIMARY,
+                                overflow=ft.TextOverflow.ELLIPSIS),
+                        ],
+                        spacing=10),
                     padding=8,
                     border_radius=Radii.SM,
                     bgcolor=ObsidianColors.SURFACE_DARK,
-                )
-            )
+                ))
         try:
             self.update()
         except RuntimeError:

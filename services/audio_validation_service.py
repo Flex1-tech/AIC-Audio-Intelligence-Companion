@@ -4,14 +4,17 @@ from func import is_audio_file, is_valid_media
 from domain.track import Track
 from repositories.track_repository import TrackRepository
 
+
 class AudioValidationService:
     """
     Service de validation des fichiers audio via FFprobe et Fleep.
     """
+
     def __init__(self, repository: TrackRepository = None):
         self.repository = repository or TrackRepository()
 
-    def validate_file_paths(self, file_paths: List[str]) -> Tuple[List[Track], int]:
+    def validate_file_paths(
+            self, file_paths: List[str]) -> Tuple[List[Track], int]:
         """
         Valide une liste de chemins de fichiers et retourne les objets Track valides
         ainsi que le nombre de fichiers ignorés.

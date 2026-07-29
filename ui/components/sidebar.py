@@ -1,11 +1,12 @@
 import flet as ft
 from ui.design_system.colors import ObsidianColors
-from ui.design_system.spacing import Radii, Spacing
+
 
 class Sidebar(ft.Container):
     """
     Rail de navigation latéral style Obsidian / Linear.
     """
+
     def __init__(self, selected_index: int = 0, on_change=None):
         self.on_change_callback = on_change
         self.selected_index = selected_index
@@ -40,7 +41,10 @@ class Sidebar(ft.Container):
         super().__init__(
             content=self.rail,
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.only(right=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+            border=ft.Border.only(
+                right=ft.BorderSide(
+                    1,
+                    ObsidianColors.BORDER_DARK)),
         )
 
     def _on_nav_change(self, e):

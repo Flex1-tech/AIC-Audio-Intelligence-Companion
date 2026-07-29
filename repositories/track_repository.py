@@ -1,16 +1,15 @@
 from typing import List, Dict, Optional, Any
 import lancedb
-import numpy as np
-from pathlib import Path
 
-from schema import TrackEmbeddingModel
 from extraction import initialize_database, get_file_hash, get_existing_embeddings
+
 
 class TrackRepository:
     """
     Repository d'accès aux données vectorielles LanceDB pour AIC.
     Encapsule la table 'audio_embeddings' et les requêtes BLAKE3 hash.
     """
+
     def __init__(self, db_path: str = "./MusicRecommenderDB"):
         self.db_path = db_path
         self._table: Optional[lancedb.table.Table] = None
@@ -27,7 +26,8 @@ class TrackRepository:
         except Exception:
             return 0
 
-    def find_existing_hashes(self, hashes: List[str]) -> Dict[str, Dict[str, Any]]:
+    def find_existing_hashes(
+            self, hashes: List[str]) -> Dict[str, Dict[str, Any]]:
         """Retourne les entrées DB sous forme {hash: row_dict}."""
         if not hashes:
             return {}

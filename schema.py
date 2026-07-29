@@ -1,13 +1,11 @@
-import os
-import lancedb
-from uuid import uuid4
 from pydantic import Field
 from lancedb.pydantic import LanceModel, Vector
+
 
 class TrackEmbeddingModel(LanceModel):
     """
     Modèle de données pour stocker les embeddings des pistes audio dans LanceDB.
-    Chaque instance représente une piste audio avec son embedding et ses métadonnées associées. 
+    Chaque instance représente une piste audio avec son embedding et ses métadonnées associées.
     """
     # Identifiant unique de la piste
     file_hash: str = Field(
@@ -21,4 +19,5 @@ class TrackEmbeddingModel(LanceModel):
     file_size_bytes: int
 
     # Embedding de la piste
-    vector: Vector(200) = Field(description="Embedding audio de dimenson 200")  # type: ignore
+    vector: Vector(200) = Field(
+        description="Embedding audio de dimenson 200")  # type: ignore

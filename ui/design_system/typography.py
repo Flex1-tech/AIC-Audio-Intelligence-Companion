@@ -3,11 +3,13 @@ Design Tokens - Hiérarchie typographique pour AIC.
 """
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
 class TypographyStyle:
     size: int
     weight: str = "normal"
     font_family: str = "System"
+
 
 class Typography:
     APP_TITLE = TypographyStyle(size=20, weight="bold")

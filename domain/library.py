@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 from domain.track import Track
 
+
 @dataclass
 class MusicLibrary:
     """
@@ -10,7 +11,8 @@ class MusicLibrary:
     """
     name: str = "Ma Bibliothèque Principale"
     folder_paths: List[str] = field(default_factory=list)
-    tracks: Dict[str, Track] = field(default_factory=dict)  # {file_path: Track}
+    tracks: Dict[str, Track] = field(
+        default_factory=dict)  # {file_path: Track}
     last_scanned_timestamp: float = 0.0
 
     @property

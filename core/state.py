@@ -4,11 +4,13 @@ from domain.session import SessionState
 from domain.history import ActionLog
 import time
 
+
 class AppState:
     """
     Magasin d'état central réactif (Single Source of Truth) pour AIC.
     Gère la bibliothèque musicale, la session, la télémétrie et les abonnés aux événements.
     """
+
     def __init__(self):
         self.library = MusicLibrary()
         self.session = SessionState()
@@ -40,7 +42,8 @@ class AppState:
             except Exception as e:
                 print(f"[AppState] Erreur notification listener: {e}")
 
-    def log_action(self, action_type: str, description: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+    def log_action(self, action_type: str, description: str,
+                   metadata: Optional[Dict[str, Any]] = None) -> None:
         log = ActionLog(
             action_type=action_type,
             description=description,
@@ -49,6 +52,7 @@ class AppState:
         )
         self.action_history.append(log)
         self.notify()
+
 
 # Instance unique partagée
 app_state = AppState()

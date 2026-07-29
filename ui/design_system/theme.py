@@ -1,6 +1,7 @@
 import flet as ft
 from ui.design_system.colors import ObsidianColors
 
+
 def get_obsidian_theme() -> ft.Theme:
     """
     Construit le thème Flet global Obsidian Dark compatible avec Flet v0.86+.

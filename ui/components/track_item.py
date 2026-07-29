@@ -3,10 +3,12 @@ from domain.track import Track
 from ui.design_system.colors import ObsidianColors
 from ui.design_system.spacing import Radii, Spacing
 
+
 class TrackItem(ft.Container):
     """
     Carte réutilisable affichant un morceau audio avec métadonnées, BLAKE3 hash et bouton like.
     """
+
     def __init__(self, track: Track, on_like=None, on_delete=None):
         self.track = track
         self.on_like = on_like
@@ -23,16 +25,28 @@ class TrackItem(ft.Container):
 
         # Format Badge (ex: MP3, FLAC)
         format_badge = ft.Container(
-            content=ft.Text(track.audio_format or "AUDIO", size=10, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_SECONDARY),
-            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
+            content=ft.Text(
+                track.audio_format or "AUDIO",
+                size=10,
+                weight=ft.FontWeight.BOLD,
+                color=ObsidianColors.TEXT_SECONDARY),
+            padding=ft.Padding.symmetric(
+                horizontal=6,
+                vertical=2),
             border_radius=Radii.SM,
             bgcolor=ObsidianColors.SURFACE_ELEVATED,
         )
 
         # Hash Badge
         hash_badge = ft.Container(
-            content=ft.Text(track.short_hash, size=10, font_family="monospace", color=ObsidianColors.TEXT_MUTED),
-            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
+            content=ft.Text(
+                track.short_hash,
+                size=10,
+                font_family="monospace",
+                color=ObsidianColors.TEXT_MUTED),
+            padding=ft.Padding.symmetric(
+                horizontal=6,
+                vertical=2),
             border_radius=Radii.SM,
             bgcolor=ObsidianColors.SURFACE_ELEVATED,
         )
@@ -42,12 +56,22 @@ class TrackItem(ft.Container):
                 [
                     # Gauche : Icône + Nom + Métadonnées
                     ft.Row([
-                        ft.Icon(ft.Icons.MUSIC_NOTE, size=20, color=ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.TEXT_SECONDARY),
+                        ft.Icon(
+                            ft.Icons.MUSIC_NOTE,
+                            size=20,
+                            color=ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.TEXT_SECONDARY),
                         ft.Column([
-                            ft.Text(track.file_name, size=14, weight=ft.FontWeight.W_500, color=ObsidianColors.TEXT_PRIMARY, overflow=ft.TextOverflow.ELLIPSIS, max_lines=1),
+                            ft.Text(
+                                track.file_name,
+                                size=14,
+                                weight=ft.FontWeight.W_500,
+                                color=ObsidianColors.TEXT_PRIMARY,
+                                overflow=ft.TextOverflow.ELLIPSIS,
+                                max_lines=1),
                             ft.Row([
                                 format_badge,
-                                ft.Text(track.formatted_size, size=11, color=ObsidianColors.TEXT_MUTED),
+                                ft.Text(track.formatted_size, size=11,
+                                        color=ObsidianColors.TEXT_MUTED),
                                 hash_badge,
                             ], spacing=8),
                         ], spacing=2, expand=True),
@@ -68,10 +92,12 @@ class TrackItem(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.Padding.symmetric(horizontal=Spacing.MD, vertical=Spacing.SM),
+            padding=ft.Padding.symmetric(
+                horizontal=Spacing.MD, vertical=Spacing.SM),
             border_radius=Radii.MD,
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.all(1, ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.BORDER_DARK),
+            border=ft.Border.all(
+                1, ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.BORDER_DARK),
         )
 
     def _handle_like(self, e):

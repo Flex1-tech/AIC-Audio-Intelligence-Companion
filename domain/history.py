@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import time
-from typing import Optional, Dict, Any
+from typing import Dict, Any
+
 
 @dataclass
 class ActionLog:

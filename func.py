@@ -5,7 +5,6 @@ import fleep
 import subprocess
 from pathlib import Path
 from shutil import which
-import subprocess
 import platform
 
 
@@ -82,8 +81,9 @@ def get_media_type(filepath):
 
         return None
 
-    except:
+    except Exception:
         return None
+
 
 def is_valid_media(filepath):
     try:
@@ -112,16 +112,20 @@ def run_ffprobe(cmd, timeout=5):
 
     return subprocess.run(cmd, **kwargs)
 
+
 def is_audio_file(filepath):
     with open(filepath, "rb") as file:
         info = fleep.get(file.read(128))
-    return "audio" in info.type or "video" in info.type  # Some audio files may be classified as video
+    # Some audio files may be classified as video
+    return "audio" in info.type or "video" in info.type
+
 
 def open_file():
     return filedialog.askopenfilenames(
         title="Select audio files",
         filetypes=[("All files", "*.*")]
     )
+
 
 def show_toast(root, message, icon=None, duration=3000):
 
@@ -167,4 +171,3 @@ def show_toast(root, message, icon=None, duration=3000):
     toast.after(10, place_toast)
 
     toast.after(duration, toast.destroy)
-

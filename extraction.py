@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Optional
 import lancedb
 import numpy as np
 import subprocess
@@ -66,18 +66,14 @@ def extract_representative_batch(
         batch.shape = (n_segments, samples_per_segment)
     """
 
-    
     # SECURITE
-    
 
     if audio is None or len(audio) == 0:
         return None
 
     audio = audio.astype(np.float32)
 
-    
     # PARAMETRES
-    
 
     samples_per_segment = int(sr * segment_duration)
 
@@ -86,9 +82,7 @@ def extract_representative_batch(
     if hop_size <= 0:
         raise ValueError("overlap trop élevé")
 
-    
     # PADDING MINIMAL
-    
 
     min_required = samples_per_segment
 
@@ -102,9 +96,7 @@ def extract_representative_batch(
             mode="reflect"
         )
 
-    
     # SEGMENTATION AVEC OVERLAP
-    
 
     segments = []
 
@@ -122,9 +114,7 @@ def extract_representative_batch(
 
     segments = np.array(segments, dtype=np.float32)
 
-    
     # FALLBACK
-    
 
     if len(segments) == 0:
 
@@ -136,9 +126,7 @@ def extract_representative_batch(
 
         return padded[:samples_per_segment][None, :]
 
-    
     # FILTRAGE DES SEGMENTS TROP SILENCIEUX
-    
 
     rms_values = np.sqrt(np.mean(segments ** 2, axis=1))
 
@@ -159,17 +147,13 @@ def extract_representative_batch(
 
         valid_rms = rms_values
 
-    
     # EXTRACTION FEATURES
-    
 
     features = []
 
     for segment, rms in zip(valid_segments, valid_rms):
 
-        
         # STFT unique
-        
 
         stft = np.abs(
             librosa.stft(
@@ -179,9 +163,7 @@ def extract_representative_batch(
             )
         )
 
-        
         # Spectral Flux
-        
 
         spectral_flux = np.mean(
             np.sqrt(
@@ -192,9 +174,7 @@ def extract_representative_batch(
             )
         )
 
-        
         # MFCC
-        
 
         mel_spec = librosa.feature.melspectrogram(
             S=stft**2,
@@ -216,9 +196,7 @@ def extract_representative_batch(
         mfcc_3 = np.mean(mfcc[2])
         mfcc_5 = np.mean(mfcc[4])
 
-        
         # Chroma (ajout important)
-        
 
         chroma = librosa.feature.chroma_stft(
             S=stft,
@@ -227,9 +205,7 @@ def extract_representative_batch(
 
         chroma_mean = np.mean(chroma)
 
-        
         # Zero Crossing Rate
-        
 
         zcr = np.mean(
             librosa.feature.zero_crossing_rate(
@@ -237,9 +213,7 @@ def extract_representative_batch(
             )
         )
 
-        
         # Feature Vector
-        
 
         feature_vector = [
             rms,
@@ -255,9 +229,7 @@ def extract_representative_batch(
 
     features = np.array(features, dtype=np.float32)
 
-    
     # CAS TRIVIAL
-    
 
     if len(valid_segments) <= n_segments:
 
@@ -269,17 +241,13 @@ def extract_representative_batch(
 
         return np.array(selected[:n_segments], dtype=np.float32)
 
-    
     # NORMALISATION
-    
 
     scaler = StandardScaler()
 
     features_scaled = scaler.fit_transform(features)
 
-    
     # CLUSTERING
-    
 
     kmeans = KMeans(
         init="k-means++",
@@ -292,9 +260,7 @@ def extract_representative_batch(
 
     centroids = kmeans.cluster_centers_
 
-    
     # SELECTION REPRESENTATIVE
-    
 
     selected_indices = []
 
@@ -320,9 +286,7 @@ def extract_representative_batch(
 
         selected_indices.append(best_global_index)
 
-    
     # FALLBACK SECURITE
-    
 
     if len(selected_indices) == 0:
 
@@ -333,19 +297,16 @@ def extract_representative_batch(
     while len(selected_indices) < n_segments:
         selected_indices.append(selected_indices[-1])
 
-    
     # TRI TEMPOREL
-    
 
     selected_indices = sorted(selected_indices)
 
-    
     # BATCH FINAL
-    
 
     batch = valid_segments[selected_indices]
 
     return batch.astype(np.float32)
+
 
 def has_vector_index(table):
     return any(
@@ -353,13 +314,15 @@ def has_vector_index(table):
         for idx in table.list_indices()
     )
 
+
 def get_file_hash(filepath: str):
     hasher = blake3()
     hasher.update_mmap(filepath)
     return hasher.hexdigest()
 
 
-def load_musicnn(onnx_path: str="./msd-musicnn-1.onnx") -> ort.InferenceSession:
+def load_musicnn(
+        onnx_path: str = "./msd-musicnn-1.onnx") -> ort.InferenceSession:
 
     so = ort.SessionOptions()
     so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -377,7 +340,7 @@ def load_musicnn(onnx_path: str="./msd-musicnn-1.onnx") -> ort.InferenceSession:
         sess_options=so,
         providers=[
             "CPUExecutionProvider"
-            ]
+        ]
     )
 
     return session
@@ -421,11 +384,12 @@ def l2_normalize(v):
     return v / (np.linalg.norm(v) + 1e-10)
 
 
-def get_existing_embeddings(hashes: list[str], table: lancedb.table.Table) -> dict[str, dict]:
+def get_existing_embeddings(
+        hashes: list[str], table: lancedb.table.Table) -> dict[str, dict]:
     """Retourne un dict {hash: row} pour tous les hashes trouvés en base."""
     if not hashes:
         return {}
-    
+
     hash_list = ", ".join(f"'{h}'" for h in hashes)
     df = (
         table.search()
@@ -433,7 +397,7 @@ def get_existing_embeddings(hashes: list[str], table: lancedb.table.Table) -> di
         .limit(len(hashes))
         .to_pandas()
     )
-    
+
     return {row["file_hash"]: row for _, row in df.iterrows()}
 
 
@@ -473,7 +437,9 @@ def process_files_batch(
             row = existing[h]
             # Mise à jour chemin si besoin
             if row["file_path"] != path:
-                table.update(where=f"file_hash = '{h}'", values={"file_path": path})
+                table.update(
+                    where=f"file_hash = '{h}'", values={
+                        "file_path": path})
             results[path] = np.array(row["vector"], dtype=np.float32)
         else:
             # À calculer
@@ -492,7 +458,6 @@ def process_files_batch(
     if to_insert:
         table.add(to_insert)
 
-        
         if not has_vector_index(table) and len(table) >= 500:
             table.create_index(vector_column_name="vector", metric="cosine")
 
@@ -515,15 +480,12 @@ def audio_to_musicnn_batch(
         shape = (n_patches, 187, 96)
     """
 
-
     if not (0.0 <= patch_overlap < 1.0):
         raise ValueError(
             "patch_overlap must be in [0,1)"
         )
-    
 
     # MEL SPECTROGRAM
-    
 
     mel = librosa.feature.melspectrogram(
         y=audio,
@@ -534,20 +496,17 @@ def audio_to_musicnn_batch(
         power=2.0
     )
 
-    
     # LOG COMPRESSION
-    
 
     mel = librosa.power_to_db(
         mel,
         ref=1.0
     )
 
-    mel = np.clip((mel + 80.0) / 80.0, 0.0, 1.0 )  # Normalisation approximative entre 0 et 1
+    # Normalisation approximative entre 0 et 1
+    mel = np.clip((mel + 80.0) / 80.0, 0.0, 1.0)
 
-    
     # PATCH EXTRACTION
-    
 
     patches = []
 
@@ -598,18 +557,14 @@ def compute_embedding(
     if not file.is_file():
         return None
 
-    
     # LOAD AUDIO
-    
 
     audio = load_audio(
         path,
         sr=16000
     )
 
-    
     # GLOBAL RMS NORMALIZATION
-    
 
     target_rms = 0.1
 
@@ -621,17 +576,14 @@ def compute_embedding(
         audio = audio * (target_rms / global_rms)
 
         max_peak = np.max(np.abs(audio))
-    
+
         if max_peak > 0.95:
             audio = audio * (0.95 / max_peak)
-
 
         if audio is None or audio.size == 0:
             return None
 
-    
     # SEGMENTS REPRESENTATIFS
-    
 
     segments = extract_representative_batch(
         audio,
@@ -645,7 +597,6 @@ def compute_embedding(
     input_name = session.get_inputs()[0].name
     output_name = session.get_outputs()[1].name
 
-    
     # CHAQUE SEGMENT
     all_patches = []
     patch_counts = []
@@ -662,7 +613,6 @@ def compute_embedding(
         all_patches.append(patches)
         patch_counts.append(patches.shape[0])
 
-
     # CONCATENATION GLOBALE (pour éviter les appels multiples à ONNX Runtime)
     all_patches = np.concatenate(all_patches, axis=0)
 
@@ -671,8 +621,6 @@ def compute_embedding(
         [output_name],
         {input_name: all_patches}
     )[0]
-
-
 
     # moyenne des patches
     segment_embeddings = []
@@ -696,7 +644,6 @@ def compute_embedding(
 
         start = end
 
-    
     # MOYENNE GLOBALE
     final_embedding = np.mean(
         segment_embeddings,
@@ -708,8 +655,6 @@ def compute_embedding(
     )
 
 
-
-
 def mmr_ranking(
     query_vector: np.ndarray,
     candidates: list[dict],
@@ -717,62 +662,63 @@ def mmr_ranking(
 ) -> list[dict]:
     """
     Classe TOUS les candidats par ordre MMR (du meilleur au pire).
-    
+
     Args:
         query_vector: Vecteur moyen des likés
         candidates: Liste de dicts avec 'file_path' et 'vector'
         lambda_param: 0.7 = 70% pertinence, 30% diversité
-    
+
     Returns:
         Liste des candidats classés par MMR (tous les candidats, reordonnés)
     """
     if not candidates:
         return []
-    
+
     n = len(candidates)
-    
+
     # Convertir les vecteurs en matrice numpy
     candidate_vectors = np.stack([c["vector"] for c in candidates])
-    
+
     # Similarité cosinus avec le query (produit scalaire car L2-normalisé)
     query_sims = candidate_vectors @ query_vector  # shape: (n_candidates,)
-    
+
     # Matrice de similarité entre candidats
     sim_matrix = candidate_vectors @ candidate_vectors.T  # shape: (n, n)
     np.fill_diagonal(sim_matrix, -np.inf)  # s'auto-exclure
-    
+
     selected = []
     selected_indices = set()
     remaining = set(range(n))
-    
+
     # Itérativement : à chaque tour, choisir le meilleur MMR parmi les restants
     while remaining:
         best_mmr_score = -np.inf
         best_idx = None
-        
+
         for idx in remaining:
             # Pertinence : similitude avec le query
             relevance = query_sims[idx]
-            
+
             # Diversité : max similitude avec les déjà sélectionnés
             # Si c'est le premier, diversity = 0 (pas encore de sélectionnés)
             if selected_indices:
                 diversity = np.max(sim_matrix[idx, list(selected_indices)])
             else:
                 diversity = 0.0
-            
+
             # Score MMR
-            mmr_score = lambda_param * relevance - (1 - lambda_param) * diversity
-            
+            mmr_score = lambda_param * relevance - \
+                (1 - lambda_param) * diversity
+
             if mmr_score > best_mmr_score:
                 best_mmr_score = mmr_score
                 best_idx = idx
-        
+
         if best_idx is not None:
             selected.append(candidates[best_idx])
             selected_indices.add(best_idx)
             remaining.remove(best_idx)
-    
+
     return selected
 
 
@@ -785,28 +731,31 @@ def recommend_playlist(
     """
     Génère une playlist complète (tous les non-likés du dictionnaire)
     classée par MMR à partir du vecteur moyen des likés.
-    
+
     Args:
         path_dict: {chemin_fichier: is_liked (bool)}
         session: Session ONNX Runtime
         table: Table LanceDB
         lambda_mmr: Ratio MMR (0.7 = 70% pertinence, 30% diversité)
-    
+
     Returns:
         Liste des chemins des chansons recommandées (tous les non-likés, classés)
     """
 
-    # Traite tous les fichiers en batch pour récupérer ou calculer leurs vecteurs, et les stocker en base si besoin
-    all_vectors = process_files_batch(path_dict, session, table)  # {path: vector}
-    liked_vectors = [all_vectors[path] for path, liked in path_dict.items() if liked and path in all_vectors]
+    # Traite tous les fichiers en batch pour récupérer ou calculer leurs
+    # vecteurs, et les stocker en base si besoin
+    all_vectors = process_files_batch(
+        path_dict, session, table)  # {path: vector}
+    liked_vectors = [
+        all_vectors[path] for path,
+        liked in path_dict.items() if liked and path in all_vectors]
 
     if not liked_vectors:
         return []  # Pas de likés, pas de recommandations
-    
+
     # Calcule le vecteur moyen des likés
     mean_vector = l2_normalize(np.mean(np.stack(liked_vectors), axis=0))
 
-        
     # Construit la liste de tous les fichiers avec leurs vecteurs
     candidates = [
         {
@@ -815,17 +764,14 @@ def recommend_playlist(
         }
         for path in path_dict.keys()
     ]
-    
 
-    # Applique MMR pour classer TOUS les fichiers 
+    # Applique MMR pour classer TOUS les fichiers
     ranked = mmr_ranking(mean_vector, candidates, lambda_param=lambda_mmr)
-    
+
     # 6. Retourne les chemins dans l'ordre MMR
     playlist_paths = [c["file_path"] for c in ranked]
-    
+
     return playlist_paths
-
-
 
 
 def initialize_database(db_path: str) -> lancedb.table.Table:
@@ -836,10 +782,11 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
     # Crée la table "audio_embeddings" si elle n'existe pas, sinon l'ouvre
     if "audio_embeddings" not in db.list_tables():
         table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel)
-        table.create_scalar_index("file_hash")  # Index sur le hash pour accélérer les recherches
+        # Index sur le hash pour accélérer les recherches
+        table.create_scalar_index("file_hash")
     else:
         table = db.open_table("audio_embeddings")
-    
+
     # Retourne la table pour les opérations de lecture/écriture
     return table
 

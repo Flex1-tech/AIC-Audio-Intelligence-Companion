@@ -3,6 +3,7 @@ Design Tokens - Palette de couleurs Obsidian Horizon pour AIC.
 Inspirée par Linear, Obsidian et Raycast.
 """
 
+
 class ObsidianColors:
     # Arrière-plans & Surfaces
     BG_DARK = "#0F1117"             # Deep Obsidian

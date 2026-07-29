@@ -8,10 +8,12 @@ from ui.views.ai_metrics_view import AIMetricsView
 from ui.views.settings_view import SettingsView
 from core.state import app_state
 
+
 class MainLayout(ft.Column):
     """
     Layout principal Shell unifiant le Header, la Navigation Rails, le Workspace et la Bottom ActionBar.
     """
+
     def __init__(
         self,
         on_pick_files=None,
@@ -24,7 +26,9 @@ class MainLayout(ft.Column):
         on_theme_toggle=None,
     ):
         self.header_bar = HeaderBar(on_theme_toggle=on_theme_toggle)
-        self.sidebar = Sidebar(selected_index=0, on_change=self._on_navigation_change)
+        self.sidebar = Sidebar(
+            selected_index=0,
+            on_change=self._on_navigation_change)
 
         self.library_view = LibraryView(
             on_pick_files=on_pick_files,
@@ -71,7 +75,7 @@ class MainLayout(ft.Column):
             self.metrics_view.refresh_metrics()
         elif index == 2:
             self.workspace_container.content = self.settings_view
-        
+
         try:
             self.workspace_container.update()
         except RuntimeError:

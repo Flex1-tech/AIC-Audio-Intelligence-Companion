@@ -40,7 +40,9 @@ def main(page: ft.Page) -> None:
     def _show_toast(message: str, is_error: bool = False) -> None:
         """Affiche un SnackBar. Doit être appelé depuis le thread UI uniquement."""
         snack = ft.SnackBar(
-            content=ft.Text(message, color="#FFFFFF"),
+            content=ft.Text(
+                message,
+                color="#FFFFFF"),
             bgcolor=ObsidianColors.ERROR if is_error else ObsidianColors.PRIMARY,
             duration=4000,
         )
@@ -53,7 +55,8 @@ def main(page: ft.Page) -> None:
 
     # ── 5. Handlers d'événements UI (FilePicker — API async Flet v0.86+) ────
     # pick_files / get_directory_path sont des coroutines qui retournent le résultat
-    # directement via await. Tout le flux post-pick est donc async et séquentiel.
+    # directement via await. Tout le flux post-pick est donc async et
+    # séquentiel.
 
     async def handle_pick_files() -> None:
         layout.library_view.set_loading(True)
@@ -77,12 +80,14 @@ def main(page: ft.Page) -> None:
         def on_complete_files(valid_count: int, invalid_count: int) -> None:
             async def _finish() -> None:
                 layout.library_view.set_loading(False)
-                _show_toast(f"{valid_count} morceau(x) ajouté(s) ({invalid_count} ignoré(s))")
+                _show_toast(
+                    f"{valid_count} morceau(x) ajouté(s) ({invalid_count} ignoré(s))")
                 app_state.notify()
 
             page.run_task(_finish)
 
-        library_controller.import_files_async(file_paths, on_complete=on_complete_files)
+        library_controller.import_files_async(
+            file_paths, on_complete=on_complete_files)
 
     async def handle_pick_folder() -> None:
         layout.library_view.set_loading(True)
@@ -105,7 +110,8 @@ def main(page: ft.Page) -> None:
 
             page.run_task(_finish)
 
-        library_controller.import_folder_async(folder_path, on_complete=on_complete_folder)
+        library_controller.import_folder_async(
+            folder_path, on_complete=on_complete_folder)
 
     def handle_like_track(file_path: str) -> None:
         library_controller.toggle_like(file_path)
@@ -147,7 +153,8 @@ def main(page: ft.Page) -> None:
 
             page.run_task(_show_err)
 
-        rec_controller.run_recommendation_async(on_success=on_success, on_error=on_error)
+        rec_controller.run_recommendation_async(
+            on_success=on_success, on_error=on_error)
 
     def _launch_vlc() -> None:
         success, msg = rec_controller.launch_vlc()

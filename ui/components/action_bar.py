@@ -3,10 +3,12 @@ from ui.design_system.colors import ObsidianColors
 from ui.design_system.spacing import Radii, Spacing
 from core.state import app_state
 
+
 class ActionBar(ft.Container):
     """
     Barre de contrôle du bas (Sticky Bottom Bar) avec slider MMR et bouton de recommandation principal.
     """
+
     def __init__(self, on_start_recommendation=None, on_reset=None):
         self.on_start_recommendation = on_start_recommendation
         self.on_reset = on_reset
@@ -37,14 +39,26 @@ class ActionBar(ft.Container):
         )
 
         self.start_button = ft.FilledButton(
-            content=ft.Row([
-                ft.Icon(ft.Icons.AUTO_AWESOME, size=18, color=ObsidianColors.BG_DARK),
-                ft.Text("Générer la Playlist IA (MMR)", weight=ft.FontWeight.BOLD, color=ObsidianColors.BG_DARK),
-            ], spacing=8, alignment=ft.MainAxisAlignment.CENTER),
+            content=ft.Row(
+                [
+                    ft.Icon(
+                        ft.Icons.AUTO_AWESOME,
+                        size=18,
+                        color=ObsidianColors.BG_DARK),
+                    ft.Text(
+                        "Générer la Playlist IA (MMR)",
+                        weight=ft.FontWeight.BOLD,
+                        color=ObsidianColors.BG_DARK),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.CENTER),
             style=ft.ButtonStyle(
                 bgcolor=ObsidianColors.PRIMARY,
-                padding=ft.Padding.symmetric(horizontal=20, vertical=12),
-                shape=ft.RoundedRectangleBorder(radius=Radii.SM),
+                padding=ft.Padding.symmetric(
+                    horizontal=20,
+                    vertical=12),
+                shape=ft.RoundedRectangleBorder(
+                    radius=Radii.SM),
             ),
             disabled=True,
             on_click=self._handle_start,
@@ -56,9 +70,13 @@ class ActionBar(ft.Container):
                     # Gauche : Stats & Slider MMR
                     ft.Row([
                         self.status_text,
-                        ft.Container(width=1, height=20, bgcolor=ObsidianColors.BORDER_DARK),
+                        ft.Container(
+                            width=1, height=20, bgcolor=ObsidianColors.BORDER_DARK),
                         ft.Row([
-                            ft.Text("Balance MMR :", size=12, color=ObsidianColors.TEXT_MUTED),
+                            ft.Text(
+                                "Balance MMR :",
+                                size=12,
+                                color=ObsidianColors.TEXT_MUTED),
                             self.lambda_slider,
                             self.lambda_text,
                         ], spacing=6),
@@ -70,8 +88,10 @@ class ActionBar(ft.Container):
                             content="Réinitialiser",
                             style=ft.ButtonStyle(
                                 color=ObsidianColors.TEXT_SECONDARY,
-                                side=ft.BorderSide(1, ObsidianColors.BORDER_DARK),
-                                shape=ft.RoundedRectangleBorder(radius=Radii.SM),
+                                side=ft.BorderSide(
+                                    1, ObsidianColors.BORDER_DARK),
+                                shape=ft.RoundedRectangleBorder(
+                                    radius=Radii.SM),
                             ),
                             on_click=self._handle_reset,
                         ),
@@ -81,16 +101,19 @@ class ActionBar(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.Padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
+            padding=ft.Padding.symmetric(
+                horizontal=Spacing.LG, vertical=Spacing.MD),
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.only(top=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+            border=ft.Border.only(
+                top=ft.BorderSide(
+                    1, ObsidianColors.BORDER_DARK)),
         )
 
     def update_state(self):
         lib = app_state.library
         liked_cnt = lib.liked_tracks_count
         ready = lib.is_recommendation_ready
-        
+
         self.status_text.value = f"{lib.total_tracks_count} morceau(x) importé(s) | {liked_cnt}/3 Likés (Requis: 3)"
         if ready:
             self.status_text.color = ObsidianColors.SUCCESS

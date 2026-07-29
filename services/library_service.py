@@ -5,10 +5,12 @@ from services.audio_validation_service import AudioValidationService
 
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac"}
 
+
 class LibraryService:
     """
     Service gérant le balayage des dossiers et l'indexation de la bibliothèque.
     """
+
     def __init__(self, validation_service: AudioValidationService = None):
         self.validation_service = validation_service or AudioValidationService()
 
@@ -29,7 +31,8 @@ class LibraryService:
 
         return discovered_paths
 
-    def process_folder_import(self, folder_path: str) -> Tuple[List[Track], int]:
+    def process_folder_import(
+            self, folder_path: str) -> Tuple[List[Track], int]:
         """
         Scanne et valide un dossier complet.
         """
