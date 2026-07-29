@@ -2,7 +2,7 @@ import subprocess
 import time
 from typing import List, Tuple
 from extraction import recommend_playlist, make_m3u
-from func import find_vlc
+from utils.audio_utils import find_vlc
 from providers.musicnn_provider import MusicnnProvider
 from repositories.track_repository import TrackRepository
 from core.state import app_state

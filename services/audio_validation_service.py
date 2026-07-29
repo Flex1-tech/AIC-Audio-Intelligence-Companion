@@ -1,6 +1,6 @@
 import os
 from typing import List, Tuple
-from func import is_audio_file, is_valid_media
+from utils.audio_utils import is_audio_file, is_valid_media
 from domain.track import Track
 from repositories.track_repository import TrackRepository
 
