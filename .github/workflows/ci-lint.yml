@@ -20,18 +20,12 @@ name: "AIC — CI (Lint & Tests)"
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "**.py"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/ci-lint.yml"
-  pull_request:
-    branches: [dev]
-    paths:
-      - "**.py"
-      - "pyproject.toml"
-      - "uv.lock"
   workflow_dispatch:
 
 env:

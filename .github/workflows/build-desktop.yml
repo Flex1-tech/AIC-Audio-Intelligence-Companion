@@ -30,8 +30,6 @@ name: "AIC — Desktop Builds"
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [dev]
   workflow_dispatch:
 
 env:
