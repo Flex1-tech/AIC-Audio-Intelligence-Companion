@@ -1,0 +1,98 @@
+---
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AIC — Mise à jour du fichier uv.lock
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  POURQUOI CE WORKFLOW ?
+#  uv.lock garantit des builds CI reproductibles (versions exactes verrouillées).
+#  Il doit être committé dans le repo, mais ne nécessite PAS d'installer uv
+#  localement : ce workflow le génère directement depuis le runner CI.
+#
+#  QUAND L'EXÉCUTER ?
+#  ┌─ workflow_dispatch   → manuellement depuis l'onglet Actions (recommandé
+#  │                         après chaque modification de pyproject.toml)
+#  └─ push sur pyproject.toml → automatiquement si les dépendances changent
+#
+#  RÉSULTAT
+#  Un commit "chore: update uv.lock" est poussé sur la branche courante
+#  avec le fichier uv.lock mis à jour. Les workflows build-desktop.yml et
+#  ci-lint.yml utiliseront ensuite ce lock pour des builds reproductibles.
+#
+#  PERMISSIONS REQUISES
+#  Le GITHUB_TOKEN doit avoir le droit d'écriture sur le contenu du repo.
+#  Activez "Read and write permissions" dans :
+#  Settings → Actions → General → Workflow permissions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: "Update uv.lock"
+
+on:
+  # Déclenchement manuel depuis l'onglet Actions de GitHub
+  workflow_dispatch:
+
+  # Déclenchement automatique si les dépendances changent
+  push:
+    branches: [main]
+    paths:
+      - "pyproject.toml"
+
+env:
+  UV_PYTHON: "3.11"
+
+permissions:
+  # Nécessaire pour que le bot puisse pousser le commit uv.lock
+  contents: write
+
+jobs:
+  update-lock:
+    name: "Generate & commit uv.lock"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      # fetch-depth: 0 pour que git push fonctionne correctement
+      - name: "Checkout"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Utilise le token par défaut (GITHUB_TOKEN) avec droits write
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 2. uv ────────────────────────────────────────────────────────────────
+      - name: "Setup uv"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false   # Pas de cache ici : on veut résoudre le dernier état
+
+      # ── 3. Générer uv.lock ───────────────────────────────────────────────────
+      # `uv lock` lit pyproject.toml et génère/met à jour uv.lock avec les
+      # versions les plus récentes compatibles avec les contraintes déclarées.
+      # Il ne modifie pas l'environnement virtual (pas d'installation).
+      - name: "uv lock"
+        run: uv lock
+
+      # ── 4. Vérifier s'il y a des changements ────────────────────────────────
+      - name: "Check for changes"
+        id: check
+        run: |
+          if git diff --quiet uv.lock 2>/dev/null && git ls-files --error-unmatch uv.lock 2>/dev/null; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+      # ── 5. Commit & push ─────────────────────────────────────────────────────
+      # Ne committe que si uv.lock a changé (ou est créé pour la première fois).
+      - name: "Commit uv.lock"
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add uv.lock
+          git commit -m "chore: update uv.lock [skip ci]"
+          git push
+        shell: bash
+        # [skip ci] évite de déclencher une boucle infinie de builds

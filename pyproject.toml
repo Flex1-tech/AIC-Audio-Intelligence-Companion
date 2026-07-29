@@ -1,0 +1,64 @@
+# ── AIC — Audio Intelligence Companion ──────────────────────────────────────
+# Métadonnées du projet Python (PEP 621) et configuration Flet Build.
+# Référence : https://docs.flet.dev/publish
+#
+# Source de vérité unique pour le CI/CD (uv sync) ET flet build.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[project]
+name            = "aic-audio-intelligence-companion"
+version         = "2.0.0"
+description     = "AIC — Moteur de recommandation musicale 100% local propulsé par ONNX, LanceDB et Flet."
+readme          = "README.md"
+license         = { text = "MIT" }
+requires-python = ">=3.10"
+
+# ── Dépendances de production ────────────────────────────────────────────────
+# Embarquées dans l'exécutable final par `flet build`.
+# Installées par `uv sync` dans le CI.
+dependencies = [
+    "flet>=0.86.0",
+    "lancedb>=0.5.0",
+    "onnxruntime>=1.15.0",
+    "blake3>=0.3.0",
+    "fleep>=1.0.1",
+    "librosa>=0.10.0",
+    "numpy>=1.23.0,<2.0.0",
+    "scikit-learn>=1.2.0",
+    "pydantic>=2.0.0",
+]
+
+# ── Dépendances de développement / CI ───────────────────────────────────────
+# Installées par `uv sync --group dev` dans le workflow ci-lint.
+# Ne sont PAS embarquées dans le build desktop final.
+[dependency-groups]
+dev = [
+    "flake8>=7.0.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    # `flet[build]` inclut le CLI Flutter/Dart requis par `flet build`
+    "flet[build]>=0.86.0",
+]
+
+# ── Configuration uv ─────────────────────────────────────────────────────────
+[tool.uv]
+# uv.lock est committé dans le repo pour garantir des builds CI reproductibles.
+# `uv sync` résout les dépendances à partir du lock file.
+managed = true
+
+# ── Configuration Flet Build ─────────────────────────────────────────────────
+# https://docs.flet.dev/publish/pyproject-toml/
+
+[tool.flet]
+build_number = 1
+product      = "AIC — Audio Intelligence Companion"
+company      = "AIC Project"
+
+[tool.flet.app]
+# `flet build` cherche main.py à la racine du projet.
+path = "."
+
+# ── Assets embarqués ─────────────────────────────────────────────────────────
+# Le modèle ONNX (~3 MB) est embarqué dans l'artefact final.
+[tool.flet.app.bundle_files]
+"msd-musicnn-1.onnx" = "msd-musicnn-1.onnx"

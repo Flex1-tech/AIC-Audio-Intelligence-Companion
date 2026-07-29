@@ -1,0 +1,130 @@
+---
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AIC — CI : Lint + Import check + Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  OBJECTIF
+#  Vérification rapide (~3 min) avant les builds desktop (~35 min).
+#  Bloque les PR contenant des erreurs Python avant de consommer des minutes CI.
+#
+#  DÉCLENCHEURS
+#  Uniquement sur les changements de fichiers Python ou de dépendances
+#  (path filters) pour ne pas gaspiller des minutes CI sur les commits doc.
+#
+#  GESTIONNAIRE DE PAQUETS
+#  uv (astral-sh/setup-uv@v6) — même environnement que le workflow de build.
+#  `uv sync --group dev` installe flake8 + pytest déclarés dans pyproject.toml.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: "AIC — CI (Lint & Tests)"
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "**.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci-lint.yml"
+  workflow_dispatch:
+
+env:
+  PYTHONUTF8: 1
+  UV_PYTHON: "3.11"
+
+jobs:
+  lint-and-check:
+    name: "Lint & Import Check"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      # ── 2. uv ────────────────────────────────────────────────────────────────
+      - name: "Setup uv"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          # Invalide le cache si uv.lock OU pyproject.toml change
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+
+      # ── 3. Sync (dev group) ───────────────────────────────────────────────────
+      # `uv sync --group dev` installe flake8, pytest, pytest-cov déclarés dans
+      # [dependency-groups] dev de pyproject.toml. Pas besoin de flet[build]
+      # (Flutter/Dart) pour le lint — on n'exécute pas flet build ici.
+      - name: "uv sync (dev group)"
+        run: uv sync --group dev
+
+      # ── 4. Flake8 ────────────────────────────────────────────────────────────
+      # max-line-length 120 (cohérent avec la base de code AIC existante).
+      # Dossiers exclus : .venv, __pycache__, build, MusicRecommenderDB.
+      - name: "flake8 lint"
+        run: |
+          uv run flake8 . \
+            --exclude=.venv,__pycache__,.git,build,MusicRecommenderDB \
+            --max-line-length=120 \
+            --extend-ignore=E501,W503,E203 \
+            --statistics \
+            --count
+
+      # ── 5. Import check ───────────────────────────────────────────────────────
+      # Vérifie que les modules du projet s'importent sans exception.
+      # Détecte les dépendances manquantes et les fautes de frappe dans les imports.
+      - name: "Module import check"
+        run: |
+          uv run python - <<'EOF'
+          import sys
+
+          modules = [
+              "core.state",
+              "domain.track",
+              "domain.library",
+              "services.library_service",
+              "services.audio_validation_service",
+              "controllers.library_controller",
+              "controllers.recommendation_controller",
+              "ui.design_system.colors",
+              "ui.design_system.spacing",
+          ]
+
+          errors = []
+          for mod in modules:
+              try:
+                  __import__(mod)
+                  print(f"  OK {mod}")
+              except Exception as exc:
+                  errors.append(f"  ERR {mod}: {exc}")
+                  print(f"  ERR {mod}: {exc}", file=sys.stderr)
+
+          if errors:
+              print(
+                  f"\n{len(errors)} module(s) failed to import.",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          print(f"\nAll {len(modules)} modules imported successfully.")
+          EOF
+
+      # ── 6. Tests (pytest) ────────────────────────────────────────────────────
+      # S'exécute uniquement si un dossier tests/ ou des fichiers test_*.py
+      # existent dans le projet (hors .venv).
+      - name: "pytest (if tests exist)"
+        run: |
+          if find . -path ./.venv -prune -o \
+             \( -name "test_*.py" -o -name "*_test.py" \) \
+             -print -quit | grep -q .; then
+            uv run pytest --tb=short -q \
+              --ignore=.venv \
+              --ignore=build \
+              --ignore=MusicRecommenderDB
+          else
+            echo "No test files found — skipping pytest."
+          fi
+        shell: bash
