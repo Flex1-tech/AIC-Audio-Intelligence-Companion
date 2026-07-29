@@ -24,7 +24,7 @@
 #  Settings → Actions → General → Workflow permissions
 # ═══════════════════════════════════════════════════════════════════════════════
 
-name: "🔒 Update uv.lock"
+name: "Update uv.lock"
 
 on:
   # Déclenchement manuel depuis l'onglet Actions de GitHub
@@ -53,7 +53,7 @@ jobs:
 
       # ── 1. Checkout ──────────────────────────────────────────────────────────
       # fetch-depth: 0 pour que git push fonctionne correctement
-      - name: "📥 Checkout"
+      - name: "Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -61,7 +61,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # ── 2. uv ────────────────────────────────────────────────────────────────
-      - name: "⚡ Setup uv"
+      - name: "Setup uv"
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: false   # Pas de cache ici : on veut résoudre le dernier état
@@ -70,11 +70,11 @@ jobs:
       # `uv lock` lit pyproject.toml et génère/met à jour uv.lock avec les
       # versions les plus récentes compatibles avec les contraintes déclarées.
       # Il ne modifie pas l'environnement virtual (pas d'installation).
-      - name: "🔒 uv lock"
+      - name: "uv lock"
         run: uv lock
 
       # ── 4. Vérifier s'il y a des changements ────────────────────────────────
-      - name: "🔍 Check for changes"
+      - name: "Check for changes"
         id: check
         run: |
           if git diff --quiet uv.lock 2>/dev/null && git ls-files --error-unmatch uv.lock 2>/dev/null; then
@@ -86,7 +86,7 @@ jobs:
 
       # ── 5. Commit & push ─────────────────────────────────────────────────────
       # Ne committe que si uv.lock a changé (ou est créé pour la première fois).
-      - name: "📤 Commit uv.lock"
+      - name: "Commit uv.lock"
         if: steps.check.outputs.changed == 'true'
         run: |
           git config user.name  "github-actions[bot]"

@@ -6,7 +6,7 @@
 #
 #  DÉCLENCHEURS
 #  ┌─ push sur main          → build complet des 3 plateformes
-#  ├─ pull_request vers main → vérification avant merge
+#  ├─ pull_request vers dev  → vérification avant merge sur dev
 #  └─ workflow_dispatch      → déclenchement manuel
 #
 #  GESTIONNAIRE DE PAQUETS
@@ -25,13 +25,13 @@
 #  6. Timeout de 45 min par job pour éviter les runners bloqués.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-name: "🔨 AIC — Desktop Builds"
+name: "AIC — Desktop Builds"
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [dev]
   workflow_dispatch:
 
 env:
@@ -69,7 +69,7 @@ jobs:
     steps:
 
       # ── 1. Checkout ──────────────────────────────────────────────────────────
-      - name: "📥 Checkout"
+      - name: "Checkout"
         uses: actions/checkout@v4
 
       # ── 2. uv ────────────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ jobs:
       # cache-dependency-glob : clé invalidée si uv.lock OU pyproject.toml change.
       # Si uv.lock n'existe pas encore (premier push), uv résout depuis pyproject.toml
       # et le workflow lock-update.yml doit être lancé pour le générer et le committer.
-      - name: "⚡ Setup uv"
+      - name: "Setup uv"
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -87,7 +87,7 @@ jobs:
 
       # ── 3. Dépendances système Linux ─────────────────────────────────────────
       # GTK3 + GStreamer + Clang/Ninja requis par Flutter sur ubuntu-22.04.
-      - name: "🐧 Linux system dependencies"
+      - name: "Linux system dependencies"
         if: matrix.needs_linux_deps
         run: |
           sudo apt-get update -qq
@@ -116,19 +116,19 @@ jobs:
       # ── 4. Sync dépendances ───────────────────────────────────────────────────
       # `uv sync` lit pyproject.toml + uv.lock et installe exactement les versions
       # verrouillées. Le groupe "dev" inclut flet[build] (CLI Flutter/Dart).
-      - name: "📦 uv sync (with dev group)"
+      - name: "uv sync (with dev group)"
         run: uv sync --group dev
         shell: bash
 
       # ── 5. Vérification flet CLI ─────────────────────────────────────────────
-      - name: "🔍 flet --version"
+      - name: "flet --version"
         run: uv run flet --version
         shell: bash
 
       # ── 6. Build ─────────────────────────────────────────────────────────────
       # `uv run flet build <platform>` exécute flet dans l'env uv.
       # Flutter SDK est téléchargé automatiquement par flet[build] au premier run.
-      - name: "🔨 flet build ${{ matrix.platform }}"
+      - name: "flet build ${{ matrix.platform }}"
         run: |
           uv run flet build ${{ matrix.platform }} \
             --verbose \
@@ -140,7 +140,7 @@ jobs:
       # ── 7. Upload artifact ───────────────────────────────────────────────────
       # Nom : aic-<platform>-<sha court> pour traçabilité.
       # Rétention 30 jours (économie vs défaut 90 jours GitHub).
-      - name: "📤 Upload ${{ matrix.platform }} artifact"
+      - name: "Upload ${{ matrix.platform }} artifact"
         uses: actions/upload-artifact@v4
         with:
           name: "aic-${{ matrix.platform }}-${{ github.sha }}"

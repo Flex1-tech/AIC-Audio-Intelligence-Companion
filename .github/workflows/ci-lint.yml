@@ -16,7 +16,7 @@
 #  `uv sync --group dev` installe flake8 + pytest déclarés dans pyproject.toml.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-name: "✅ AIC — CI (Lint & Tests)"
+name: "AIC — CI (Lint & Tests)"
 
 on:
   push:
@@ -27,7 +27,7 @@ on:
       - "uv.lock"
       - ".github/workflows/ci-lint.yml"
   pull_request:
-    branches: [main]
+    branches: [dev]
     paths:
       - "**.py"
       - "pyproject.toml"
@@ -47,11 +47,11 @@ jobs:
     steps:
 
       # ── 1. Checkout ──────────────────────────────────────────────────────────
-      - name: "📥 Checkout"
+      - name: "Checkout"
         uses: actions/checkout@v4
 
       # ── 2. uv ────────────────────────────────────────────────────────────────
-      - name: "⚡ Setup uv"
+      - name: "Setup uv"
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -64,13 +64,13 @@ jobs:
       # `uv sync --group dev` installe flake8, pytest, pytest-cov déclarés dans
       # [dependency-groups] dev de pyproject.toml. Pas besoin de flet[build]
       # (Flutter/Dart) pour le lint — on n'exécute pas flet build ici.
-      - name: "📦 uv sync (dev group)"
+      - name: "uv sync (dev group)"
         run: uv sync --group dev
 
       # ── 4. Flake8 ────────────────────────────────────────────────────────────
       # max-line-length 120 (cohérent avec la base de code AIC existante).
       # Dossiers exclus : .venv, __pycache__, build, MusicRecommenderDB.
-      - name: "🔎 flake8 lint"
+      - name: "flake8 lint"
         run: |
           uv run flake8 . \
             --exclude=.venv,__pycache__,.git,build,MusicRecommenderDB \
@@ -82,7 +82,7 @@ jobs:
       # ── 5. Import check ───────────────────────────────────────────────────────
       # Vérifie que les modules du projet s'importent sans exception.
       # Détecte les dépendances manquantes et les fautes de frappe dans les imports.
-      - name: "🧪 Module import check"
+      - name: "Module import check"
         run: |
           uv run python - <<'EOF'
           import sys
@@ -103,10 +103,10 @@ jobs:
           for mod in modules:
               try:
                   __import__(mod)
-                  print(f"  ✓ {mod}")
+                  print(f"  OK {mod}")
               except Exception as exc:
-                  errors.append(f"  ✗ {mod}: {exc}")
-                  print(f"  ✗ {mod}: {exc}", file=sys.stderr)
+                  errors.append(f"  ERR {mod}: {exc}")
+                  print(f"  ERR {mod}: {exc}", file=sys.stderr)
 
           if errors:
               print(
@@ -121,7 +121,7 @@ jobs:
       # ── 6. Tests (pytest) ────────────────────────────────────────────────────
       # S'exécute uniquement si un dossier tests/ ou des fichiers test_*.py
       # existent dans le projet (hors .venv).
-      - name: "🧬 pytest (if tests exist)"
+      - name: "pytest (if tests exist)"
         run: |
           if find . -path ./.venv -prune -o \
              \( -name "test_*.py" -o -name "*_test.py" \) \
