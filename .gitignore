@@ -1,13 +1,30 @@
+# ── Environnements virtuels ───────────────────────────────────────────────────
 .venv/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
 .vscode/
+
+# ── Python cache ─────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-j
+
+# ── Données locales (non versionnées) ────────────────────────────────────────
 MusicRecommenderDB/
 playlist.m3u8
+
+# ── Scripts temporaires ───────────────────────────────────────────────────────
 eval.py
 test.py
 convert.py
 temp.py
+
+# ── Artefacts de build Flet/Flutter ──────────────────────────────────────────
+build/
+.flutter/
+*.flutter-plugins
+*.flutter-plugins-dependencies
+
+# ── uv.lock est intentionnellement versionné (builds CI reproductibles) ───────
+# Ne pas ajouter uv.lock ici.

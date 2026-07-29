@@ -1,0 +1,149 @@
+---
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AIC — Desktop Builds (Windows · Linux · macOS)
+#  Référence Flet 0.86 : https://docs.flet.dev/publish
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  DÉCLENCHEURS
+#  ┌─ push sur main          → build complet des 3 plateformes
+#  ├─ pull_request vers main → vérification avant merge
+#  └─ workflow_dispatch      → déclenchement manuel
+#
+#  GESTIONNAIRE DE PAQUETS
+#  uv (astral-sh/setup-uv@v6) — source de vérité : pyproject.toml + uv.lock
+#  • `uv sync`         installe les dépendances de production verrouillées
+#  • `uv run flet ...` exécute flet dans l'environnement géré par uv
+#  Avantage : builds reproductibles garantis par uv.lock committé dans le repo.
+#
+#  ADAPTATIONS PAR RAPPORT AU TEMPLATE
+#  1. Seules les plateformes desktop (Windows, Linux, macOS) sont conservées.
+#     AIC est une app audio locale — mobile/web ne sont pas pertinents.
+#  2. `uv sync` remplace `pip install -r requirements.txt`.
+#  3. `uv run flet build` préfixe toutes les commandes flet.
+#  4. `actions/upload-artifact@v4` (v5 n'existe pas en stable).
+#  5. `macos-13` (Intel) au lieu de `macos-latest` (ARM/M1) pour stabilité.
+#  6. Timeout de 45 min par job pour éviter les runners bloqués.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: "🔨 AIC — Desktop Builds"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PYTHONUTF8: 1              # Encodage UTF-8 forcé
+  FLET_CLI_NO_RICH_OUTPUT: 1 # Logs bruts sans ANSI dans la CI
+  UV_PYTHON: "3.11"          # Version Python gérée par uv
+
+jobs:
+  build:
+    name: "Build · ${{ matrix.platform }}"
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+
+          # ── Windows ────────────────────────────────────────────────────────
+          - platform: windows
+            runner: windows-latest
+            artifact_path: build/windows
+
+          # ── Linux ──────────────────────────────────────────────────────────
+          - platform: linux
+            runner: ubuntu-22.04
+            artifact_path: build/linux
+            needs_linux_deps: true
+
+          # ── macOS ──────────────────────────────────────────────────────────
+          - platform: macos
+            runner: macos-13
+            artifact_path: build/macos
+
+    steps:
+
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: "📥 Checkout"
+        uses: actions/checkout@v4
+
+      # ── 2. uv ────────────────────────────────────────────────────────────────
+      # setup-uv gère son propre cache (~/.cache/uv) via enable-cache.
+      # cache-dependency-glob : clé invalidée si uv.lock OU pyproject.toml change.
+      # Si uv.lock n'existe pas encore (premier push), uv résout depuis pyproject.toml
+      # et le workflow lock-update.yml doit être lancé pour le générer et le committer.
+      - name: "⚡ Setup uv"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+
+      # ── 3. Dépendances système Linux ─────────────────────────────────────────
+      # GTK3 + GStreamer + Clang/Ninja requis par Flutter sur ubuntu-22.04.
+      - name: "🐧 Linux system dependencies"
+        if: matrix.needs_linux_deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build \
+            libgtk-3-dev libasound2-dev \
+            libmpv-dev mpv \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
+            libgstreamer-plugins-bad1.0-dev \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly \
+            gstreamer1.0-libav \
+            gstreamer1.0-tools \
+            gstreamer1.0-x gstreamer1.0-alsa \
+            gstreamer1.0-gl gstreamer1.0-gtk3 \
+            gstreamer1.0-pulseaudio \
+            pkg-config libsecret-1-dev \
+            curl git unzip xz-utils zip
+          sudo apt-get clean
+          rm -rf /var/lib/apt/lists/*
+        shell: bash
+
+      # ── 4. Sync dépendances ───────────────────────────────────────────────────
+      # `uv sync` lit pyproject.toml + uv.lock et installe exactement les versions
+      # verrouillées. Le groupe "dev" inclut flet[build] (CLI Flutter/Dart).
+      - name: "📦 uv sync (with dev group)"
+        run: uv sync --group dev
+        shell: bash
+
+      # ── 5. Vérification flet CLI ─────────────────────────────────────────────
+      - name: "🔍 flet --version"
+        run: uv run flet --version
+        shell: bash
+
+      # ── 6. Build ─────────────────────────────────────────────────────────────
+      # `uv run flet build <platform>` exécute flet dans l'env uv.
+      # Flutter SDK est téléchargé automatiquement par flet[build] au premier run.
+      - name: "🔨 flet build ${{ matrix.platform }}"
+        run: |
+          uv run flet build ${{ matrix.platform }} \
+            --verbose \
+            --no-rich-output
+        shell: bash
+        env:
+          FLET_APP_NAME: "AIC"
+
+      # ── 7. Upload artifact ───────────────────────────────────────────────────
+      # Nom : aic-<platform>-<sha court> pour traçabilité.
+      # Rétention 30 jours (économie vs défaut 90 jours GitHub).
+      - name: "📤 Upload ${{ matrix.platform }} artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "aic-${{ matrix.platform }}-${{ github.sha }}"
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+          retention-days: 30

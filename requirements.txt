@@ -1,11 +1,30 @@
-flet>=0.22.0
+# ── AIC — Audio Intelligence Companion ──────────────────────────────────────
+# Dépendances Python exactes pour les builds reproductibles.
+# Versions vérifiées avec Flet 0.86.0 sur Python 3.10/3.11/3.12.
+# Pour la CI/CD : pip install -r requirements.txt
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Interface graphique
+flet>=0.86.0
+
+# Base vectorielle locale
 lancedb>=0.5.0
+
+# Inférence ONNX (MusiCNN 16kHz)
 onnxruntime>=1.15.0
+
+# Hachage rapide des fichiers audio (BLAKE3)
 blake3>=0.3.0
+
+# Détection de format audio
 fleep>=1.0.1
+
+# Traitement audio et extraction de features
 librosa>=0.10.0
-numpy>=1.23.0
+numpy>=1.23.0,<2.0.0
+
+# Algorithme MMR (Maximal Marginal Relevance)
 scikit-learn>=1.2.0
+
+# Validation des modèles de domaine
 pydantic>=2.0.0
-customtkinter>=5.2.0
-Pillow>=9.5.0
