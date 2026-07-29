@@ -10,7 +10,10 @@ class TrackEmbeddingModel(LanceModel):
     Chaque instance représente une piste audio avec son embedding et ses métadonnées associées. 
     """
     # Identifiant unique de la piste
-    file_hash: str = Field(primary_key=True, description="Blake3 hash du fichier audio, utilisé comme identifiant unique")
+    file_hash: str = Field(
+        json_schema_extra={"primary_key": True},
+        description="Blake3 hash du fichier audio, utilisé comme identifiant unique"
+    )
 
     # Métadonnées générales
     file_name: str

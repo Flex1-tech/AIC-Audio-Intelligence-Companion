@@ -834,7 +834,7 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
     db = lancedb.connect(db_path)
 
     # Crée la table "audio_embeddings" si elle n'existe pas, sinon l'ouvre
-    if "audio_embeddings" not in db.table_names():
+    if "audio_embeddings" not in db.list_tables():
         table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel)
         table.create_scalar_index("file_hash")  # Index sur le hash pour accélérer les recherches
     else:
