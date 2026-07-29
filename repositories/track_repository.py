@@ -26,8 +26,7 @@ class TrackRepository:
         except Exception:
             return 0
 
-    def find_existing_hashes(
-            self, hashes: List[str]) -> Dict[str, Dict[str, Any]]:
+    def find_existing_hashes(self, hashes: List[str]) -> Dict[str, Dict[str, Any]]:
         """Retourne les entrées DB sous forme {hash: row_dict}."""
         if not hashes:
             return {}

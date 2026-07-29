@@ -13,8 +13,7 @@ class AudioValidationService:
     def __init__(self, repository: TrackRepository = None):
         self.repository = repository or TrackRepository()
 
-    def validate_file_paths(
-            self, file_paths: List[str]) -> Tuple[List[Track], int]:
+    def validate_file_paths(self, file_paths: List[str]) -> Tuple[List[Track], int]:
         """
         Valide une liste de chemins de fichiers et retourne les objets Track valides
         ainsi que le nombre de fichiers ignorés.
@@ -35,7 +34,7 @@ class AudioValidationService:
                         file_path=path,
                         file_size_bytes=st.st_size,
                         file_hash=track_hash,
-                        is_valid=True
+                        is_valid=True,
                     )
                     valid_tracks.append(track)
                 else:

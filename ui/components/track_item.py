@@ -17,7 +17,11 @@ class TrackItem(ft.Container):
         # Heart Icon Button
         self.like_button = ft.IconButton(
             icon=ft.Icons.FAVORITE if track.is_liked else ft.Icons.FAVORITE_BORDER,
-            icon_color=ObsidianColors.HEART_RED if track.is_liked else ObsidianColors.TEXT_MUTED,
+            icon_color=(
+                ObsidianColors.HEART_RED
+                if track.is_liked
+                else ObsidianColors.TEXT_MUTED
+            ),
             icon_size=20,
             tooltip="Liker ce morceau" if not track.is_liked else "Morceau liké",
             on_click=self._handle_like,
@@ -29,10 +33,9 @@ class TrackItem(ft.Container):
                 track.audio_format or "AUDIO",
                 size=10,
                 weight=ft.FontWeight.BOLD,
-                color=ObsidianColors.TEXT_SECONDARY),
-            padding=ft.Padding.symmetric(
-                horizontal=6,
-                vertical=2),
+                color=ObsidianColors.TEXT_SECONDARY,
+            ),
+            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
             border_radius=Radii.SM,
             bgcolor=ObsidianColors.SURFACE_ELEVATED,
         )
@@ -43,10 +46,9 @@ class TrackItem(ft.Container):
                 track.short_hash,
                 size=10,
                 font_family="monospace",
-                color=ObsidianColors.TEXT_MUTED),
-            padding=ft.Padding.symmetric(
-                horizontal=6,
-                vertical=2),
+                color=ObsidianColors.TEXT_MUTED,
+            ),
+            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
             border_radius=Radii.SM,
             bgcolor=ObsidianColors.SURFACE_ELEVATED,
         )
@@ -55,49 +57,76 @@ class TrackItem(ft.Container):
             content=ft.Row(
                 [
                     # Gauche : Icône + Nom + Métadonnées
-                    ft.Row([
-                        ft.Icon(
-                            ft.Icons.MUSIC_NOTE,
-                            size=20,
-                            color=ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.TEXT_SECONDARY),
-                        ft.Column([
-                            ft.Text(
-                                track.file_name,
-                                size=14,
-                                weight=ft.FontWeight.W_500,
-                                color=ObsidianColors.TEXT_PRIMARY,
-                                overflow=ft.TextOverflow.ELLIPSIS,
-                                max_lines=1),
-                            ft.Row([
-                                format_badge,
-                                ft.Text(track.formatted_size, size=11,
-                                        color=ObsidianColors.TEXT_MUTED),
-                                hash_badge,
-                            ], spacing=8),
-                        ], spacing=2, expand=True),
-                    ], spacing=12, expand=True),
-
+                    ft.Row(
+                        [
+                            ft.Icon(
+                                ft.Icons.MUSIC_NOTE,
+                                size=20,
+                                color=(
+                                    ObsidianColors.PRIMARY
+                                    if track.is_liked
+                                    else ObsidianColors.TEXT_SECONDARY
+                                ),
+                            ),
+                            ft.Column(
+                                [
+                                    ft.Text(
+                                        track.file_name,
+                                        size=14,
+                                        weight=ft.FontWeight.W_500,
+                                        color=ObsidianColors.TEXT_PRIMARY,
+                                        overflow=ft.TextOverflow.ELLIPSIS,
+                                        max_lines=1,
+                                    ),
+                                    ft.Row(
+                                        [
+                                            format_badge,
+                                            ft.Text(
+                                                track.formatted_size,
+                                                size=11,
+                                                color=ObsidianColors.TEXT_MUTED,
+                                            ),
+                                            hash_badge,
+                                        ],
+                                        spacing=8,
+                                    ),
+                                ],
+                                spacing=2,
+                                expand=True,
+                            ),
+                        ],
+                        spacing=12,
+                        expand=True,
+                    ),
                     # Droite : Actions (Like & Delete)
-                    ft.Row([
-                        self.like_button,
-                        ft.IconButton(
-                            icon=ft.Icons.DELETE_OUTLINED,
-                            icon_color=ObsidianColors.TEXT_MUTED,
-                            icon_size=18,
-                            tooltip="Retirer de la liste",
-                            on_click=self._handle_delete,
-                        ),
-                    ], spacing=4),
+                    ft.Row(
+                        [
+                            self.like_button,
+                            ft.IconButton(
+                                icon=ft.Icons.DELETE_OUTLINED,
+                                icon_color=ObsidianColors.TEXT_MUTED,
+                                icon_size=18,
+                                tooltip="Retirer de la liste",
+                                on_click=self._handle_delete,
+                            ),
+                        ],
+                        spacing=4,
+                    ),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.Padding.symmetric(
-                horizontal=Spacing.MD, vertical=Spacing.SM),
+            padding=ft.Padding.symmetric(horizontal=Spacing.MD, vertical=Spacing.SM),
             border_radius=Radii.MD,
             bgcolor=ObsidianColors.SURFACE_DARK,
             border=ft.Border.all(
-                1, ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.BORDER_DARK),
+                1,
+                (
+                    ObsidianColors.PRIMARY
+                    if track.is_liked
+                    else ObsidianColors.BORDER_DARK
+                ),
+            ),
         )
 
     def _handle_like(self, e):

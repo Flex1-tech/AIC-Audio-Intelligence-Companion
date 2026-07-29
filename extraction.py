@@ -90,21 +90,13 @@ def extract_representative_batch(
 
         padding = min_required - len(audio)
 
-        audio = np.pad(
-            audio,
-            (0, padding),
-            mode="reflect"
-        )
+        audio = np.pad(audio, (0, padding), mode="reflect")
 
     # SEGMENTATION AVEC OVERLAP
 
     segments = []
 
-    for start in range(
-        0,
-        len(audio) - samples_per_segment + 1,
-        hop_size
-    ):
+    for start in range(0, len(audio) - samples_per_segment + 1, hop_size):
 
         end = start + samples_per_segment
 
@@ -119,16 +111,14 @@ def extract_representative_batch(
     if len(segments) == 0:
 
         padded = np.pad(
-            audio,
-            (0, max(0, samples_per_segment - len(audio))),
-            mode="reflect"
+            audio, (0, max(0, samples_per_segment - len(audio))), mode="reflect"
         )
 
         return padded[:samples_per_segment][None, :]
 
     # FILTRAGE DES SEGMENTS TROP SILENCIEUX
 
-    rms_values = np.sqrt(np.mean(segments ** 2, axis=1))
+    rms_values = np.sqrt(np.mean(segments**2, axis=1))
 
     max_rms = np.max(rms_values)
 
@@ -155,42 +145,19 @@ def extract_representative_batch(
 
         # STFT unique
 
-        stft = np.abs(
-            librosa.stft(
-                segment,
-                n_fft=1024,
-                hop_length=512
-            )
-        )
+        stft = np.abs(librosa.stft(segment, n_fft=1024, hop_length=512))
 
         # Spectral Flux
 
-        spectral_flux = np.mean(
-            np.sqrt(
-                np.sum(
-                    np.diff(stft, axis=1) ** 2,
-                    axis=0
-                )
-            )
-        )
+        spectral_flux = np.mean(np.sqrt(np.sum(np.diff(stft, axis=1) ** 2, axis=0)))
 
         # MFCC
 
-        mel_spec = librosa.feature.melspectrogram(
-            S=stft**2,
-            sr=sr,
-            n_mels=40
-        )
+        mel_spec = librosa.feature.melspectrogram(S=stft**2, sr=sr, n_mels=40)
 
-        log_mel = librosa.power_to_db(
-            mel_spec,
-            ref=np.max
-        )
+        log_mel = librosa.power_to_db(mel_spec, ref=np.max)
 
-        mfcc = librosa.feature.mfcc(
-            S=log_mel,
-            n_mfcc=6
-        )
+        mfcc = librosa.feature.mfcc(S=log_mel, n_mfcc=6)
 
         mfcc_1 = np.mean(mfcc[0])
         mfcc_3 = np.mean(mfcc[2])
@@ -198,20 +165,13 @@ def extract_representative_batch(
 
         # Chroma (ajout important)
 
-        chroma = librosa.feature.chroma_stft(
-            S=stft,
-            sr=sr
-        )
+        chroma = librosa.feature.chroma_stft(S=stft, sr=sr)
 
         chroma_mean = np.mean(chroma)
 
         # Zero Crossing Rate
 
-        zcr = np.mean(
-            librosa.feature.zero_crossing_rate(
-                segment
-            )
-        )
+        zcr = np.mean(librosa.feature.zero_crossing_rate(segment))
 
         # Feature Vector
 
@@ -275,10 +235,7 @@ def extract_representative_batch(
 
         centroid = centroids[cluster_id]
 
-        distances = np.linalg.norm(
-            cluster_features - centroid,
-            axis=1
-        )
+        distances = np.linalg.norm(cluster_features - centroid, axis=1)
 
         best_local_index = np.argmin(distances)
 
@@ -321,8 +278,7 @@ def get_file_hash(filepath: str):
     return hasher.hexdigest()
 
 
-def load_musicnn(
-        onnx_path: str = "./msd-musicnn-1.onnx") -> ort.InferenceSession:
+def load_musicnn(onnx_path: str = "./msd-musicnn-1.onnx") -> ort.InferenceSession:
 
     so = ort.SessionOptions()
     so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -336,11 +292,7 @@ def load_musicnn(
     so.enable_cpu_mem_arena = True
 
     session = ort.InferenceSession(
-        onnx_path,
-        sess_options=so,
-        providers=[
-            "CPUExecutionProvider"
-        ]
+        onnx_path, sess_options=so, providers=["CPUExecutionProvider"]
     )
 
     return session
@@ -351,28 +303,28 @@ def load_audio(path: str, sr: int = 16000) -> np.ndarray:
     cmd = [
         "ffmpeg",
         "-nostdin",
-        "-loglevel", "error",
-        "-i", path,
+        "-loglevel",
+        "error",
+        "-i",
+        path,
         "-vn",
-        "-ac", "1",
-        "-ar", str(sr),
-        "-f", "f32le",
-        "-acodec", "pcm_f32le",
-        "-"
+        "-ac",
+        "1",
+        "-ar",
+        str(sr),
+        "-f",
+        "f32le",
+        "-acodec",
+        "pcm_f32le",
+        "-",
     ]
 
     try:
         result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=True
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
         )
 
-        audio = np.frombuffer(
-            result.stdout,
-            dtype=np.float32
-        )
+        audio = np.frombuffer(result.stdout, dtype=np.float32)
 
         return audio
 
@@ -385,7 +337,8 @@ def l2_normalize(v):
 
 
 def get_existing_embeddings(
-        hashes: list[str], table: lancedb.table.Table) -> dict[str, dict]:
+    hashes: list[str], table: lancedb.table.Table
+) -> dict[str, dict]:
     """Retourne un dict {hash: row} pour tous les hashes trouvés en base."""
     if not hashes:
         return {}
@@ -402,9 +355,7 @@ def get_existing_embeddings(
 
 
 def process_files_batch(
-    path_dict: dict,
-    session: ort.InferenceSession,
-    table: lancedb.table.Table
+    path_dict: dict, session: ort.InferenceSession, table: lancedb.table.Table
 ) -> dict[str, np.ndarray]:
     """
     Traite tous les fichiers en batch :
@@ -418,17 +369,14 @@ def process_files_batch(
         f = Path(path)
         if not f.is_file():
             continue
-        file_metas[path] = {
-            "hash": get_file_hash(path),
-            "file": f
-        }
+        file_metas[path] = {"hash": get_file_hash(path), "file": f}
 
     # 2. Une seule requête pour tout ce qui est déjà en base
     all_hashes = [m["hash"] for m in file_metas.values()]
     existing = get_existing_embeddings(all_hashes, table)  # {hash: row}
 
     # 3. Sépare connus / inconnus
-    results = {}     # {path: vector}
+    results = {}  # {path: vector}
     to_insert = []
 
     for path, meta in file_metas.items():
@@ -437,22 +385,22 @@ def process_files_batch(
             row = existing[h]
             # Mise à jour chemin si besoin
             if row["file_path"] != path:
-                table.update(
-                    where=f"file_hash = '{h}'", values={
-                        "file_path": path})
+                table.update(where=f"file_hash = '{h}'", values={"file_path": path})
             results[path] = np.array(row["vector"], dtype=np.float32)
         else:
             # À calculer
             vector = compute_embedding(path, session)
             if vector is not None:
                 results[path] = vector
-                to_insert.append({
-                    "file_name": meta["file"].name,
-                    "file_path": path,
-                    "file_hash": h,
-                    "file_size_bytes": meta["file"].stat().st_size,
-                    "vector": vector,
-                })
+                to_insert.append(
+                    {
+                        "file_name": meta["file"].name,
+                        "file_path": path,
+                        "file_hash": h,
+                        "file_size_bytes": meta["file"].stat().st_size,
+                        "vector": vector,
+                    }
+                )
 
     # 4. Un seul insert pour tous les nouveaux
     if to_insert:
@@ -471,7 +419,7 @@ def audio_to_musicnn_batch(
     hop_length: int = 256,
     n_mels: int = 96,
     patch_size: int = 187,
-    patch_overlap: float = 0.5
+    patch_overlap: float = 0.5,
 ) -> np.ndarray:
     """
     Convertit un segment audio en batch MusiCNN.
@@ -481,27 +429,17 @@ def audio_to_musicnn_batch(
     """
 
     if not (0.0 <= patch_overlap < 1.0):
-        raise ValueError(
-            "patch_overlap must be in [0,1)"
-        )
+        raise ValueError("patch_overlap must be in [0,1)")
 
     # MEL SPECTROGRAM
 
     mel = librosa.feature.melspectrogram(
-        y=audio,
-        sr=sr,
-        n_fft=n_fft,
-        hop_length=hop_length,
-        n_mels=n_mels,
-        power=2.0
+        y=audio, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels, power=2.0
     )
 
     # LOG COMPRESSION
 
-    mel = librosa.power_to_db(
-        mel,
-        ref=1.0
-    )
+    mel = librosa.power_to_db(mel, ref=1.0)
 
     # Normalisation approximative entre 0 et 1
     mel = np.clip((mel + 80.0) / 80.0, 0.0, 1.0)
@@ -516,22 +454,14 @@ def audio_to_musicnn_batch(
 
         padding = patch_size - total_frames
 
-        mel = np.pad(
-            mel,
-            ((0, 0), (0, padding)),
-            mode="constant"
-        )
+        mel = np.pad(mel, ((0, 0), (0, padding)), mode="constant")
 
         total_frames = mel.shape[1]
 
     patch_hop = max(1, int(patch_size * (1.0 - patch_overlap)))
-    for start in range(
-        0,
-        total_frames - patch_size + 1,
-        patch_hop
-    ):
+    for start in range(0, total_frames - patch_size + 1, patch_hop):
 
-        patch = mel[:, start:start + patch_size]
+        patch = mel[:, start : start + patch_size]
 
         # IMPORTANT
         # (96,187) -> (187,96)
@@ -539,18 +469,12 @@ def audio_to_musicnn_batch(
 
         patches.append(patch)
 
-    patches = np.array(
-        patches,
-        dtype=np.float32
-    )
+    patches = np.array(patches, dtype=np.float32)
 
     return patches
 
 
-def compute_embedding(
-    path: str,
-    session: ort.InferenceSession
-) -> Optional[np.ndarray]:
+def compute_embedding(path: str, session: ort.InferenceSession) -> Optional[np.ndarray]:
 
     file = Path(path)
 
@@ -559,18 +483,13 @@ def compute_embedding(
 
     # LOAD AUDIO
 
-    audio = load_audio(
-        path,
-        sr=16000
-    )
+    audio = load_audio(path, sr=16000)
 
     # GLOBAL RMS NORMALIZATION
 
     target_rms = 0.1
 
-    global_rms = np.sqrt(
-        np.mean(audio ** 2)
-    )
+    global_rms = np.sqrt(np.mean(audio**2))
 
     if global_rms > 1e-8:
         audio = audio * (target_rms / global_rms)
@@ -585,11 +504,7 @@ def compute_embedding(
 
     # SEGMENTS REPRESENTATIFS
 
-    segments = extract_representative_batch(
-        audio,
-        sr=16000,
-        segment_duration=10
-    )
+    segments = extract_representative_batch(audio, sr=16000, segment_duration=10)
 
     if segments is None:
         return None
@@ -604,10 +519,7 @@ def compute_embedding(
     for segment in segments:
 
         # audio -> musicnn patches
-        patches = audio_to_musicnn_batch(
-            segment,
-            sr=16000
-        )
+        patches = audio_to_musicnn_batch(segment, sr=16000)
 
         # Stockage pour batch ONNX global
         all_patches.append(patches)
@@ -617,10 +529,7 @@ def compute_embedding(
     all_patches = np.concatenate(all_patches, axis=0)
 
     # ONNX
-    all_outputs = session.run(
-        [output_name],
-        {input_name: all_patches}
-    )[0]
+    all_outputs = session.run([output_name], {input_name: all_patches})[0]
 
     # moyenne des patches
     segment_embeddings = []
@@ -633,26 +542,16 @@ def compute_embedding(
 
         segment_outputs = all_outputs[start:end]
 
-        segment_embedding = np.mean(
-            segment_outputs,
-            axis=0
-        )
+        segment_embedding = np.mean(segment_outputs, axis=0)
 
-        segment_embeddings.append(
-            segment_embedding
-        )
+        segment_embeddings.append(segment_embedding)
 
         start = end
 
     # MOYENNE GLOBALE
-    final_embedding = np.mean(
-        segment_embeddings,
-        axis=0
-    )
+    final_embedding = np.mean(segment_embeddings, axis=0)
 
-    return l2_normalize(
-        final_embedding.astype(np.float32)
-    )
+    return l2_normalize(final_embedding.astype(np.float32))
 
 
 def mmr_ranking(
@@ -707,8 +606,7 @@ def mmr_ranking(
                 diversity = 0.0
 
             # Score MMR
-            mmr_score = lambda_param * relevance - \
-                (1 - lambda_param) * diversity
+            mmr_score = lambda_param * relevance - (1 - lambda_param) * diversity
 
             if mmr_score > best_mmr_score:
                 best_mmr_score = mmr_score
@@ -744,11 +642,12 @@ def recommend_playlist(
 
     # Traite tous les fichiers en batch pour récupérer ou calculer leurs
     # vecteurs, et les stocker en base si besoin
-    all_vectors = process_files_batch(
-        path_dict, session, table)  # {path: vector}
+    all_vectors = process_files_batch(path_dict, session, table)  # {path: vector}
     liked_vectors = [
-        all_vectors[path] for path,
-        liked in path_dict.items() if liked and path in all_vectors]
+        all_vectors[path]
+        for path, liked in path_dict.items()
+        if liked and path in all_vectors
+    ]
 
     if not liked_vectors:
         return []  # Pas de likés, pas de recommandations
@@ -758,11 +657,7 @@ def recommend_playlist(
 
     # Construit la liste de tous les fichiers avec leurs vecteurs
     candidates = [
-        {
-            "file_path": path,
-            "vector": all_vectors[path]
-        }
-        for path in path_dict.keys()
+        {"file_path": path, "vector": all_vectors[path]} for path in path_dict.keys()
     ]
 
     # Applique MMR pour classer TOUS les fichiers

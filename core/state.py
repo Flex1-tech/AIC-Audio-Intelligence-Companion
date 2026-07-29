@@ -42,13 +42,17 @@ class AppState:
             except Exception as e:
                 print(f"[AppState] Erreur notification listener: {e}")
 
-    def log_action(self, action_type: str, description: str,
-                   metadata: Optional[Dict[str, Any]] = None) -> None:
+    def log_action(
+        self,
+        action_type: str,
+        description: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
         log = ActionLog(
             action_type=action_type,
             description=description,
             timestamp=time.time(),
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
         self.action_history.append(log)
         self.notify()

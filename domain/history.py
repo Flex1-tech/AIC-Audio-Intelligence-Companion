@@ -8,6 +8,7 @@ class ActionLog:
     """
     Représente une action historisée dans AIC pour le journal et l'Undo/Redo.
     """
+
     action_type: str  # ex: "IMPORT_FILES", "LIKE_TRACK", "RESET_LIBRARY", "GENERATE_RECOMMENDATION"
     description: str
     timestamp: float = field(default_factory=time.time)

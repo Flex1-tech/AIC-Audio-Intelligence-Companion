@@ -13,8 +13,9 @@ class PlaylistService:
     Service de recommandation MMR, génération de playlists .m3u8 et exécution de VLC.
     """
 
-    def __init__(self, provider: MusicnnProvider = None,
-                 repository: TrackRepository = None):
+    def __init__(
+        self, provider: MusicnnProvider = None, repository: TrackRepository = None
+    ):
         self.provider = provider or MusicnnProvider()
         self.repository = repository or TrackRepository()
 
@@ -36,10 +37,7 @@ class PlaylistService:
         # Exécution de recommend_playlist (qui calcule aussi
         # process_files_batch)
         recommended_paths = recommend_playlist(
-            path_dict=path_dict,
-            session=session,
-            table=table,
-            lambda_mmr=lambda_mmr
+            path_dict=path_dict, session=session, table=table, lambda_mmr=lambda_mmr
         )
 
         duration_ms = (time.time() - start_time) * 1000.0
@@ -55,28 +53,31 @@ class PlaylistService:
 
         app_state.log_action(
             "RECOMMENDATION_SUCCESS",
-            f"Playlist générée ({len(recommended_paths)} morceaux en {duration_ms:.0f}ms)")
+            f"Playlist générée ({len(recommended_paths)} morceaux en {duration_ms:.0f}ms)",
+        )
         return recommended_paths
 
     def export_m3u8(
-            self,
-            playlist_paths: List[str],
-            output_path: str = "playlist.m3u8") -> str:
+        self, playlist_paths: List[str], output_path: str = "playlist.m3u8"
+    ) -> str:
         make_m3u(playlist_paths, output_path)
         app_state.session.last_generated_playlist_path = output_path
         app_state.notify()
         return output_path
 
-    def launch_vlc(
-            self, playlist_path: str = "playlist.m3u8") -> Tuple[bool, str]:
+    def launch_vlc(self, playlist_path: str = "playlist.m3u8") -> Tuple[bool, str]:
         vlc_path = app_state.session.vlc_custom_path or find_vlc()
         if not vlc_path:
-            return False, "VLC est introuvable. Veuillez l'installer ou préciser son chemin."
+            return (
+                False,
+                "VLC est introuvable. Veuillez l'installer ou préciser son chemin.",
+            )
 
         try:
             subprocess.Popen([vlc_path, playlist_path])
-            app_state.log_action("VLC_LAUNCHED",
-                                 f"VLC lancé avec la playlist {playlist_path}")
+            app_state.log_action(
+                "VLC_LAUNCHED", f"VLC lancé avec la playlist {playlist_path}"
+            )
             return True, "VLC lancé avec succès !"
         except Exception as e:
             return False, f"Erreur lors du lancement de VLC : {e}"

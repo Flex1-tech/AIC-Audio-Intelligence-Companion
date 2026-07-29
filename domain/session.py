@@ -7,6 +7,7 @@ class SessionState:
     """
     Entité représentant l'état persistant d'une session utilisateur AIC.
     """
+
     active_nav_index: int = 0
     search_query: str = ""
     filter_liked_only: bool = False

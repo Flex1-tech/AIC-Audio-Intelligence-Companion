@@ -14,6 +14,7 @@ Fonctions disponibles :
     - run_ffprobe(cmd, timeout)  → subprocess.CompletedProcess
     - find_vlc()                 → str | None
 """
+
 import sys
 import subprocess
 import platform
@@ -63,11 +64,14 @@ def run_ffprobe(cmd, timeout=5):
 def is_valid_media(filepath):
     """Retourne True si ffprobe valide le fichier comme média lisible."""
     try:
-        result = run_ffprobe([
-            "ffprobe",
-            "-v", "error",
-            filepath,
-        ])
+        result = run_ffprobe(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                filepath,
+            ]
+        )
         return result.returncode == 0
     except subprocess.SubprocessError:
         return False
@@ -87,10 +91,12 @@ def find_vlc():
     if system == "Windows":
         possible_paths = []
         for drive in "CDEFGHIJKLMNOPQRSTUVWXYZ":
-            possible_paths.extend([
-                Path(f"{drive}:/Program Files/VideoLAN/VLC/vlc.exe"),
-                Path(f"{drive}:/Program Files (x86)/VideoLAN/VLC/vlc.exe"),
-            ])
+            possible_paths.extend(
+                [
+                    Path(f"{drive}:/Program Files/VideoLAN/VLC/vlc.exe"),
+                    Path(f"{drive}:/Program Files (x86)/VideoLAN/VLC/vlc.exe"),
+                ]
+            )
         for path in possible_paths:
             if path.exists():
                 return str(path)

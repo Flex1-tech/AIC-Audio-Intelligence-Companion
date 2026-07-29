@@ -81,8 +81,16 @@ class ResultDialog(ft.AlertDialog):
                 ft.FilledButton(
                     content=ft.Row(
                         [
-                            ft.Icon(ft.Icons.PLAY_ARROW_ROUNDED, size=18, color=ObsidianColors.BG_DARK),
-                            ft.Text("Lancer dans VLC", weight=ft.FontWeight.BOLD, color=ObsidianColors.BG_DARK),
+                            ft.Icon(
+                                ft.Icons.PLAY_ARROW_ROUNDED,
+                                size=18,
+                                color=ObsidianColors.BG_DARK,
+                            ),
+                            ft.Text(
+                                "Lancer dans VLC",
+                                weight=ft.FontWeight.BOLD,
+                                color=ObsidianColors.BG_DARK,
+                            ),
                         ],
                         spacing=6,
                     ),

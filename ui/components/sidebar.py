@@ -41,10 +41,7 @@ class Sidebar(ft.Container):
         super().__init__(
             content=self.rail,
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.only(
-                right=ft.BorderSide(
-                    1,
-                    ObsidianColors.BORDER_DARK)),
+            border=ft.Border.only(right=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
         )
 
     def _on_nav_change(self, e):

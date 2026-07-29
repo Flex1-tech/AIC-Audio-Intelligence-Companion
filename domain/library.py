@@ -9,10 +9,10 @@ class MusicLibrary:
     Entité représentant la bibliothèque musicale gérée par AIC.
     Gère les dossiers sources, les pistes indexées et les métriques globales.
     """
+
     name: str = "Ma Bibliothèque Principale"
     folder_paths: List[str] = field(default_factory=list)
-    tracks: Dict[str, Track] = field(
-        default_factory=dict)  # {file_path: Track}
+    tracks: Dict[str, Track] = field(default_factory=dict)  # {file_path: Track}
     last_scanned_timestamp: float = 0.0
 
     @property

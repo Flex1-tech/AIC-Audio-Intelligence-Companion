@@ -13,7 +13,7 @@ class Spacing:
 
 
 class Radii:
-    SM = 6      # Petits boutons, chips
-    MD = 10     # Cartes d'items, champs de saisie
-    LG = 14     # Zone d'import, grands conteneurs
+    SM = 6  # Petits boutons, chips
+    MD = 10  # Cartes d'items, champs de saisie
+    LG = 14  # Zone d'import, grands conteneurs
     FULL = 9999  # Pills et boutons ronds

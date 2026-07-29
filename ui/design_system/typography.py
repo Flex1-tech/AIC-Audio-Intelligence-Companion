@@ -1,6 +1,7 @@
 """
 Design Tokens - Hiérarchie typographique pour AIC.
 """
+
 from dataclasses import dataclass
 
 

@@ -42,23 +42,21 @@ class ActionBar(ft.Container):
             content=ft.Row(
                 [
                     ft.Icon(
-                        ft.Icons.AUTO_AWESOME,
-                        size=18,
-                        color=ObsidianColors.BG_DARK),
+                        ft.Icons.AUTO_AWESOME, size=18, color=ObsidianColors.BG_DARK
+                    ),
                     ft.Text(
                         "Générer la Playlist IA (MMR)",
                         weight=ft.FontWeight.BOLD,
-                        color=ObsidianColors.BG_DARK),
+                        color=ObsidianColors.BG_DARK,
+                    ),
                 ],
                 spacing=8,
-                alignment=ft.MainAxisAlignment.CENTER),
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
             style=ft.ButtonStyle(
                 bgcolor=ObsidianColors.PRIMARY,
-                padding=ft.Padding.symmetric(
-                    horizontal=20,
-                    vertical=12),
-                shape=ft.RoundedRectangleBorder(
-                    radius=Radii.SM),
+                padding=ft.Padding.symmetric(horizontal=20, vertical=12),
+                shape=ft.RoundedRectangleBorder(radius=Radii.SM),
             ),
             disabled=True,
             on_click=self._handle_start,
@@ -68,45 +66,51 @@ class ActionBar(ft.Container):
             content=ft.Row(
                 [
                     # Gauche : Stats & Slider MMR
-                    ft.Row([
-                        self.status_text,
-                        ft.Container(
-                            width=1, height=20, bgcolor=ObsidianColors.BORDER_DARK),
-                        ft.Row([
-                            ft.Text(
-                                "Balance MMR :",
-                                size=12,
-                                color=ObsidianColors.TEXT_MUTED),
-                            self.lambda_slider,
-                            self.lambda_text,
-                        ], spacing=6),
-                    ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-
-                    # Droite : Actions (Reset & Start)
-                    ft.Row([
-                        ft.OutlinedButton(
-                            content="Réinitialiser",
-                            style=ft.ButtonStyle(
-                                color=ObsidianColors.TEXT_SECONDARY,
-                                side=ft.BorderSide(
-                                    1, ObsidianColors.BORDER_DARK),
-                                shape=ft.RoundedRectangleBorder(
-                                    radius=Radii.SM),
+                    ft.Row(
+                        [
+                            self.status_text,
+                            ft.Container(
+                                width=1, height=20, bgcolor=ObsidianColors.BORDER_DARK
                             ),
-                            on_click=self._handle_reset,
-                        ),
-                        self.start_button,
-                    ], spacing=12),
+                            ft.Row(
+                                [
+                                    ft.Text(
+                                        "Balance MMR :",
+                                        size=12,
+                                        color=ObsidianColors.TEXT_MUTED,
+                                    ),
+                                    self.lambda_slider,
+                                    self.lambda_text,
+                                ],
+                                spacing=6,
+                            ),
+                        ],
+                        spacing=16,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    # Droite : Actions (Reset & Start)
+                    ft.Row(
+                        [
+                            ft.OutlinedButton(
+                                content="Réinitialiser",
+                                style=ft.ButtonStyle(
+                                    color=ObsidianColors.TEXT_SECONDARY,
+                                    side=ft.BorderSide(1, ObsidianColors.BORDER_DARK),
+                                    shape=ft.RoundedRectangleBorder(radius=Radii.SM),
+                                ),
+                                on_click=self._handle_reset,
+                            ),
+                            self.start_button,
+                        ],
+                        spacing=12,
+                    ),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.Padding.symmetric(
-                horizontal=Spacing.LG, vertical=Spacing.MD),
+            padding=ft.Padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
             bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.only(
-                top=ft.BorderSide(
-                    1, ObsidianColors.BORDER_DARK)),
+            border=ft.Border.only(top=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
         )
 
     def update_state(self):

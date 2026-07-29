@@ -26,9 +26,7 @@ class MainLayout(ft.Column):
         on_theme_toggle=None,
     ):
         self.header_bar = HeaderBar(on_theme_toggle=on_theme_toggle)
-        self.sidebar = Sidebar(
-            selected_index=0,
-            on_change=self._on_navigation_change)
+        self.sidebar = Sidebar(selected_index=0, on_change=self._on_navigation_change)
 
         self.library_view = LibraryView(
             on_pick_files=on_pick_files,
@@ -55,10 +53,14 @@ class MainLayout(ft.Column):
         super().__init__(
             controls=[
                 self.header_bar,
-                ft.Row([
-                    self.sidebar,
-                    self.workspace_container,
-                ], expand=True, spacing=0),
+                ft.Row(
+                    [
+                        self.sidebar,
+                        self.workspace_container,
+                    ],
+                    expand=True,
+                    spacing=0,
+                ),
                 self.action_bar,
             ],
             spacing=0,

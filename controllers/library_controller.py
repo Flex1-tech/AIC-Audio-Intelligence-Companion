@@ -17,13 +17,14 @@ class LibraryController:
     ):
         self.validation_service = validation_service or AudioValidationService()
         self.library_service = library_service or LibraryService(
-            self.validation_service)
+            self.validation_service
+        )
 
-    def import_files_async(self,
-                           file_paths: List[str],
-                           on_complete: Optional[Callable[[int,
-                                                           int],
-                                                          None]] = None) -> None:
+    def import_files_async(
+        self,
+        file_paths: List[str],
+        on_complete: Optional[Callable[[int, int], None]] = None,
+    ) -> None:
         """
         Valide et importe des fichiers audio dans un thread séparé non-bloquant.
         """
@@ -36,7 +37,8 @@ class LibraryController:
 
         def _worker():
             valid_tracks, invalid_count = self.validation_service.validate_file_paths(
-                file_paths)
+                file_paths
+            )
 
             for track in valid_tracks:
                 if track.file_path not in app_state.library.tracks:
@@ -48,7 +50,7 @@ class LibraryController:
             app_state.log_action(
                 "IMPORT_FILES",
                 f"{len(valid_tracks)} morceaux importés ({invalid_count} ignorés)",
-                {"imported": len(valid_tracks), "ignored": invalid_count}
+                {"imported": len(valid_tracks), "ignored": invalid_count},
             )
 
             if on_complete:
@@ -56,8 +58,9 @@ class LibraryController:
 
         threading.Thread(target=_worker, daemon=True).start()
 
-    def import_folder_async(self, folder_path: str, on_complete: Optional[Callable[[
-                            int, int], None]] = None) -> None:
+    def import_folder_async(
+        self, folder_path: str, on_complete: Optional[Callable[[int, int], None]] = None
+    ) -> None:
         """
         Scanne récursivement un dossier musical et importe ses fichiers audio de manière asynchrone.
         """
@@ -70,7 +73,8 @@ class LibraryController:
 
         def _worker():
             valid_tracks, invalid_count = self.library_service.process_folder_import(
-                folder_path)
+                folder_path
+            )
 
             for track in valid_tracks:
                 if track.file_path not in app_state.library.tracks:
@@ -85,7 +89,7 @@ class LibraryController:
             app_state.log_action(
                 "IMPORT_FOLDER",
                 f"Dossier importé : {folder_path} ({len(valid_tracks)} morceaux trouvés)",
-                {"folder": folder_path, "imported": len(valid_tracks)}
+                {"folder": folder_path, "imported": len(valid_tracks)},
             )
 
             if on_complete:
@@ -99,16 +103,14 @@ class LibraryController:
             track.is_liked = not track.is_liked
             app_state.log_action(
                 "TOGGLE_LIKE",
-                f"{'Liké' if track.is_liked else 'Unliké'} : {track.file_name}"
+                f"{'Liké' if track.is_liked else 'Unliké'} : {track.file_name}",
             )
             app_state.notify()
 
     def remove_track(self, file_path: str) -> None:
         if file_path in app_state.library.tracks:
             track = app_state.library.tracks.pop(file_path)
-            app_state.log_action(
-                "REMOVE_TRACK",
-                f"Morceau retiré : {track.file_name}")
+            app_state.log_action("REMOVE_TRACK", f"Morceau retiré : {track.file_name}")
             app_state.notify()
 
     def reset_library(self) -> None:

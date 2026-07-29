@@ -30,10 +30,7 @@ class LibraryView(ft.Container):
         self._btn_files = ft.FilledButton(
             content=ft.Row(
                 [
-                    ft.Icon(
-                        ft.Icons.AUDIO_FILE,
-                        size=16,
-                        color=ObsidianColors.BG_DARK),
+                    ft.Icon(ft.Icons.AUDIO_FILE, size=16, color=ObsidianColors.BG_DARK),
                     ft.Text(
                         "Parcourir Fichiers",
                         size=12,
@@ -43,32 +40,28 @@ class LibraryView(ft.Container):
                 ],
                 spacing=6,
             ),
-            style=ft.ButtonStyle(
-                bgcolor=ObsidianColors.PRIMARY),
-            on_click=lambda e: e.page.run_task(
-                self.on_pick_files) if self.on_pick_files else None,
+            style=ft.ButtonStyle(bgcolor=ObsidianColors.PRIMARY),
+            on_click=lambda e: (
+                e.page.run_task(self.on_pick_files) if self.on_pick_files else None
+            ),
         )
 
         self._btn_folder = ft.OutlinedButton(
             content=ft.Row(
                 [
                     ft.Icon(
-                        ft.Icons.FOLDER_OPEN,
-                        size=16,
-                        color=ObsidianColors.TEXT_PRIMARY),
+                        ft.Icons.FOLDER_OPEN, size=16, color=ObsidianColors.TEXT_PRIMARY
+                    ),
                     ft.Text(
-                        "Scanner un Dossier",
-                        size=12,
-                        color=ObsidianColors.TEXT_PRIMARY),
+                        "Scanner un Dossier", size=12, color=ObsidianColors.TEXT_PRIMARY
+                    ),
                 ],
                 spacing=6,
             ),
-            style=ft.ButtonStyle(
-                side=ft.BorderSide(
-                    1,
-                    ObsidianColors.BORDER_DARK)),
-            on_click=lambda e: e.page.run_task(
-                self.on_pick_folder) if self.on_pick_folder else None,
+            style=ft.ButtonStyle(side=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+            on_click=lambda e: (
+                e.page.run_task(self.on_pick_folder) if self.on_pick_folder else None
+            ),
         )
 
         # ── Indicateur de chargement ─────────────────────────────────────────
@@ -142,13 +135,8 @@ class LibraryView(ft.Container):
         )
 
         self.filter_chip = ft.Chip(
-            label=ft.Text(
-                "Likés uniquement",
-                size=12),
-            leading=ft.Icon(
-                ft.Icons.FAVORITE,
-                size=14,
-                color=ObsidianColors.HEART_RED),
+            label=ft.Text("Likés uniquement", size=12),
+            leading=ft.Icon(ft.Icons.FAVORITE, size=14, color=ObsidianColors.HEART_RED),
             selected=app_state.session.filter_liked_only,
             on_select=self._handle_filter_toggle,
         )

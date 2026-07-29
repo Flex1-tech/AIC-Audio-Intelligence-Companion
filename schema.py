@@ -7,10 +7,11 @@ class TrackEmbeddingModel(LanceModel):
     Modèle de données pour stocker les embeddings des pistes audio dans LanceDB.
     Chaque instance représente une piste audio avec son embedding et ses métadonnées associées.
     """
+
     # Identifiant unique de la piste
     file_hash: str = Field(
         json_schema_extra={"primary_key": True},
-        description="Blake3 hash du fichier audio, utilisé comme identifiant unique"
+        description="Blake3 hash du fichier audio, utilisé comme identifiant unique",
     )
 
     # Métadonnées générales
@@ -20,4 +21,5 @@ class TrackEmbeddingModel(LanceModel):
 
     # Embedding de la piste
     vector: Vector(200) = Field(
-        description="Embedding audio de dimenson 200")  # type: ignore
+        description="Embedding audio de dimenson 200"
+    )  # type: ignore

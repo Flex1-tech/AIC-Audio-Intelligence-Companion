@@ -31,8 +31,7 @@ class LibraryService:
 
         return discovered_paths
 
-    def process_folder_import(
-            self, folder_path: str) -> Tuple[List[Track], int]:
+    def process_folder_import(self, folder_path: str) -> Tuple[List[Track], int]:
         """
         Scanne et valide un dossier complet.
         """

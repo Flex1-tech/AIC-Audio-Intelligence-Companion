@@ -9,6 +9,7 @@ class Track:
     Entité du Domaine représentant une piste audio dans AIC.
     Contient les métadonnées de la piste, son hash BLAKE3 et son état d'interaction.
     """
+
     file_path: str
     file_name: str = ""
     file_hash: Optional[str] = None
