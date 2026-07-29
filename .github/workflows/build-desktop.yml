@@ -93,6 +93,7 @@ jobs:
             clang cmake ninja-build \
             libgtk-3-dev libasound2-dev \
             libmpv-dev mpv \
+            libunwind-dev \
             libgstreamer1.0-dev \
             libgstreamer-plugins-base1.0-dev \
             libgstreamer-plugins-bad1.0-dev \
@@ -129,6 +130,7 @@ jobs:
       - name: "flet build ${{ matrix.platform }}"
         run: |
           uv run flet build ${{ matrix.platform }} \
+            --yes \
             --verbose \
             --no-rich-output
         shell: bash
