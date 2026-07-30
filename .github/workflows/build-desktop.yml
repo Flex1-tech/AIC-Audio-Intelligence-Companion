@@ -63,6 +63,7 @@ jobs:
           - platform: macos
             runner: macos-latest
             artifact_path: build/macos
+            extra_args: "--arch arm64"
 
     steps:
 
@@ -130,6 +131,7 @@ jobs:
       - name: "flet build ${{ matrix.platform }}"
         run: |
           uv run flet build ${{ matrix.platform }} \
+            ${{ matrix.extra_args }} \
             --yes \
             --verbose \
             --no-rich-output
