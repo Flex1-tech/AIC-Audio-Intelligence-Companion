@@ -5,9 +5,9 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 #
 #  DÉCLENCHEURS
-#  ┌─ push sur main          → build complet des 3 plateformes
-#  ├─ pull_request vers dev  → vérification avant merge sur dev
-#  └─ workflow_dispatch      → déclenchement manuel
+#  ┌─ push sur main            → build complet des 3 plateformes
+#  ├─ push d'un tag v*         → build + GitHub Release automatique
+#  └─ workflow_dispatch        → déclenchement manuel
 #
 #  GESTIONNAIRE DE PAQUETS
 #  uv (astral-sh/setup-uv@v6) — source de vérité : pyproject.toml + uv.lock
@@ -21,7 +21,7 @@
 #  2. `uv sync` remplace `pip install -r requirements.txt`.
 #  3. `uv run flet build` préfixe toutes les commandes flet.
 #  4. `actions/upload-artifact@v4` (v5 n'existe pas en stable).
-#  5. `macos-13` (Intel) au lieu de `macos-latest` (ARM/M1) pour stabilité.
+#  5. `macos-latest` (ARM/M1) + `--arch arm64` pour compatibilité onnxruntime.
 #  6. Timeout de 45 min par job pour éviter les runners bloqués.
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -29,7 +29,10 @@ name: "AIC — Desktop Builds"
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+    tags:
+      - "v*"
   workflow_dispatch:
 
 env:
@@ -149,3 +152,38 @@ jobs:
           path: ${{ matrix.artifact_path }}
           if-no-files-found: error
           retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job Release — uniquement sur push d'un tag v*
+  # Dépend du job build (matrice windows + linux + macos).
+  # Télécharge les 3 artifacts, puis crée une GitHub Release avec les binaires.
+  # ─────────────────────────────────────────────────────────────────────────────
+  release:
+    name: "GitHub Release"
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+
+      # ── 1. Téléchargement de tous les artifacts du workflow courant ───────────
+      # Le pattern "aic-*" cible les 3 artifacts : aic-windows-*, aic-linux-*, aic-macos-*
+      # Chaque artifact est extrait dans dist/<nom-artifact>/ pour éviter les conflits.
+      - name: "Download all build artifacts"
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "aic-*"
+          path: dist/
+          merge-multiple: false
+
+      # ── 2. GitHub Release ────────────────────────────────────────────────────
+      # softprops/action-gh-release@v2 crée la Release pour le tag courant.
+      # generate_release_notes: true génère automatiquement les notes depuis les commits.
+      # files: attache tous les fichiers de dist/ à la Release.
+      - name: "Create GitHub Release"
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/**/*

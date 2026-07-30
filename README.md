@@ -116,5 +116,28 @@ Les exécutables générés se trouvent dans le dossier `build/`.
 Le projet utilise **`uv`** (d'Astral) comme gestionnaire ultra-rapide dans les workflows CI/CD :
 
 - **CI Lint & Tests** (`ci-lint.yml`) : Déclenché automatiquement sur chaque `push` sur les branches `main` et `dev`.
-- **Desktop Builds** (`build-desktop.yml`) : Compile automatiquement les versions Windows, Linux et macOS sur chaque `push` vers `main`.
+- **Desktop Builds** (`build-desktop.yml`) : Compile automatiquement les versions Windows, Linux et macOS sur chaque `push` vers `main` ou sur un **tag `v*`**.
+- **GitHub Release** (`build-desktop.yml`) : Lors d'un push de tag `v*`, un job `release` se lance automatiquement à la fin des 3 builds, télécharge les artifacts et crée une **GitHub Release** avec les binaires attachés.
 - **Mise à jour du lockfile** (`lock-update.yml`) : Maintient le fichier `uv.lock` synchronisé sans nécessiter d'installation locale de `uv`.
+
+---
+
+## Releases
+
+Les exécutables Windows, Linux et macOS sont construits et publiés automatiquement à chaque nouvelle version.
+
+### Créer une nouvelle version
+
+```bash
+# Créer et pousser un tag sémantique (SemVer recommandé)
+git tag v1.0.0
+git push --tags
+```
+
+Dès que le tag est poussé :
+
+1. GitHub Actions déclenche automatiquement les 3 builds (Windows, Linux, macOS).
+2. Une fois les builds terminés, le job `release` crée automatiquement une **GitHub Release** avec les notes de version générées depuis les commits.
+3. Les exécutables sont attachés à la Release et téléchargeables depuis :
+
+**[Releases — Flex1-tech/Local\_Recommendation\_Engine](https://github.com/Flex1-tech/Local_Recommendation_Engine/releases)**
