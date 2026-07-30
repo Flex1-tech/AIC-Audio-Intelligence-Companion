@@ -38,6 +38,61 @@ https://github.com/Flex1-tech/Local_Recommendation_Engine/releases
 
 ---
 
+## Lancer l'application depuis les binaires téléchargés
+
+Les binaires publiés sont prêts à être exécutés et ne nécessitent pas l'installation de Python.
+
+| Plateforme | Archive | Exécutable |
+|----------------------|------------------------------|------------|
+| Windows (x64) | `AIC-<version>-Windows-x64.zip` | `AIC.exe` |
+| Linux (x64) | `AIC-<version>-Linux-x64.zip` | `AIC` |
+| macOS (Apple Silicon) | `AIC-<version>-macOS-arm64.zip` | `AIC.app` |
+
+Téléchargez l'archive correspondant à votre plateforme depuis la [dernière Release](https://github.com/Flex1-tech/Local_Recommendation_Engine/releases/latest).
+
+### Windows
+
+1. Télécharger l'archive `AIC-<version>-Windows-x64.zip` depuis la page [Releases](https://github.com/Flex1-tech/Local_Recommendation_Engine/releases/latest).
+2. Extraire l'archive ZIP.
+3. Ouvrir le dossier extrait.
+4. Double-cliquer sur `AIC.exe`.
+
+> [!NOTE]
+> **Windows Defender / SmartScreen** : Il est normal qu'un avertissement apparaisse pour une application distribuée sans certificat de signature. Pour continuer, cliquez sur **Informations complémentaires** puis sur **Exécuter quand même**.
+> Lors du premier lancement, Windows ou votre antivirus peut analyser l'application. Attendez simplement que cette analyse soit terminée.
+
+### Linux
+
+1. Télécharger l'archive `AIC-<version>-Linux-x64.zip` depuis la page [Releases](https://github.com/Flex1-tech/Local_Recommendation_Engine/releases/latest).
+2. Extraire l'archive.
+3. Si nécessaire, attribuer les permissions d'exécution :
+   ```bash
+   chmod +x AIC
+   ```
+4. Lancer l'application :
+   ```bash
+   ./AIC
+   ```
+   *(Un double-clic sur le binaire `AIC` fonctionne également selon votre environnement de bureau).*
+
+> [!NOTE]
+> Les binaires Linux ont été construits sur Ubuntu 22.04 et requièrent GTK 3 (`libgtk-3-0`) ainsi que `mpv` pour la lecture audio. Ces paquets sont généralement disponibles dans les gestionnaires de paquets des distributions courantes.
+
+### macOS
+
+> [!IMPORTANT]
+> Les binaires macOS sont générés exclusivement pour l'architecture **Apple Silicon (arm64)**. Ils ne sont pas compatibles avec les Mac à processeur Intel.
+
+1. Télécharger l'archive `AIC-<version>-macOS-arm64.zip` depuis la page [Releases](https://github.com/Flex1-tech/Local_Recommendation_Engine/releases/latest).
+2. Extraire l'archive.
+3. L'application n'étant pas signée avec un certificat Apple, ouvrez-la via :
+   - **Clic droit** (ou `Control` + clic) sur `AIC.app`
+   - Sélectionner **Ouvrir**
+   - Confirmer l'ouverture dans la fenêtre d'avertissement Gatekeeper.
+
+
+---
+
 ## Features
 
 * Analyse locale d'une bibliothèque musicale

@@ -178,28 +178,37 @@ jobs:
           path: dist/
           merge-multiple: false
 
-      # ── 2. Archivage de chaque plateforme en .zip ────────────────────────────
+      # ── 2. Archivage avec noms stables orientés utilisateur ─────────────────
       # Chaque sous-dossier dist/aic-<platform>-<sha>/ est compressé en un .zip
-      # autonome pour éviter les collisions de noms internes (RECORD, WHEEL, .pyc)
-      # entre les 3 plateformes lors de l'attachement à la Release.
+      # dont le nom est construit à partir du tag Git, de la plateforme et de
+      # l'architecture réelle produite par le build.
       # Résultat attendu dans dist/ :
-      #   aic-windows-<sha>.zip
-      #   aic-linux-<sha>.zip
-      #   aic-macos-<sha>.zip
+      #   AIC-<tag>-Windows-x64.zip
+      #   AIC-<tag>-Linux-x64.zip
+      #   AIC-<tag>-macOS-arm64.zip
       - name: "Archive each platform build"
         run: |
+          TAG="${{ github.ref_name }}"
           for dir in dist/aic-*/; do
             name=$(basename "$dir")
-            zip -r "dist/${name}.zip" "$dir"
+            case "$name" in
+              aic-windows-*) archive="AIC-${TAG}-Windows-x64.zip" ;;
+              aic-linux-*)   archive="AIC-${TAG}-Linux-x64.zip" ;;
+              aic-macos-*)   archive="AIC-${TAG}-macOS-arm64.zip" ;;
+              *)             archive="${name}.zip" ;;
+            esac
+            zip -r "dist/${archive}" "$dir"
           done
         shell: bash
 
       # ── 3. GitHub Release ────────────────────────────────────────────────────
       # softprops/action-gh-release@v2 crée la Release pour le tag courant.
       # generate_release_notes: true génère automatiquement les notes depuis les commits.
-      # files: attache uniquement les .zip (un par plateforme) à la Release.
+      # files: attache uniquement les .zip nommés AIC-<tag>-<platform>-<arch>.zip.
       - name: "Create GitHub Release"
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: dist/*.zip
+          files: dist/AIC-*.zip
+
+
