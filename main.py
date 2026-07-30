@@ -40,7 +40,7 @@ def main(page: ft.Page) -> None:
     def _show_toast(message: str, is_error: bool = False) -> None:
         """Affiche un SnackBar. Doit être appelé depuis le thread UI uniquement."""
         snack = ft.SnackBar(
-            content=ft.Text(message, color="#FFFFFF"),
+            content=ft.Text(message, color=ObsidianColors.TEXT_WHITE),
             bgcolor=ObsidianColors.ERROR if is_error else ObsidianColors.PRIMARY,
             duration=4000,
         )
