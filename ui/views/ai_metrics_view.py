@@ -72,9 +72,7 @@ class AIMetricsView(ft.Container):
         )
         self.refresh_metrics()
 
-    def _build_card(
-        self, title: str, value: str, icon: "ft.IconData", accent_color: str
-    ) -> ft.Container:
+    def _build_card(self, title: str, value: str, icon: "ft.IconData", accent_color: str) -> ft.Container:
         return ft.Container(
             content=ft.Column(
                 [

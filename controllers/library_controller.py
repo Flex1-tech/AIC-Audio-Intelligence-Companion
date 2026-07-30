@@ -16,9 +16,7 @@ class LibraryController:
         library_service: Optional[LibraryService] = None,
     ):
         self.validation_service = validation_service or AudioValidationService()
-        self.library_service = library_service or LibraryService(
-            self.validation_service
-        )
+        self.library_service = library_service or LibraryService(self.validation_service)
 
     def import_files_async(
         self,
@@ -36,9 +34,7 @@ class LibraryController:
         app_state.notify()
 
         def _worker():
-            valid_tracks, invalid_count = self.validation_service.validate_file_paths(
-                file_paths
-            )
+            valid_tracks, invalid_count = self.validation_service.validate_file_paths(file_paths)
 
             for track in valid_tracks:
                 if track.file_path not in app_state.library.tracks:
@@ -58,9 +54,7 @@ class LibraryController:
 
         threading.Thread(target=_worker, daemon=True).start()
 
-    def import_folder_async(
-        self, folder_path: str, on_complete: Optional[Callable[[int, int], None]] = None
-    ) -> None:
+    def import_folder_async(self, folder_path: str, on_complete: Optional[Callable[[int, int], None]] = None) -> None:
         """
         Scanne récursivement un dossier musical et importe ses fichiers audio de manière asynchrone.
         """
@@ -72,9 +66,7 @@ class LibraryController:
         app_state.notify()
 
         def _worker():
-            valid_tracks, invalid_count = self.library_service.process_folder_import(
-                folder_path
-            )
+            valid_tracks, invalid_count = self.library_service.process_folder_import(folder_path)
 
             for track in valid_tracks:
                 if track.file_path not in app_state.library.tracks:

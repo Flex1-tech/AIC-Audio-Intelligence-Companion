@@ -41,27 +41,19 @@ class LibraryView(ft.Container):
                 spacing=6,
             ),
             style=ft.ButtonStyle(bgcolor=ObsidianColors.PRIMARY),
-            on_click=lambda e: (
-                e.page.run_task(self.on_pick_files) if self.on_pick_files else None
-            ),
+            on_click=lambda e: (e.page.run_task(self.on_pick_files) if self.on_pick_files else None),
         )
 
         self._btn_folder = ft.OutlinedButton(
             content=ft.Row(
                 [
-                    ft.Icon(
-                        ft.Icons.FOLDER_OPEN, size=16, color=ObsidianColors.TEXT_PRIMARY
-                    ),
-                    ft.Text(
-                        "Scanner un Dossier", size=12, color=ObsidianColors.TEXT_PRIMARY
-                    ),
+                    ft.Icon(ft.Icons.FOLDER_OPEN, size=16, color=ObsidianColors.TEXT_PRIMARY),
+                    ft.Text("Scanner un Dossier", size=12, color=ObsidianColors.TEXT_PRIMARY),
                 ],
                 spacing=6,
             ),
             style=ft.ButtonStyle(side=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
-            on_click=lambda e: (
-                e.page.run_task(self.on_pick_folder) if self.on_pick_folder else None
-            ),
+            on_click=lambda e: (e.page.run_task(self.on_pick_folder) if self.on_pick_folder else None),
         )
 
         # ── Indicateur de chargement ─────────────────────────────────────────

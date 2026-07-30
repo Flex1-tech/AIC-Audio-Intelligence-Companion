@@ -17,11 +17,7 @@ class TrackItem(ft.Container):
         # Heart Icon Button
         self.like_button = ft.IconButton(
             icon=ft.Icons.FAVORITE if track.is_liked else ft.Icons.FAVORITE_BORDER,
-            icon_color=(
-                ObsidianColors.HEART_RED
-                if track.is_liked
-                else ObsidianColors.TEXT_MUTED
-            ),
+            icon_color=(ObsidianColors.HEART_RED if track.is_liked else ObsidianColors.TEXT_MUTED),
             icon_size=20,
             tooltip="Liker ce morceau" if not track.is_liked else "Morceau liké",
             on_click=self._handle_like,
@@ -62,11 +58,7 @@ class TrackItem(ft.Container):
                             ft.Icon(
                                 ft.Icons.MUSIC_NOTE,
                                 size=20,
-                                color=(
-                                    ObsidianColors.PRIMARY
-                                    if track.is_liked
-                                    else ObsidianColors.TEXT_SECONDARY
-                                ),
+                                color=(ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.TEXT_SECONDARY),
                             ),
                             ft.Column(
                                 [
@@ -121,11 +113,7 @@ class TrackItem(ft.Container):
             bgcolor=ObsidianColors.SURFACE_DARK,
             border=ft.Border.all(
                 1,
-                (
-                    ObsidianColors.PRIMARY
-                    if track.is_liked
-                    else ObsidianColors.BORDER_DARK
-                ),
+                (ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.BORDER_DARK),
             ),
         )
 

@@ -19,13 +19,9 @@ class AIEngineService:
             session = self.provider.get_session()
             app_state.is_onnx_loaded = session is not None
             if app_state.is_onnx_loaded:
-                app_state.log_action(
-                    "AI_ENGINE_LOADED", "Modèle Musicnn ONNX chargé avec succès"
-                )
+                app_state.log_action("AI_ENGINE_LOADED", "Modèle Musicnn ONNX chargé avec succès")
             return app_state.is_onnx_loaded
         except Exception as e:
             app_state.is_onnx_loaded = False
-            app_state.log_action(
-                "AI_ENGINE_ERROR", f"Échec chargement Musicnn ONNX: {e}"
-            )
+            app_state.log_action("AI_ENGINE_ERROR", f"Échec chargement Musicnn ONNX: {e}")
             return False

@@ -27,4 +27,4 @@ build/
 *.flutter-plugins-dependencies
 
 # ── uv.lock est intentionnellement versionné (builds CI reproductibles) ───────
-# Ne pas ajouter uv.lock ici.
+# Ne pas ajouter uv.lock ici.
