@@ -178,12 +178,28 @@ jobs:
           path: dist/
           merge-multiple: false
 
-      # ── 2. GitHub Release ────────────────────────────────────────────────────
+      # ── 2. Archivage de chaque plateforme en .zip ────────────────────────────
+      # Chaque sous-dossier dist/aic-<platform>-<sha>/ est compressé en un .zip
+      # autonome pour éviter les collisions de noms internes (RECORD, WHEEL, .pyc)
+      # entre les 3 plateformes lors de l'attachement à la Release.
+      # Résultat attendu dans dist/ :
+      #   aic-windows-<sha>.zip
+      #   aic-linux-<sha>.zip
+      #   aic-macos-<sha>.zip
+      - name: "Archive each platform build"
+        run: |
+          for dir in dist/aic-*/; do
+            name=$(basename "$dir")
+            zip -r "dist/${name}.zip" "$dir"
+          done
+        shell: bash
+
+      # ── 3. GitHub Release ────────────────────────────────────────────────────
       # softprops/action-gh-release@v2 crée la Release pour le tag courant.
       # generate_release_notes: true génère automatiquement les notes depuis les commits.
-      # files: attache tous les fichiers de dist/ à la Release.
+      # files: attache uniquement les .zip (un par plateforme) à la Release.
       - name: "Create GitHub Release"
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: dist/**/*
+          files: dist/*.zip
