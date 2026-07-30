@@ -62,16 +62,9 @@ jobs:
         run: uv sync --group dev
 
       # ── 4. Flake8 ────────────────────────────────────────────────────────────
-      # max-line-length 120 (cohérent avec la base de code AIC existante).
-      # Dossiers exclus : .venv, __pycache__, build, MusicRecommenderDB.
+      # Configuration lue automatiquement depuis le fichier .flake8 à la racine.
       - name: "flake8 lint"
-        run: |
-          uv run flake8 . \
-            --exclude=.venv,__pycache__,.git,build,MusicRecommenderDB \
-            --max-line-length=120 \
-            --extend-ignore=E501,W503,E203 \
-            --statistics \
-            --count
+        run: uv run flake8 . --statistics --count
 
       # ── 5. Import check ───────────────────────────────────────────────────────
       # Vérifie que les modules du projet s'importent sans exception.

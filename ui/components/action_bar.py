@@ -41,9 +41,7 @@ class ActionBar(ft.Container):
         self.start_button = ft.FilledButton(
             content=ft.Row(
                 [
-                    ft.Icon(
-                        ft.Icons.AUTO_AWESOME, size=18, color=ObsidianColors.BG_DARK
-                    ),
+                    ft.Icon(ft.Icons.AUTO_AWESOME, size=18, color=ObsidianColors.BG_DARK),
                     ft.Text(
                         "Générer la Playlist IA (MMR)",
                         weight=ft.FontWeight.BOLD,
@@ -69,9 +67,7 @@ class ActionBar(ft.Container):
                     ft.Row(
                         [
                             self.status_text,
-                            ft.Container(
-                                width=1, height=20, bgcolor=ObsidianColors.BORDER_DARK
-                            ),
+                            ft.Container(width=1, height=20, bgcolor=ObsidianColors.BORDER_DARK),
                             ft.Row(
                                 [
                                     ft.Text(

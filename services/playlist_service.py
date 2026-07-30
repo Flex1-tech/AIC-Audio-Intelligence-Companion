@@ -13,9 +13,7 @@ class PlaylistService:
     Service de recommandation MMR, génération de playlists .m3u8 et exécution de VLC.
     """
 
-    def __init__(
-        self, provider: MusicnnProvider = None, repository: TrackRepository = None
-    ):
+    def __init__(self, provider: MusicnnProvider = None, repository: TrackRepository = None):
         self.provider = provider or MusicnnProvider()
         self.repository = repository or TrackRepository()
 
@@ -26,19 +24,14 @@ class PlaylistService:
         start_time = time.time()
 
         # Prépare le dict path_dict {path: is_liked} requis par extraction.py
-        path_dict = {
-            track.file_path: track.is_liked
-            for track in app_state.library.tracks.values()
-        }
+        path_dict = {track.file_path: track.is_liked for track in app_state.library.tracks.values()}
 
         session = self.provider.get_session()
         table = self.repository.get_table()
 
         # Exécution de recommend_playlist (qui calcule aussi
         # process_files_batch)
-        recommended_paths = recommend_playlist(
-            path_dict=path_dict, session=session, table=table, lambda_mmr=lambda_mmr
-        )
+        recommended_paths = recommend_playlist(path_dict=path_dict, session=session, table=table, lambda_mmr=lambda_mmr)
 
         duration_ms = (time.time() - start_time) * 1000.0
         app_state.last_inference_duration_ms = duration_ms
@@ -57,9 +50,7 @@ class PlaylistService:
         )
         return recommended_paths
 
-    def export_m3u8(
-        self, playlist_paths: List[str], output_path: str = "playlist.m3u8"
-    ) -> str:
+    def export_m3u8(self, playlist_paths: List[str], output_path: str = "playlist.m3u8") -> str:
         make_m3u(playlist_paths, output_path)
         app_state.session.last_generated_playlist_path = output_path
         app_state.notify()
@@ -75,9 +66,7 @@ class PlaylistService:
 
         try:
             subprocess.Popen([vlc_path, playlist_path])
-            app_state.log_action(
-                "VLC_LAUNCHED", f"VLC lancé avec la playlist {playlist_path}"
-            )
+            app_state.log_action("VLC_LAUNCHED", f"VLC lancé avec la playlist {playlist_path}")
             return True, "VLC lancé avec succès !"
         except Exception as e:
             return False, f"Erreur lors du lancement de VLC : {e}"

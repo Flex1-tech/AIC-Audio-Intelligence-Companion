@@ -78,9 +78,7 @@ def main(page: ft.Page) -> None:
         def on_complete_files(valid_count: int, invalid_count: int) -> None:
             async def _finish() -> None:
                 layout.library_view.set_loading(False)
-                _show_toast(
-                    f"{valid_count} morceau(x) ajouté(s) ({invalid_count} ignoré(s))"
-                )
+                _show_toast(f"{valid_count} morceau(x) ajouté(s) ({invalid_count} ignoré(s))")
                 app_state.notify()
 
             page.run_task(_finish)
@@ -101,16 +99,12 @@ def main(page: ft.Page) -> None:
         def on_complete_folder(valid_count: int, invalid_count: int) -> None:
             async def _finish() -> None:
                 layout.library_view.set_loading(False)
-                _show_toast(
-                    f"{valid_count} morceau(x) indexé(s) depuis le dossier ({invalid_count} ignoré(s))"
-                )
+                _show_toast(f"{valid_count} morceau(x) indexé(s) depuis le dossier ({invalid_count} ignoré(s))")
                 app_state.notify()
 
             page.run_task(_finish)
 
-        library_controller.import_folder_async(
-            folder_path, on_complete=on_complete_folder
-        )
+        library_controller.import_folder_async(folder_path, on_complete=on_complete_folder)
 
     def handle_like_track(file_path: str) -> None:
         library_controller.toggle_like(file_path)
@@ -126,11 +120,7 @@ def main(page: ft.Page) -> None:
         _show_toast("Bibliothèque réinitialisée.")
 
     def handle_theme_toggle(_e) -> None:
-        page.theme_mode = (
-            ft.ThemeMode.LIGHT
-            if page.theme_mode == ft.ThemeMode.DARK
-            else ft.ThemeMode.DARK
-        )
+        page.theme_mode = ft.ThemeMode.LIGHT if page.theme_mode == ft.ThemeMode.DARK else ft.ThemeMode.DARK
         page.update()
 
     def handle_start_recommendation() -> None:
@@ -152,9 +142,7 @@ def main(page: ft.Page) -> None:
 
             page.run_task(_show_err)
 
-        rec_controller.run_recommendation_async(
-            on_success=on_success, on_error=on_error
-        )
+        rec_controller.run_recommendation_async(on_success=on_success, on_error=on_error)
 
     def _launch_vlc() -> None:
         success, msg = rec_controller.launch_vlc()

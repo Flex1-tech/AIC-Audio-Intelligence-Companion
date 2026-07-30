@@ -16,9 +16,7 @@ class HeaderBar(ft.Container):
         self.onnx_badge = ft.Container(
             content=ft.Row(
                 [
-                    ft.Icon(
-                        ft.Icons.AUTO_AWESOME, size=14, color=ObsidianColors.SUCCESS
-                    ),
+                    ft.Icon(ft.Icons.AUTO_AWESOME, size=14, color=ObsidianColors.SUCCESS),
                     ft.Text(
                         "Musicnn ONNX",
                         size=12,

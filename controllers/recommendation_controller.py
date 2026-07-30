@@ -22,22 +22,16 @@ class RecommendationController:
         """
         if not app_state.library.is_recommendation_ready:
             if on_error:
-                on_error(
-                    "Veuillez liker au moins 3 morceaux pour générer une recommandation."
-                )
+                on_error("Veuillez liker au moins 3 morceaux pour générer une recommandation.")
             return
 
         app_state.is_processing = True
-        app_state.processing_status_message = (
-            "Calcul des embeddings MusiCNN & Ranking MMR..."
-        )
+        app_state.processing_status_message = "Calcul des embeddings MusiCNN & Ranking MMR..."
         app_state.notify()
 
         def _worker():
             try:
-                playlist_paths = self.playlist_service.generate_recommendations(
-                    lambda_mmr=app_state.session.lambda_mmr
-                )
+                playlist_paths = self.playlist_service.generate_recommendations(lambda_mmr=app_state.session.lambda_mmr)
                 self.playlist_service.export_m3u8(playlist_paths)
 
                 app_state.is_processing = False
@@ -59,6 +53,4 @@ class RecommendationController:
         threading.Thread(target=_worker, daemon=True).start()
 
     def launch_vlc(self) -> tuple[bool, str]:
-        return self.playlist_service.launch_vlc(
-            app_state.session.last_generated_playlist_path
-        )
+        return self.playlist_service.launch_vlc(app_state.session.last_generated_playlist_path)

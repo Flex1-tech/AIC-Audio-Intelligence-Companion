@@ -110,9 +110,7 @@ def extract_representative_batch(
 
     if len(segments) == 0:
 
-        padded = np.pad(
-            audio, (0, max(0, samples_per_segment - len(audio))), mode="reflect"
-        )
+        padded = np.pad(audio, (0, max(0, samples_per_segment - len(audio))), mode="reflect")
 
         return padded[:samples_per_segment][None, :]
 
@@ -266,10 +264,7 @@ def extract_representative_batch(
 
 
 def has_vector_index(table):
-    return any(
-        hasattr(idx, "columns") and "vector" in idx.columns
-        for idx in table.list_indices()
-    )
+    return any(hasattr(idx, "columns") and "vector" in idx.columns for idx in table.list_indices())
 
 
 def get_file_hash(filepath: str):
@@ -291,9 +286,7 @@ def load_musicnn(onnx_path: str = "./msd-musicnn-1.onnx") -> ort.InferenceSessio
     so.enable_mem_pattern = True
     so.enable_cpu_mem_arena = True
 
-    session = ort.InferenceSession(
-        onnx_path, sess_options=so, providers=["CPUExecutionProvider"]
-    )
+    session = ort.InferenceSession(onnx_path, sess_options=so, providers=["CPUExecutionProvider"])
 
     return session
 
@@ -320,9 +313,7 @@ def load_audio(path: str, sr: int = 16000) -> np.ndarray:
     ]
 
     try:
-        result = subprocess.run(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-        )
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
         audio = np.frombuffer(result.stdout, dtype=np.float32)
 
@@ -336,20 +327,13 @@ def l2_normalize(v):
     return v / (np.linalg.norm(v) + 1e-10)
 
 
-def get_existing_embeddings(
-    hashes: list[str], table: lancedb.table.Table
-) -> dict[str, dict]:
+def get_existing_embeddings(hashes: list[str], table: lancedb.table.Table) -> dict[str, dict]:
     """Retourne un dict {hash: row} pour tous les hashes trouvés en base."""
     if not hashes:
         return {}
 
     hash_list = ", ".join(f"'{h}'" for h in hashes)
-    df = (
-        table.search()
-        .where(f"file_hash IN ({hash_list})")
-        .limit(len(hashes))
-        .to_pandas()
-    )
+    df = table.search().where(f"file_hash IN ({hash_list})").limit(len(hashes)).to_pandas()
 
     return {row["file_hash"]: row for _, row in df.iterrows()}
 
@@ -433,9 +417,7 @@ def audio_to_musicnn_batch(
 
     # MEL SPECTROGRAM
 
-    mel = librosa.feature.melspectrogram(
-        y=audio, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels, power=2.0
-    )
+    mel = librosa.feature.melspectrogram(y=audio, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels, power=2.0)
 
     # LOG COMPRESSION
 
@@ -643,11 +625,7 @@ def recommend_playlist(
     # Traite tous les fichiers en batch pour récupérer ou calculer leurs
     # vecteurs, et les stocker en base si besoin
     all_vectors = process_files_batch(path_dict, session, table)  # {path: vector}
-    liked_vectors = [
-        all_vectors[path]
-        for path, liked in path_dict.items()
-        if liked and path in all_vectors
-    ]
+    liked_vectors = [all_vectors[path] for path, liked in path_dict.items() if liked and path in all_vectors]
 
     if not liked_vectors:
         return []  # Pas de likés, pas de recommandations
@@ -656,9 +634,7 @@ def recommend_playlist(
     mean_vector = l2_normalize(np.mean(np.stack(liked_vectors), axis=0))
 
     # Construit la liste de tous les fichiers avec leurs vecteurs
-    candidates = [
-        {"file_path": path, "vector": all_vectors[path]} for path in path_dict.keys()
-    ]
+    candidates = [{"file_path": path, "vector": all_vectors[path]} for path in path_dict.keys()]
 
     # Applique MMR pour classer TOUS les fichiers
     ranked = mmr_ranking(mean_vector, candidates, lambda_param=lambda_mmr)
