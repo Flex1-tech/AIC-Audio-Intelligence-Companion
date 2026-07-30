@@ -171,6 +171,42 @@ flet build macos
 
 ---
 
+## Development
+
+Le projet utilise **pre-commit** pour automatiser les vérifications de qualité et de style de code localement avant chaque commit.
+
+### Installation
+
+```bash
+uv sync --dev
+uv run pre-commit install
+```
+
+### Vérification manuelle
+
+```bash
+uv run pre-commit run --all-files
+```
+
+### Vérifier un seul fichier
+
+```bash
+uv run pre-commit run --files path/to/file.py
+```
+
+### Mise à jour des hooks
+
+```bash
+uv run pre-commit autoupdate
+```
+
+Lorsque vous effectuez un commit, les hooks pre-commit s'exécutent automatiquement :
+- Les erreurs de formatage ou d'imports inutilisés sont corrigées automatiquement lorsque c'est possible.
+- Si des erreurs de style ou de syntaxe persistent, le commit est bloqué afin de corriger les problèmes.
+- Cela garantit un code propre et évite l'échec des vérifications dans le pipeline GitHub Actions.
+
+---
+
 ## Continuous Integration
 
 Le dépôt utilise GitHub Actions pour automatiser les différentes tâches.
