@@ -646,19 +646,18 @@ def recommend_playlist(
 
 
 def initialize_database(db_path: str) -> lancedb.table.Table:
-    """Initialise la connexion à LanceDB et retourne la table d'embeddings."""
-    # Crée la base si elle n'existe pas, sinon l'ouvre
+    """
+    Initialise la connexion à LanceDB et retourne la table d'embeddings.
+    Idempotent et optimisé : ouvre la table si elle existe déjà, et ne crée l'index
+    scalaire sur file_hash que s'il n'est pas encore présent (<1ms si déjà indexé).
+    """
     db = lancedb.connect(db_path)
+    table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel, exist_ok=True)
 
-    # Crée la table "audio_embeddings" si elle n'existe pas, sinon l'ouvre
-    if "audio_embeddings" not in db.list_tables():
-        table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel)
-        # Index sur le hash pour accélérer les recherches
-        table.create_scalar_index("file_hash")
-    else:
-        table = db.open_table("audio_embeddings")
+    # Vérifie si l'index sur file_hash existe déjà pour éviter toute reconstruction inutile
+    if not any("file_hash" in idx.columns for idx in table.list_indices()):
+        table.create_scalar_index("file_hash", replace=True)
 
-    # Retourne la table pour les opérations de lecture/écriture
     return table
 
 
