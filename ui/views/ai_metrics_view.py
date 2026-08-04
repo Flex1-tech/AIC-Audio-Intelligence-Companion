@@ -103,6 +103,11 @@ class AIMetricsView(ft.Container):
         if self.clipboard not in page.services:
             page.services.append(self.clipboard)
 
+            try:
+                page.update()
+            except Exception:
+                pass
+
         async def _copy_and_toast() -> None:
             await self.clipboard.set(logs_text)
             snack = ft.SnackBar(

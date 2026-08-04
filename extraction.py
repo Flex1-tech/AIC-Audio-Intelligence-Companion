@@ -278,6 +278,10 @@ def resolve_onnx_model_path(filename: str = "msd-musicnn-1.onnx") -> str:
     Raises:
         FileNotFoundError: Si le fichier modèle n'existe dans aucun emplacement.
     """
+    path = Path(filename)
+    if path.is_file():
+        return str(path.resolve())
+    
     model_name = Path(filename).name
     base_dir = Path(__file__).resolve().parent
 
