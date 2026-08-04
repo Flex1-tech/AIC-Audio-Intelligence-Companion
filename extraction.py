@@ -1,15 +1,20 @@
-from typing import Optional
-import lancedb
-import numpy as np
-import subprocess
-import onnxruntime as ort
+"""Pipeline d'extraction de caractéristiques audio et base vectorielle LanceDB."""
+
 import os
-from schema import TrackEmbeddingModel
-from blake3 import blake3
 from pathlib import Path
+import subprocess
+from typing import Optional
+
+from blake3 import blake3
+import lancedb
+from lancedb.index import BTree
 import librosa
-from sklearn.preprocessing import StandardScaler
+import numpy as np
+import onnxruntime as ort
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+
+from schema import TrackEmbeddingModel
 
 
 def extract_representative_batch(
@@ -20,9 +25,7 @@ def extract_representative_batch(
     overlap: float = 0.5,
     rms_threshold_ratio: float = 0.1,
 ) -> np.ndarray:
-    """
-    Sélectionne les segments les plus représentatifs d'un morceau
-    via clustering léger.
+    """Extrait les segments audio les plus représentatifs via un clustering léger.
 
     Pipeline :
         audio
@@ -45,38 +48,34 @@ def extract_representative_batch(
         Signal audio mono float32.
 
     sr : int
-        Sample rate.
+        Fréquence d'échantillonnage en Hz.
 
     segment_duration : int
-        Durée d'un segment en secondes.
+        Durée de chaque segment en secondes.
 
     n_segments : int
         Nombre de segments représentatifs à retourner.
 
     overlap : float
-        Overlap entre segments.
-        0.5 = 50%.
+        Fraction de chevauchement entre segments.
 
     rms_threshold_ratio : float
-        Seuil relatif pour ignorer les segments silencieux.
+        Ratio de seuil d'énergie pour filtrer le silence.
 
     Returns
     -------
     np.ndarray
-        batch.shape = (n_segments, samples_per_segment)
+        Tableau NumPy float32 contenant les segments représentatifs concaténés.
     """
 
     # SECURITE
-
     if audio is None or len(audio) == 0:
         return None
 
     audio = audio.astype(np.float32)
 
     # PARAMETRES
-
     samples_per_segment = int(sr * segment_duration)
-
     hop_size = int(samples_per_segment * (1.0 - overlap))
 
     if hop_size <= 0:
@@ -273,7 +272,35 @@ def get_file_hash(filepath: str):
     return hasher.hexdigest()
 
 
-def load_musicnn(onnx_path: str = "./msd-musicnn-1.onnx") -> ort.InferenceSession:
+def resolve_onnx_model_path(filename: str = "msd-musicnn-1.onnx") -> str:
+    """Résout le chemin absolu déterministe du fichier modèle ONNX (assets/ ou racine projet).
+
+    Raises:
+        FileNotFoundError: Si le fichier modèle n'existe dans aucun emplacement.
+    """
+    path = Path(filename)
+    if path.is_file():
+        return str(path.resolve())
+
+    model_name = Path(filename).name
+    base_dir = Path(__file__).resolve().parent
+
+    candidates = [
+        base_dir / "assets" / model_name,
+        base_dir / model_name,
+    ]
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate.resolve())
+
+    searched_paths = ", ".join(f"'{p}'" for p in candidates)
+    raise FileNotFoundError(f"Fichier modèle ONNX introuvable : '{model_name}' (recherché dans : {searched_paths}).")
+
+
+def load_musicnn(onnx_path: str = "msd-musicnn-1.onnx") -> ort.InferenceSession:
+    """Charge la session d'inférence ONNX Runtime pour le modèle MusiCNN."""
+    resolved_path = resolve_onnx_model_path(onnx_path)
 
     so = ort.SessionOptions()
     so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -286,7 +313,7 @@ def load_musicnn(onnx_path: str = "./msd-musicnn-1.onnx") -> ort.InferenceSessio
     so.enable_mem_pattern = True
     so.enable_cpu_mem_arena = True
 
-    session = ort.InferenceSession(onnx_path, sess_options=so, providers=["CPUExecutionProvider"])
+    session = ort.InferenceSession(resolved_path, sess_options=so, providers=["CPUExecutionProvider"])
 
     return session
 
@@ -333,9 +360,9 @@ def get_existing_embeddings(hashes: list[str], table: lancedb.table.Table) -> di
         return {}
 
     hash_list = ", ".join(f"'{h}'" for h in hashes)
-    df = table.search().where(f"file_hash IN ({hash_list})").limit(len(hashes)).to_pandas()
+    rows = table.search().where(f"file_hash IN ({hash_list})").limit(len(hashes)).to_list()
 
-    return {row["file_hash"]: row for _, row in df.iterrows()}
+    return {row["file_hash"]: row for row in rows}
 
 
 def process_files_batch(
@@ -656,7 +683,7 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
 
     # Vérifie si l'index sur file_hash existe déjà pour éviter toute reconstruction inutile
     if not any("file_hash" in idx.columns for idx in table.list_indices()):
-        table.create_scalar_index("file_hash", replace=True)
+        table.create_index("file_hash", config=BTree(), replace=True)
 
     return table
 

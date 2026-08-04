@@ -10,7 +10,7 @@ class MusicnnProvider:
     Fournisseur d'inférence audio Deep Learning MusiCNN (ONNX Runtime).
     """
 
-    def __init__(self, model_path: str = "./msd-musicnn-1.onnx"):
+    def __init__(self, model_path: str = "msd-musicnn-1.onnx"):
         self.model_path = model_path
         self._session: Optional[ort.InferenceSession] = None
 

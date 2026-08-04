@@ -53,19 +53,13 @@ line-length = 120
 # `uv sync` résout les dépendances à partir du lock file.
 managed = true
 
-# ── Configuration Flet Build ─────────────────────────────────────────────────
-# https://docs.flet.dev/publish/pyproject-toml/
-
 [tool.flet]
 build_number = 1
 product      = "AIC — Audio Intelligence Companion"
 company      = "AIC Project"
 
 [tool.flet.app]
-# `flet build` cherche main.py à la racine du projet.
 path = "."
 
-# ── Assets embarqués ─────────────────────────────────────────────────────────
-# Le modèle ONNX (~3 MB) est embarqué dans l'artefact final.
-[tool.flet.app.bundle_files]
-"msd-musicnn-1.onnx" = "msd-musicnn-1.onnx"
+[tool.flet.build]
+icon = "assets/icon.png"
