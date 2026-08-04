@@ -14,6 +14,7 @@ class AIMetricsView(ft.Container):
             expand=True,
             spacing=6,
         )
+        self.clipboard = ft.Clipboard()
 
         super().__init__(
             content=ft.Column(
@@ -55,11 +56,24 @@ class AIMetricsView(ft.Container):
                         spacing=Spacing.MD,
                     ),
                     ft.Container(height=15),
-                    ft.Text(
-                        "Journal des Événements du Moteur",
-                        size=15,
-                        weight=ft.FontWeight.W_600,
-                        color=ObsidianColors.TEXT_PRIMARY,
+                    # Header du journal avec bouton copier
+                    ft.Row(
+                        [
+                            ft.Text(
+                                "Journal des Événements du Moteur",
+                                size=15,
+                                weight=ft.FontWeight.W_600,
+                                color=ObsidianColors.TEXT_PRIMARY,
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.CONTENT_COPY,
+                                icon_size=16,
+                                icon_color=ObsidianColors.TEXT_MUTED,
+                                tooltip="Copier les journaux",
+                                on_click=self._handle_copy_logs,
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
                     # Action Logs List
                     self.log_list,
@@ -71,6 +85,39 @@ class AIMetricsView(ft.Container):
             expand=True,
         )
         self.refresh_metrics()
+
+    def _handle_copy_logs(self, e: ft.ControlEvent) -> None:
+        """Copie l'historique des journaux d'événements du moteur dans le presse-papier."""
+        if not app_state.action_history:
+            return
+
+        logs_text = "\n".join(
+            f"[{log.formatted_time}] [{log.action_type}] {log.description}"
+            for log in reversed(app_state.action_history)
+        )
+
+        page = e.page or self.page
+        if not page:
+            return
+
+        if self.clipboard not in page.services:
+            page.services.append(self.clipboard)
+
+        async def _copy_and_toast() -> None:
+            await self.clipboard.set(logs_text)
+            snack = ft.SnackBar(
+                content=ft.Text("Journaux copiés dans le presse-papier !", color=ObsidianColors.TEXT_WHITE),
+                bgcolor=ObsidianColors.PRIMARY,
+                duration=3000,
+            )
+            page.overlay.append(snack)
+            snack.open = True
+            try:
+                page.update()
+            except Exception:
+                pass
+
+        page.run_task(_copy_and_toast)
 
     def _build_card(self, title: str, value: str, icon: "ft.IconData", accent_color: str) -> ft.Container:
         return ft.Container(

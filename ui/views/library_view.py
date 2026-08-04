@@ -168,6 +168,8 @@ class LibraryView(ft.Container):
             padding=40,
         )
 
+        self._is_loading = False
+
         super().__init__(
             content=ft.Column(
                 [
@@ -183,15 +185,17 @@ class LibraryView(ft.Container):
         )
 
     # ── API Loader ──────────────────────────────────────────────────────────
-    def set_loading(self, loading: bool) -> None:
+    def set_loading(self, loading: bool, message: str = "Analyse en cours…") -> None:
         """
         Active / désactive l'état de chargement :
         - Affiche / cache le ProgressRing et le message
         - Désactive / réactive les boutons d'import
         Doit être appelé depuis le thread UI (ou via page.run_task).
         """
-        self._btn_files.disabled = loading
-        self._btn_folder.disabled = loading
+        self._is_loading = loading
+        self._loader_text.value = message
+        self._btn_files.disabled = loading or app_state.is_processing
+        self._btn_folder.disabled = loading or app_state.is_processing
         self._loader_row.visible = loading
         try:
             self._btn_files.update()
@@ -203,6 +207,9 @@ class LibraryView(ft.Container):
     # ── Rafraîchissement de la liste ─────────────────────────────────────────
     def refresh_tracks(self) -> None:
         """Mise à jour réactive des items de morceaux dans la liste."""
+        is_disabled = getattr(self, "_is_loading", False) or app_state.is_processing
+        self._btn_files.disabled = is_disabled
+        self._btn_folder.disabled = is_disabled
         self.track_list.controls.clear()
         query = app_state.session.search_query.lower()
         liked_only = app_state.session.filter_liked_only

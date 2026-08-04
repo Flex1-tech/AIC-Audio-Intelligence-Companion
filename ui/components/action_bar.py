@@ -38,6 +38,16 @@ class ActionBar(ft.Container):
             color=ObsidianColors.TEXT_SECONDARY,
         )
 
+        self.reset_button = ft.OutlinedButton(
+            content="Réinitialiser",
+            style=ft.ButtonStyle(
+                color=ObsidianColors.TEXT_SECONDARY,
+                side=ft.BorderSide(1, ObsidianColors.BORDER_DARK),
+                shape=ft.RoundedRectangleBorder(radius=Radii.SM),
+            ),
+            on_click=self._handle_reset,
+        )
+
         self.start_button = ft.FilledButton(
             content=ft.Row(
                 [
@@ -87,15 +97,7 @@ class ActionBar(ft.Container):
                     # Droite : Actions (Reset & Start)
                     ft.Row(
                         [
-                            ft.OutlinedButton(
-                                content="Réinitialiser",
-                                style=ft.ButtonStyle(
-                                    color=ObsidianColors.TEXT_SECONDARY,
-                                    side=ft.BorderSide(1, ObsidianColors.BORDER_DARK),
-                                    shape=ft.RoundedRectangleBorder(radius=Radii.SM),
-                                ),
-                                on_click=self._handle_reset,
-                            ),
+                            self.reset_button,
                             self.start_button,
                         ],
                         spacing=12,
@@ -113,14 +115,42 @@ class ActionBar(ft.Container):
         lib = app_state.library
         liked_cnt = lib.liked_tracks_count
         ready = lib.is_recommendation_ready
+        processing = app_state.is_processing
 
-        self.status_text.value = f"{lib.total_tracks_count} morceau(x) importé(s) | {liked_cnt}/3 Likés (Requis: 3)"
-        if ready:
-            self.status_text.color = ObsidianColors.SUCCESS
+        if processing:
+            self.status_text.value = app_state.processing_status_message or "Génération des recommandations en cours…"
+            self.status_text.color = ObsidianColors.PRIMARY
+            self.start_button.content = ft.Row(
+                [
+                    ft.ProgressRing(width=16, height=16, stroke_width=2.5, color=ObsidianColors.BG_DARK),
+                    ft.Text(
+                        "Génération en cours…",
+                        weight=ft.FontWeight.BOLD,
+                        color=ObsidianColors.BG_DARK,
+                    ),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.CENTER,
+            )
         else:
-            self.status_text.color = ObsidianColors.TEXT_SECONDARY
+            self.status_text.value = f"{lib.total_tracks_count} morceau(x) importé(s) | {liked_cnt}/3 Likés (Requis: 3)"
+            self.status_text.color = ObsidianColors.SUCCESS if ready else ObsidianColors.TEXT_SECONDARY
+            self.start_button.content = ft.Row(
+                [
+                    ft.Icon(ft.Icons.AUTO_AWESOME, size=18, color=ObsidianColors.BG_DARK),
+                    ft.Text(
+                        "Générer la Playlist IA (MMR)",
+                        weight=ft.FontWeight.BOLD,
+                        color=ObsidianColors.BG_DARK,
+                    ),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.CENTER,
+            )
 
-        self.start_button.disabled = not ready or app_state.is_processing
+        self.start_button.disabled = not ready or processing
+        self.lambda_slider.disabled = processing
+        self.reset_button.disabled = processing
         try:
             self.update()
         except RuntimeError:
