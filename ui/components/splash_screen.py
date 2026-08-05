@@ -9,7 +9,7 @@ Architecture :
     * layer_letterform.svg -- structure "A" (3 paths #30C4EF)
     * layer_wave.svg       -- onde sonore (70 paths #FE8F40 et variantes)
 - Effet "IA qui s'eveille" : un faisceau radial ambre parcourt la zone de l'onde (L->R).
-- Typographie : Space Grotesk (embarque dans assets/fonts/), fallback sans-serif.
+- Typographie : Cinzel Decorative (embarque dans assets/fonts/), fallback sans-serif.
 - Duree totale : ~3.0 s a 60 FPS.
 - Aucune dependance reseau au demarrage.
 - Compatible Flet 0.86.4 (ft.Scale / ft.Offset / ft.BoxFit / ft.AnimationCurve).
@@ -174,7 +174,7 @@ class SplashScreen(ft.Container):
             shadow=None,
         )
 
-        # ── Titre "AIC" (Space Grotesk Bold) ─────────────────────────────────
+        # ── Titre "AIC" (Cinzel Decorative Bold) ───────────────────────────────
         title_size = max(36, int(S * 0.095))
         self.title_box = ft.Container(
             content=ft.Text(
@@ -182,7 +182,7 @@ class SplashScreen(ft.Container):
                 size=title_size,
                 weight=ft.FontWeight.BOLD,
                 color=ObsidianColors.TEXT_PRIMARY,
-                font_family="Space Grotesk",
+                font_family="Cinzel Decorative",
             ),
             opacity=0.0,
             offset=ft.Offset(x=0, y=0.12),
@@ -198,7 +198,7 @@ class SplashScreen(ft.Container):
                 size=subtitle_size,
                 weight=ft.FontWeight.W_500,
                 color=ObsidianColors.TEXT_MUTED,
-                font_family="Space Grotesk",
+                font_family="Cinzel Decorative",
             ),
             opacity=0.0,
             offset=ft.Offset(x=0, y=0.10),

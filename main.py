@@ -46,10 +46,10 @@ def main(page: ft.Page) -> None:
         page.theme_mode = ft.ThemeMode.DARK
 
         # Polices embarquées localement (pas de dépendance réseau)
-        # Space Grotesk — téléchargée dans assets/fonts/ (woff2)
+        # Cinzel Decorative — téléchargée dans assets/fonts/ (woff2)
         page.fonts = {
-            "Space Grotesk": "fonts/SpaceGrotesk-Bold.woff2",
-            "Space Grotesk Medium": "fonts/SpaceGrotesk-Medium.woff2",
+            "Cinzel Decorative": "fonts/CinzelDecorative-Bold.woff2",
+            "Cinzel Decorative Regular": "fonts/CinzelDecorative-Regular.woff2",
         }
 
         # Résolution sécurisée de l'icône de fenêtre avec vérification d'existence
