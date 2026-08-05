@@ -10,6 +10,7 @@ from controllers.recommendation_controller import RecommendationController
 from services.ai_engine_service import AIEngineService
 from services.database_service import DatabaseService
 from ui.components.result_dialog import ResultDialog
+from ui.components.splash_screen import SplashScreen
 from ui.design_system import get_dark_theme, get_light_theme
 from ui.design_system.colors import ObsidianColors
 from ui.views.main_layout import MainLayout
@@ -195,7 +196,32 @@ def main(page: ft.Page) -> None:
                 pass
 
         app_state.subscribe(on_state_change)
-        page.add(layout)
+
+        # ── Intégration du Splash Screen & Main Layout ────────────────────────
+        def finish_splash() -> None:
+            try:
+                if splash_screen in root_stack.controls:
+                    root_stack.controls.remove(splash_screen)
+                    root_stack.update()
+            except Exception:
+                pass
+
+        splash_screen = SplashScreen(on_complete=finish_splash)
+
+        root_stack = ft.Stack(
+            [
+                layout,
+                splash_screen,
+            ],
+            expand=True,
+        )
+
+        page.add(root_stack)
+
+        async def run_splash_task() -> None:
+            await splash_screen.start_animation_async()
+
+        page.run_task(run_splash_task)
 
         def preload_background() -> None:
             try:
