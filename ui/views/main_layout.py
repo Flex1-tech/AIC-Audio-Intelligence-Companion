@@ -1,5 +1,4 @@
 import flet as ft
-from ui.design_system.colors import ObsidianColors
 from ui.components.header_bar import HeaderBar
 from ui.components.sidebar import Sidebar
 from ui.components.action_bar import ActionBar
@@ -42,7 +41,6 @@ class MainLayout(ft.Column):
         self.workspace_container = ft.Container(
             content=self.library_view,
             expand=True,
-            bgcolor=ObsidianColors.BG_DARK,
         )
 
         self.action_bar = ActionBar(

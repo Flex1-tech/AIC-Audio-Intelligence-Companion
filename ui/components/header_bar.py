@@ -7,12 +7,20 @@ from core.state import app_state
 class HeaderBar(ft.Container):
     """
     Header principal avec logo AIC, badges de télémétrie IA et commutateur de thème.
+
+    Surface and border colours delegate to the theme via ft.Colors so that they
+    adapt when the user toggles the theme.  Brand-specific colours (PRIMARY,
+    SUCCESS, badge backgrounds) remain explicit because they are semantic design
+    decisions of the Obsidian Horizon system, not generic Material roles.
+    Text colours for PRIMARY and body content are removed so ft inherits
+    on_surface from the active ColorScheme.  TEXT_MUTED is kept explicit because
+    it represents a deliberate typographic hierarchy tier with no M3 equivalent.
     """
 
     def __init__(self, on_theme_toggle=None):
         self.on_theme_toggle = on_theme_toggle
 
-        # Badges d'état IA
+        # Badges d'état IA — colours are intentional brand/semantic choices
         self.onnx_badge = ft.Container(
             content=ft.Row(
                 [
@@ -21,7 +29,7 @@ class HeaderBar(ft.Container):
                         "Musicnn ONNX",
                         size=12,
                         weight=ft.FontWeight.W_500,
-                        color=ObsidianColors.TEXT_PRIMARY,
+                        color=ObsidianColors.TEXT_PRIMARY,  # explicit light text for dark SUCCESS_BG
                     ),
                 ],
                 spacing=6,
@@ -29,14 +37,14 @@ class HeaderBar(ft.Container):
             ),
             padding=ft.Padding.symmetric(horizontal=10, vertical=4),
             border_radius=Radii.FULL,
-            bgcolor=ObsidianColors.SUCCESS_BG,
+            bgcolor=ObsidianColors.SUCCESS_BG,  # brand badge bg — explicit
         )
 
         self.db_text = ft.Text(
             "LanceDB Active",
             size=12,
             weight=ft.FontWeight.W_500,
-            color=ObsidianColors.TEXT_PRIMARY,
+            color=ObsidianColors.TEXT_PRIMARY,  # explicit light text for dark PRIMARY_GLOW bg
         )
 
         self.db_badge = ft.Container(
@@ -50,7 +58,7 @@ class HeaderBar(ft.Container):
             ),
             padding=ft.Padding.symmetric(horizontal=10, vertical=4),
             border_radius=Radii.FULL,
-            bgcolor=ObsidianColors.PRIMARY_GLOW,
+            bgcolor=ObsidianColors.PRIMARY_GLOW,  # brand badge bg — explicit
         )
 
         super().__init__(
@@ -67,7 +75,7 @@ class HeaderBar(ft.Container):
                                 ),
                                 padding=8,
                                 border_radius=Radii.SM,
-                                bgcolor=ObsidianColors.SURFACE_ELEVATED,
+                                bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
                             ),
                             ft.Column(
                                 [
@@ -75,12 +83,12 @@ class HeaderBar(ft.Container):
                                         "AIC",
                                         size=16,
                                         weight=ft.FontWeight.BOLD,
-                                        color=ObsidianColors.TEXT_PRIMARY,
+                                        # no explicit color — inherits on_surface
                                     ),
                                     ft.Text(
                                         "Audio Intelligence Companion",
                                         size=11,
-                                        color=ObsidianColors.TEXT_MUTED,
+                                        color=ObsidianColors.TEXT_MUTED,  # 3rd-level hierarchy — explicit
                                     ),
                                 ],
                                 spacing=0,
@@ -102,9 +110,9 @@ class HeaderBar(ft.Container):
                             ft.IconButton(
                                 icon=ft.Icons.BRIGHTNESS_4_OUTLINED,
                                 icon_size=18,
-                                icon_color=ObsidianColors.TEXT_SECONDARY,
                                 tooltip="Changer le thème",
                                 on_click=self._handle_theme_toggle,
+                                # no icon_color — inherits on_surface_variant from theme
                             ),
                         ],
                         spacing=6,
@@ -114,8 +122,8 @@ class HeaderBar(ft.Container):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             padding=ft.Padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
-            bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.only(bottom=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+            bgcolor=ft.Colors.SURFACE_CONTAINER,  # = ObsidianColors.SURFACE_DARK via ColorScheme
+            border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.OUTLINE)),  # = BORDER_DARK via ColorScheme
         )
 
     def update_telemetry(self):

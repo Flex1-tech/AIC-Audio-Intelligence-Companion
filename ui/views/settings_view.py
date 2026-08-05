@@ -13,8 +13,8 @@ class SettingsView(ft.Container):
         self.vlc_path_input = ft.TextField(
             value=app_state.session.vlc_custom_path,
             hint_text="Chemin d'accès vers vlc.exe (détection automatique par défaut)",
-            border_color=ObsidianColors.BORDER_DARK,
-            focused_border_color=ObsidianColors.PRIMARY,
+            # no explicit border_color — inherits outline from theme
+            focused_border_color=ObsidianColors.PRIMARY,  # brand focus indicator — explicit
             text_size=13,
             expand=True,
             on_change=self._handle_vlc_path_change,
@@ -27,7 +27,7 @@ class SettingsView(ft.Container):
                         "Réglages & Préférences",
                         size=18,
                         weight=ft.FontWeight.BOLD,
-                        color=ObsidianColors.TEXT_PRIMARY,
+                        # no explicit color — inherits on_surface
                     ),
                     ft.Text(
                         "Configurez les intégrations externes et les paramètres du moteur IA.",
@@ -43,7 +43,7 @@ class SettingsView(ft.Container):
                                     "Lecteur Média VLC",
                                     size=14,
                                     weight=ft.FontWeight.W_600,
-                                    color=ObsidianColors.TEXT_PRIMARY,
+                                    # no explicit color — inherits on_surface
                                 ),
                                 ft.Text(
                                     "Chemin d'accès personnalisé vers l'exécutable VLC sur votre ordinateur.",
@@ -61,8 +61,8 @@ class SettingsView(ft.Container):
                         ),
                         padding=Spacing.LG,
                         border_radius=Radii.MD,
-                        bgcolor=ObsidianColors.SURFACE_DARK,
-                        border=ft.Border.all(1, ObsidianColors.BORDER_DARK),
+                        bgcolor=ft.Colors.SURFACE_CONTAINER,  # = SURFACE_DARK via ColorScheme
+                        border=ft.Border.all(1, ft.Colors.OUTLINE),  # = BORDER_DARK via ColorScheme
                     ),
                     ft.Container(height=15),
                     # About Card
@@ -73,7 +73,7 @@ class SettingsView(ft.Container):
                                     "À propos d'AIC (Audio Intelligence Companion)",
                                     size=14,
                                     weight=ft.FontWeight.W_600,
-                                    color=ObsidianColors.TEXT_PRIMARY,
+                                    # no explicit color — inherits on_surface
                                 ),
                                 ft.Text(
                                     "Version 2.0 • Propulsé par Flet, ONNX Runtime, LanceDB et BLAKE3.",
@@ -83,15 +83,15 @@ class SettingsView(ft.Container):
                                 ft.Text(
                                     "Mode de fonctionnement : 100% Local & Souverain.",
                                     size=12,
-                                    color=ObsidianColors.SUCCESS,
+                                    color=ObsidianColors.SUCCESS,  # semantic feedback — explicit
                                 ),
                             ],
                             spacing=6,
                         ),
                         padding=Spacing.LG,
                         border_radius=Radii.MD,
-                        bgcolor=ObsidianColors.SURFACE_DARK,
-                        border=ft.Border.all(1, ObsidianColors.BORDER_DARK),
+                        bgcolor=ft.Colors.SURFACE_CONTAINER,
+                        border=ft.Border.all(1, ft.Colors.OUTLINE),
                     ),
                 ],
                 spacing=Spacing.MD,

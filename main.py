@@ -9,7 +9,7 @@ from controllers.recommendation_controller import RecommendationController
 from services.ai_engine_service import AIEngineService
 from services.database_service import DatabaseService
 from ui.components.result_dialog import ResultDialog
-from ui.design_system import get_obsidian_theme
+from ui.design_system import get_dark_theme, get_light_theme
 from ui.design_system.colors import ObsidianColors
 from ui.views.main_layout import MainLayout
 
@@ -20,7 +20,8 @@ def main(page: ft.Page) -> None:
     page.theme_mode = ft.ThemeMode.DARK
     page.window.icon = "assets/icon.ico"
     page.update()
-    page.theme = get_obsidian_theme()
+    page.theme = get_light_theme()
+    page.dark_theme = get_dark_theme()
     page.window.width = app_state.session.window_width
     page.window.height = app_state.session.window_height
     page.window.min_width = 850
@@ -38,7 +39,10 @@ def main(page: ft.Page) -> None:
     def _show_toast(message: str, is_error: bool = False) -> None:
         """Affiche une notification toast sur le thread UI."""
         snack = ft.SnackBar(
-            content=ft.Text(message, color=ObsidianColors.TEXT_WHITE),
+            content=ft.Text(
+                message,
+                color=ObsidianColors.TEXT_WHITE if is_error else ObsidianColors.BG_DARK,
+            ),
             bgcolor=ObsidianColors.ERROR if is_error else ObsidianColors.PRIMARY,
             duration=4000,
         )

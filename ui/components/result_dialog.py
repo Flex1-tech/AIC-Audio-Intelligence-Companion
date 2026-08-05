@@ -28,14 +28,14 @@ class ResultDialog(ft.AlertDialog):
                 [
                     ft.Icon(
                         ft.Icons.CHECK_CIRCLE_OUTLINED,
-                        color=ObsidianColors.SUCCESS,
+                        color=ObsidianColors.SUCCESS,  # semantic — explicit
                         size=24,
                     ),
                     ft.Text(
                         "Playlist Recommandée avec Succès !",
                         size=18,
                         weight=ft.FontWeight.BOLD,
-                        color=ObsidianColors.TEXT_PRIMARY,
+                        # no explicit color — inherits on_surface
                     ),
                 ],
                 spacing=10,
@@ -45,7 +45,7 @@ class ResultDialog(ft.AlertDialog):
                     ft.Text(
                         f"{count} morceau(x) ont été ordonnés par Maximal Marginal Relevance (MMR).",
                         size=14,
-                        color=ObsidianColors.TEXT_PRIMARY,
+                        # no explicit color — inherits on_surface
                     ),
                     ft.Container(height=10),
                     ft.Container(
@@ -54,20 +54,20 @@ class ResultDialog(ft.AlertDialog):
                                 ft.Icon(
                                     ft.Icons.DESCRIPTION_OUTLINED,
                                     size=16,
-                                    color=ObsidianColors.PRIMARY,
+                                    color=ObsidianColors.PRIMARY,  # brand accent — explicit
                                 ),
                                 ft.Text(
                                     file_path,
                                     size=12,
                                     font_family="monospace",
-                                    color=ObsidianColors.TEXT_SECONDARY,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,  # secondary text — via ColorScheme
                                 ),
                             ],
                             spacing=8,
                         ),
                         padding=10,
                         border_radius=Radii.SM,
-                        bgcolor=ObsidianColors.SURFACE_ELEVATED,
+                        bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,  # = SURFACE_ELEVATED via ColorScheme
                     ),
                 ],
                 tight=True,
@@ -77,6 +77,7 @@ class ResultDialog(ft.AlertDialog):
                 ft.OutlinedButton(
                     content="Fermer et continuer",
                     on_click=self._handle_close,
+                    # no explicit colors — inherits from theme
                 ),
                 ft.FilledButton(
                     content=ft.Row(
@@ -84,24 +85,24 @@ class ResultDialog(ft.AlertDialog):
                             ft.Icon(
                                 ft.Icons.PLAY_ARROW_ROUNDED,
                                 size=18,
-                                color=ObsidianColors.BG_DARK,
+                                color=ObsidianColors.ON_PRIMARY,  # dark on amber — explicit
                             ),
                             ft.Text(
                                 "Lancer dans VLC",
                                 weight=ft.FontWeight.BOLD,
-                                color=ObsidianColors.BG_DARK,
+                                color=ObsidianColors.ON_PRIMARY,
                             ),
                         ],
                         spacing=6,
                     ),
                     style=ft.ButtonStyle(
-                        bgcolor=ObsidianColors.PRIMARY,
+                        bgcolor=ObsidianColors.PRIMARY,  # brand action — explicit
                     ),
                     on_click=self._handle_vlc,
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
-            bgcolor=ObsidianColors.SURFACE_DARK,
+            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,  # = SURFACE_ELEVATED via ColorScheme
             shape=ft.RoundedRectangleBorder(radius=Radii.LG),
             on_dismiss=self._handle_close,
         )
