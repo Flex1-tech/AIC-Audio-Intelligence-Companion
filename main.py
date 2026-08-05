@@ -45,6 +45,12 @@ def main(page: ft.Page) -> None:
         page.title = "AIC — Audio Intelligence Companion"
         page.theme_mode = ft.ThemeMode.DARK
 
+        # Polices embarquées localement (pas de dépendance réseau)
+        # Space Grotesk — téléchargée dans assets/fonts/ (woff2)
+        page.fonts = {
+            "Space Grotesk": "fonts/SpaceGrotesk-Bold.woff2",
+        }
+
         # Résolution sécurisée de l'icône de fenêtre avec vérification d'existence
         icon_path = get_asset_path("icon.ico") or get_asset_path("icon.png")
         if icon_path and icon_path.exists():
@@ -206,7 +212,7 @@ def main(page: ft.Page) -> None:
             except Exception:
                 pass
 
-        splash_screen = SplashScreen(on_complete=finish_splash)
+        splash_screen = SplashScreen(page=page, on_complete=finish_splash)
 
         root_stack = ft.Stack(
             [
