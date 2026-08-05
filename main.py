@@ -49,6 +49,7 @@ def main(page: ft.Page) -> None:
         # Space Grotesk — téléchargée dans assets/fonts/ (woff2)
         page.fonts = {
             "Space Grotesk": "fonts/SpaceGrotesk-Bold.woff2",
+            "Space Grotesk Medium": "fonts/SpaceGrotesk-Medium.woff2",
         }
 
         # Résolution sécurisée de l'icône de fenêtre avec vérification d'existence
