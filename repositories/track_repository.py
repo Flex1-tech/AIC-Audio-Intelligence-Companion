@@ -2,16 +2,18 @@ from typing import List, Dict, Optional, Any
 import lancedb
 
 from extraction import initialize_database, get_file_hash, get_existing_embeddings
+from utils.path_utils import get_user_data_dir
 
 
 class TrackRepository:
     """
     Repository d'accès aux données vectorielles LanceDB pour AIC.
     Encapsule la table 'audio_embeddings' et les requêtes BLAKE3 hash.
+    Utilise le répertoire de données utilisateur propre à l'OS (%APPDATA%/AIC/MusicRecommenderDB).
     """
 
-    def __init__(self, db_path: str = "./MusicRecommenderDB"):
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[str] = None):
+        self.db_path = db_path or str(get_user_data_dir() / "MusicRecommenderDB")
         self._table: Optional[lancedb.table.Table] = None
 
     def get_table(self) -> lancedb.table.Table:

@@ -1,20 +1,23 @@
 """
 Dark and light theme definitions for AIC.
 
-Both themes use ObsidianColors as the single source of truth for colour values.
-The ft.ColorScheme maps semantic design tokens to Material 3 roles so that
-widgets can reference ft.Colors.* and remain theme-adaptive, while the design
-system retains full control over the actual hex values.
+ObsidianColors serves as the single source of truth for Obsidian Horizon design system
+tokens (brand identity, semantic feedback, and shared theme tokens).
+
+Neutral surface and typography shades specific to the light theme are defined in theme.py
+to provide optimal contrast on light surfaces. All tokens and neutral values are injected
+into Flet's Material 3 ColorScheme so that UI components consume only Material 3 roles
+(ft.Colors.*) and remain fully theme-adaptive without using raw hex values directly.
 
 Mapping contract (dark → light):
   surface            = BG_DARK              → #F8F9FA
   on_surface         = TEXT_PRIMARY         → #1A1C1E
-  on_surface_variant = TEXT_SECONDARY       → #5F6368  (darker for readability)
+  on_surface_variant = TEXT_SECONDARY       → #5F6368  (darker grey for readability)
   surface_container  = SURFACE_DARK         → #ECEEF0
   surface_container_high = SURFACE_ELEVATED → #E6E8EA
   outline            = BORDER_DARK          → #72777F
-  primary            = PRIMARY              → PRIMARY  (same amber brand)
-  on_primary         = ON_PRIMARY (BG_DARK) → #0F1117  (dark on amber — 8.79:1)
+  primary            = PRIMARY              → PRIMARY  (shared amber brand accent)
+  on_primary         = ON_PRIMARY (BG_DARK) → #0F1117  (dark text on amber — 8.79:1)
   error              = ERROR                → ERROR
   on_error           = ON_ERROR (TEXT_PRIMARY) → #FFFFFF
 """
@@ -26,7 +29,7 @@ from ui.design_system.colors import ObsidianColors
 def get_dark_theme() -> ft.Theme:
     """
     Obsidian Horizon dark theme.
-    Every colour value is sourced from ObsidianColors.
+    Maps ObsidianColors tokens into Material 3 ColorScheme roles.
     """
     return ft.Theme(
         color_scheme=ft.ColorScheme(
@@ -49,13 +52,12 @@ def get_light_theme() -> ft.Theme:
     """
     Obsidian Horizon light theme.
     Preserves the amber brand identity on neutral MD3 light surfaces.
-    on_primary uses the same dark value as dark mode — amber requires dark text
-    regardless of the page theme (contrast 8.79:1).
+    Injects light-mode neutral values into the Material 3 ColorScheme.
     """
     return ft.Theme(
         color_scheme=ft.ColorScheme(
-            primary=ObsidianColors.PRIMARY,  # same amber brand
-            on_primary=ObsidianColors.ON_PRIMARY,  # #0F1117 — dark on amber (8.79:1)
+            primary=ObsidianColors.PRIMARY,  # shared amber brand accent
+            on_primary=ObsidianColors.ON_PRIMARY,  # #0F1117 — dark text on amber (8.79:1)
             surface="#F8F9FA",
             on_surface="#1A1C1E",
             on_surface_variant="#5F6368",  # secondary text — ~6:1 on light surface
@@ -69,5 +71,5 @@ def get_light_theme() -> ft.Theme:
     )
 
 
-# Backward-compatibility alias (used in ui/design_system/__init__.py and main.py)
+# Backward-compatibility alias
 get_obsidian_theme = get_dark_theme

@@ -3,23 +3,24 @@
 ## Overview
 
 AIC uses a **dual-theme architecture** built on Flet's `page.theme` / `page.dark_theme` duality
-and the Material Design 3 `ColorScheme`. The `ObsidianColors` class remains the **single source
-of truth** for all colour values. Widgets reference M3 semantic roles (`ft.Colors.SURFACE_CONTAINER`,
-etc.) rather than raw hex values, but those roles are always configured via `ColorScheme` using
-`ObsidianColors` tokens.
+and the Material Design 3 `ColorScheme`.
+
+- **`ObsidianColors`** is the single source of truth for **Obsidian Horizon design system tokens**
+  (brand identity, semantic feedback, and shared theme tokens).
+- Neutral surface and typography shades specific to the light theme are defined in `theme.py` for
+  optimal light-mode contrast.
+- Both token sets are injected into Flet's Material 3 `ColorScheme` in `theme.py`.
+- UI components reference M3 semantic roles (`ft.Colors.SURFACE_CONTAINER`, `ft.Colors.OUTLINE`, etc.)
+  so they adapt automatically when switching between dark and light themes without using raw hex values directly.
 
 ---
 
 ## Architecture
 
 ```
-ObsidianColors        ← single source of truth for all hex values
-       │
-       ▼
-theme.py ColorScheme  ← maps design tokens to M3 roles (per theme)
-       │
-       ▼
-ft.Colors.*           ← used by widgets to reference roles adaptively
+ObsidianColors (Design Tokens)  ──┐
+                                  ├──► theme.py ColorScheme ──► ft.Colors.* (UI Components)
+Light Mode Neutrals (theme.py) ──┘
 ```
 
 ### Theme slots
@@ -33,8 +34,8 @@ ft.Colors.*           ← used by widgets to reference roles adaptively
 
 ## ColorScheme Mapping
 
-| M3 Role | Dark value (`ObsidianColors`) | Light value |
-|---------|-------------------------------|-------------|
+| M3 Role | Dark value (`ObsidianColors`) | Light value (`theme.py`) |
+|---------|-------------------------------|---------------------------|
 | `surface` | `BG_DARK` `#0F1117` | `#F8F9FA` |
 | `on_surface` | `ON_SURFACE` / `TEXT_PRIMARY` `#F9FAFB` | `#1A1C1E` |
 | `on_surface_variant` | `TEXT_SECONDARY` `#9CA3AF` | `#5F6368` |
@@ -65,7 +66,7 @@ ft.Colors.*           ← used by widgets to reference roles adaptively
 - Typographic hierarchy tier 3: `ObsidianColors.TEXT_MUTED`
 - Disabled states: `ObsidianColors.TEXT_DISABLED`
 - Decorative colours: `ObsidianColors.HEART_RED`
-- Specific contrast scenarios: `ObsidianColors.TEXT_WHITE` (on ERROR)
+- Error toast backgrounds: `ObsidianColors.ERROR_BG` (dark crimson `#B91C1C` — 7.55:1 AAA contrast)
 
 ---
 

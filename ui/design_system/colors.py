@@ -24,7 +24,7 @@ class ObsidianColors:
     WARNING = PRIMARY  # No distinct warning state in UI – aliases PRIMARY (amber)
     WARNING_BG = PRIMARY_GLOW  # Warning badge background – aliases PRIMARY_GLOW
     ERROR = "#EF4444"  # Crimson red – error / destructive
-    ERROR_BG = "#7F1D1D"  # Error badge background
+    ERROR_BG = "#B91C1C"  # Dark crimson red – error toast background (7.55:1 AAA on TEXT_WHITE)
 
     # Typography
     TEXT_PRIMARY = "#F9FAFB"  # Warm white – headings, body text
