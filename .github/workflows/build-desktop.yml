@@ -135,7 +135,7 @@ jobs:
         run: |
           uv run flet build ${{ matrix.platform }} \
             ${{ matrix.extra_args }} \
-            --python-version 3.11 \
+            --python-version 3.12 \
             --yes \
             --verbose \
             --no-rich-output
