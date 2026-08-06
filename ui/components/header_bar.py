@@ -82,12 +82,13 @@ class HeaderBar(ft.Container):
                                     ft.Text(
                                         "AIC",
                                         size=16,
-                                        weight=ft.FontWeight.BOLD,
+                                        font_family="Cinzel Decorative Bold",
                                         # no explicit color — inherits on_surface
                                     ),
                                     ft.Text(
                                         "Audio Intelligence Companion",
                                         size=11,
+                                        font_family="Cinzel Decorative Regular",
                                         color=ObsidianColors.TEXT_MUTED,  # 3rd-level hierarchy — explicit
                                     ),
                                 ],

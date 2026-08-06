@@ -13,6 +13,8 @@ class TypographyStyle:
 
 
 class Typography:
+    BRAND_TITLE = TypographyStyle(size=20, font_family="Cinzel Decorative Bold")
+    BRAND_SUBTITLE = TypographyStyle(size=12, font_family="Cinzel Decorative Regular")
     APP_TITLE = TypographyStyle(size=20, weight="bold")
     SECTION_HEADER = TypographyStyle(size=16, weight="w600")
     SUBTITLE = TypographyStyle(size=13, weight="w500")

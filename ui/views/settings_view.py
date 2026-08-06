@@ -72,7 +72,7 @@ class SettingsView(ft.Container):
                                 ft.Text(
                                     "À propos d'AIC (Audio Intelligence Companion)",
                                     size=14,
-                                    weight=ft.FontWeight.W_600,
+                                    font_family="Cinzel Decorative Regular",
                                     # no explicit color — inherits on_surface
                                 ),
                                 ft.Text(
