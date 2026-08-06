@@ -61,6 +61,7 @@ jobs:
         continue-on-error: true
         run: |
           uv run flet build windows \
+            --python-version 3.11 \
             --yes \
             --verbose \
             --no-rich-output
