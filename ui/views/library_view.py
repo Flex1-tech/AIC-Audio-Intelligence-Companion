@@ -30,12 +30,12 @@ class LibraryView(ft.Container):
         self._btn_files = ft.FilledButton(
             content=ft.Row(
                 [
-                    ft.Icon(ft.Icons.AUDIO_FILE, size=16, color=ObsidianColors.BG_DARK),
+                    ft.Icon(ft.Icons.AUDIO_FILE, size=16, color=ObsidianColors.ON_PRIMARY),
                     ft.Text(
                         "Parcourir Fichiers",
                         size=12,
                         weight=ft.FontWeight.BOLD,
-                        color=ObsidianColors.BG_DARK,
+                        color=ObsidianColors.ON_PRIMARY,
                     ),
                 ],
                 spacing=6,
@@ -47,12 +47,12 @@ class LibraryView(ft.Container):
         self._btn_folder = ft.OutlinedButton(
             content=ft.Row(
                 [
-                    ft.Icon(ft.Icons.FOLDER_OPEN, size=16, color=ObsidianColors.TEXT_PRIMARY),
-                    ft.Text("Scanner un Dossier", size=12, color=ObsidianColors.TEXT_PRIMARY),
+                    ft.Icon(ft.Icons.FOLDER_OPEN, size=16),
+                    ft.Text("Scanner un Dossier", size=12),
                 ],
                 spacing=6,
             ),
-            style=ft.ButtonStyle(side=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+            # no explicit style colors — inherits on_surface / outline from theme
             on_click=lambda e: (e.page.run_task(self.on_pick_folder) if self.on_pick_folder else None),
         )
 
@@ -66,7 +66,7 @@ class LibraryView(ft.Container):
             width=20,
             height=20,
             stroke_width=2.5,
-            color=ObsidianColors.PRIMARY,
+            color=ObsidianColors.PRIMARY,  # brand — explicit
         )
         self._loader_row = ft.Row(
             [self._loader_ring, self._loader_text],
@@ -82,18 +82,18 @@ class LibraryView(ft.Container):
                     ft.Icon(
                         ft.Icons.CLOUD_UPLOAD_OUTLINED,
                         size=34,
-                        color=ObsidianColors.PRIMARY,
+                        color=ObsidianColors.PRIMARY,  # brand — explicit
                     ),
                     ft.Text(
                         "Bibliothèque Musicale AIC",
                         size=15,
                         weight=ft.FontWeight.BOLD,
-                        color=ObsidianColors.TEXT_PRIMARY,
+                        # no explicit color — inherits on_surface
                     ),
                     ft.Text(
                         r"Sélectionnez des fichiers audio ou scannez un dossier (D:\Musique, E:\FLAC…)",
                         size=12,
-                        color=ObsidianColors.TEXT_MUTED,
+                        color=ObsidianColors.TEXT_MUTED,  # 3rd-level hierarchy — explicit
                         text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Container(height=4),
@@ -109,16 +109,16 @@ class LibraryView(ft.Container):
             ),
             padding=Spacing.LG,
             border_radius=Radii.LG,
-            bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.all(1, ObsidianColors.BORDER_DARK),
+            bgcolor=ft.Colors.SURFACE_CONTAINER,  # = SURFACE_DARK via ColorScheme
+            border=ft.Border.all(1, ft.Colors.OUTLINE),  # = BORDER_DARK via ColorScheme
         )
 
         # ── Barre de Recherche et Filtres ────────────────────────────────────
         self.search_entry = ft.TextField(
             hint_text="Rechercher par nom de fichier...",
             prefix_icon=ft.Icons.SEARCH,
-            border_color=ObsidianColors.BORDER_DARK,
-            focused_border_color=ObsidianColors.PRIMARY,
+            # no explicit border_color — inherits outline from theme
+            focused_border_color=ObsidianColors.PRIMARY,  # brand focus indicator — explicit
             text_size=13,
             height=40,
             content_padding=10,
@@ -147,18 +147,18 @@ class LibraryView(ft.Container):
                     ft.Icon(
                         ft.Icons.MUSIC_OFF_OUTLINED,
                         size=48,
-                        color=ObsidianColors.TEXT_DISABLED,
+                        color=ObsidianColors.TEXT_DISABLED,  # disabled state — explicit
                     ),
                     ft.Text(
                         "Aucun morceau dans la bibliothèque",
                         size=16,
                         weight=ft.FontWeight.W_600,
-                        color=ObsidianColors.TEXT_SECONDARY,
+                        color=ft.Colors.ON_SURFACE_VARIANT,  # secondary text — via ColorScheme
                     ),
                     ft.Text(
                         "Importez des fichiers ou scannez un dossier pour alimenter l'IA.",
                         size=13,
-                        color=ObsidianColors.TEXT_MUTED,
+                        color=ObsidianColors.TEXT_MUTED,  # 3rd-level hierarchy — explicit
                     ),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,

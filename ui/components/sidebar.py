@@ -1,10 +1,14 @@
 import flet as ft
-from ui.design_system.colors import ObsidianColors
 
 
 class Sidebar(ft.Container):
     """
     Rail de navigation latéral style Obsidian / Linear.
+
+    bgcolor is intentionally not set on NavigationRail or the outer Container
+    so Flet's native M3 theming handles surface colours adaptively.
+    The border uses ft.Colors.OUTLINE which resolves to ObsidianColors.BORDER_DARK
+    in dark mode and the equivalent outline colour in light mode via ColorScheme.
     """
 
     def __init__(self, selected_index: int = 0, on_change=None):
@@ -16,7 +20,6 @@ class Sidebar(ft.Container):
             label_type=ft.NavigationRailLabelType.ALL,
             min_width=72,
             min_extended_width=180,
-            bgcolor=ObsidianColors.SURFACE_DARK,
             group_alignment=-0.9,
             destinations=[
                 ft.NavigationRailDestination(
@@ -40,8 +43,7 @@ class Sidebar(ft.Container):
 
         super().__init__(
             content=self.rail,
-            bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.only(right=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+            border=ft.Border.only(right=ft.BorderSide(1, ft.Colors.OUTLINE)),
         )
 
     def _on_nav_change(self, e):

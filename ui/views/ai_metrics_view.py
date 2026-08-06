@@ -23,7 +23,7 @@ class AIMetricsView(ft.Container):
                         "Télémétrie & Santé du Moteur IA",
                         size=18,
                         weight=ft.FontWeight.BOLD,
-                        color=ObsidianColors.TEXT_PRIMARY,
+                        # no explicit color — inherits on_surface
                     ),
                     ft.Text(
                         "Supervision en temps réel des modèles Deep Learning et du cache vectoriel.",
@@ -50,7 +50,7 @@ class AIMetricsView(ft.Container):
                                 "Embeddings en Cache",
                                 f"{app_state.total_embeddings_in_db} morceaux",
                                 ft.Icons.GRID_VIEW,
-                                ObsidianColors.WARNING,
+                                ObsidianColors.INFO,
                             ),
                         ],
                         spacing=Spacing.MD,
@@ -63,14 +63,14 @@ class AIMetricsView(ft.Container):
                                 "Journal des Événements du Moteur",
                                 size=15,
                                 weight=ft.FontWeight.W_600,
-                                color=ObsidianColors.TEXT_PRIMARY,
+                                # no explicit color — inherits on_surface
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.CONTENT_COPY,
                                 icon_size=16,
-                                icon_color=ObsidianColors.TEXT_MUTED,
                                 tooltip="Copier les journaux",
                                 on_click=self._handle_copy_logs,
+                                # no icon_color — inherits on_surface_variant
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -111,7 +111,7 @@ class AIMetricsView(ft.Container):
         async def _copy_and_toast() -> None:
             await self.clipboard.set(logs_text)
             snack = ft.SnackBar(
-                content=ft.Text("Journaux copiés dans le presse-papier !", color=ObsidianColors.TEXT_WHITE),
+                content=ft.Text("Journaux copiés dans le presse-papier !", color=ObsidianColors.BG_DARK),
                 bgcolor=ObsidianColors.PRIMARY,
                 duration=3000,
             )
@@ -130,8 +130,8 @@ class AIMetricsView(ft.Container):
                 [
                     ft.Row(
                         [
-                            ft.Icon(icon, size=20, color=accent_color),
-                            ft.Text(title, size=12, color=ObsidianColors.TEXT_MUTED),
+                            ft.Icon(icon, size=20, color=accent_color),  # semantic colour — explicit
+                            ft.Text(title, size=12, color=ObsidianColors.TEXT_MUTED),  # 3rd-level — explicit
                         ],
                         spacing=8,
                     ),
@@ -139,15 +139,15 @@ class AIMetricsView(ft.Container):
                         value,
                         size=16,
                         weight=ft.FontWeight.BOLD,
-                        color=ObsidianColors.TEXT_PRIMARY,
+                        # no explicit color — inherits on_surface
                     ),
                 ],
                 spacing=6,
             ),
             padding=Spacing.MD,
             border_radius=Radii.MD,
-            bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.all(1, ObsidianColors.BORDER_DARK),
+            bgcolor=ft.Colors.SURFACE_CONTAINER,  # = SURFACE_DARK via ColorScheme
+            border=ft.Border.all(1, ft.Colors.OUTLINE),  # = BORDER_DARK via ColorScheme
             expand=True,
         )
 
@@ -168,12 +168,12 @@ class AIMetricsView(ft.Container):
                                 log.action_type,
                                 size=11,
                                 weight=ft.FontWeight.BOLD,
-                                color=ObsidianColors.PRIMARY,
+                                color=ObsidianColors.PRIMARY,  # brand accent — explicit
                             ),
                             ft.Text(
                                 log.description,
                                 size=12,
-                                color=ObsidianColors.TEXT_PRIMARY,
+                                # no explicit color — inherits on_surface
                                 overflow=ft.TextOverflow.ELLIPSIS,
                             ),
                         ],
@@ -181,7 +181,7 @@ class AIMetricsView(ft.Container):
                     ),
                     padding=8,
                     border_radius=Radii.SM,
-                    bgcolor=ObsidianColors.SURFACE_DARK,
+                    bgcolor=ft.Colors.SURFACE_CONTAINER,
                 )
             )
         try:

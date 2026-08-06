@@ -15,6 +15,7 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
 from schema import TrackEmbeddingModel
+from utils.path_utils import get_asset_path
 
 
 def extract_representative_batch(
@@ -273,29 +274,19 @@ def get_file_hash(filepath: str):
 
 
 def resolve_onnx_model_path(filename: str = "msd-musicnn-1.onnx") -> str:
-    """Résout le chemin absolu déterministe du fichier modèle ONNX (assets/ ou racine projet).
+    """Résout le chemin absolu déterministe du fichier modèle ONNX via multi-fallback cross-plateforme.
 
     Raises:
         FileNotFoundError: Si le fichier modèle n'existe dans aucun emplacement.
     """
-    path = Path(filename)
-    if path.is_file():
-        return str(path.resolve())
+    resolved = get_asset_path(filename)
+    if resolved and resolved.is_file():
+        return str(resolved)
 
-    model_name = Path(filename).name
-    base_dir = Path(__file__).resolve().parent
-
-    candidates = [
-        base_dir / "assets" / model_name,
-        base_dir / model_name,
-    ]
-
-    for candidate in candidates:
-        if candidate.is_file():
-            return str(candidate.resolve())
-
-    searched_paths = ", ".join(f"'{p}'" for p in candidates)
-    raise FileNotFoundError(f"Fichier modèle ONNX introuvable : '{model_name}' (recherché dans : {searched_paths}).")
+    raise FileNotFoundError(
+        f"Fichier modèle ONNX introuvable : '{filename}'. "
+        "Vérifiez qu'il est présent dans assets/ ou dans le bundle de l'application."
+    )
 
 
 def load_musicnn(onnx_path: str = "msd-musicnn-1.onnx") -> ort.InferenceSession:

@@ -29,11 +29,11 @@ class TrackItem(ft.Container):
                 track.audio_format or "AUDIO",
                 size=10,
                 weight=ft.FontWeight.BOLD,
-                color=ObsidianColors.TEXT_SECONDARY,
+                color=ft.Colors.ON_SURFACE_VARIANT,  # secondary text — via ColorScheme
             ),
             padding=ft.Padding.symmetric(horizontal=6, vertical=2),
             border_radius=Radii.SM,
-            bgcolor=ObsidianColors.SURFACE_ELEVATED,
+            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,  # = SURFACE_ELEVATED via ColorScheme
         )
 
         # Hash Badge
@@ -46,7 +46,7 @@ class TrackItem(ft.Container):
             ),
             padding=ft.Padding.symmetric(horizontal=6, vertical=2),
             border_radius=Radii.SM,
-            bgcolor=ObsidianColors.SURFACE_ELEVATED,
+            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
         )
 
         super().__init__(
@@ -58,7 +58,7 @@ class TrackItem(ft.Container):
                             ft.Icon(
                                 ft.Icons.MUSIC_NOTE,
                                 size=20,
-                                color=(ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.TEXT_SECONDARY),
+                                color=(ObsidianColors.PRIMARY if track.is_liked else ft.Colors.ON_SURFACE_VARIANT),
                             ),
                             ft.Column(
                                 [
@@ -66,7 +66,7 @@ class TrackItem(ft.Container):
                                         track.file_name,
                                         size=14,
                                         weight=ft.FontWeight.W_500,
-                                        color=ObsidianColors.TEXT_PRIMARY,
+                                        # no explicit color — inherits on_surface
                                         overflow=ft.TextOverflow.ELLIPSIS,
                                         max_lines=1,
                                     ),
@@ -110,10 +110,10 @@ class TrackItem(ft.Container):
             ),
             padding=ft.Padding.symmetric(horizontal=Spacing.MD, vertical=Spacing.SM),
             border_radius=Radii.MD,
-            bgcolor=ObsidianColors.SURFACE_DARK,
+            bgcolor=ft.Colors.SURFACE_CONTAINER,  # = SURFACE_DARK via ColorScheme
             border=ft.Border.all(
                 1,
-                (ObsidianColors.PRIMARY if track.is_liked else ObsidianColors.BORDER_DARK),
+                (ObsidianColors.PRIMARY if track.is_liked else ft.Colors.OUTLINE),
             ),
         )
 

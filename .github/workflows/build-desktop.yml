@@ -58,7 +58,7 @@ jobs:
 
           # ── Linux ──────────────────────────────────────────────────────────
           - platform: linux
-            runner: ubuntu-22.04
+            runner: ubuntu-latest
             artifact_path: build/linux
             needs_linux_deps: true
 

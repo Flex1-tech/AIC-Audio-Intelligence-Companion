@@ -7,6 +7,11 @@ from core.state import app_state
 class ActionBar(ft.Container):
     """
     Barre de contrôle du bas (Sticky Bottom Bar) avec slider MMR et bouton de recommandation principal.
+
+    Surface and border colours delegate to the theme.
+    Brand colours (PRIMARY) and typographic hierarchy colours (TEXT_MUTED) remain explicit.
+    TEXT_SECONDARY in dynamic updates uses ft.Colors.ON_SURFACE_VARIANT which resolves
+    to ObsidianColors.TEXT_SECONDARY in dark mode via ColorScheme.
     """
 
     def __init__(self, on_start_recommendation=None, on_reset=None):
@@ -21,7 +26,7 @@ class ActionBar(ft.Container):
             value=app_state.session.lambda_mmr,
             label="{value}",
             width=160,
-            active_color=ObsidianColors.PRIMARY,
+            active_color=ObsidianColors.PRIMARY,  # brand identity — explicit
             on_change=self._handle_slider_change,
         )
 
@@ -29,21 +34,20 @@ class ActionBar(ft.Container):
             f"λ = {app_state.session.lambda_mmr:.2f}",
             size=12,
             weight=ft.FontWeight.W_600,
-            color=ObsidianColors.PRIMARY,
+            color=ObsidianColors.PRIMARY,  # brand accent — explicit
         )
 
         self.status_text = ft.Text(
             "0 morceau(x) importé(s) | 0/3 Likés",
             size=13,
-            color=ObsidianColors.TEXT_SECONDARY,
+            color=ft.Colors.ON_SURFACE_VARIANT,  # secondary text — via ColorScheme
         )
 
         self.reset_button = ft.OutlinedButton(
             content="Réinitialiser",
             style=ft.ButtonStyle(
-                color=ObsidianColors.TEXT_SECONDARY,
-                side=ft.BorderSide(1, ObsidianColors.BORDER_DARK),
                 shape=ft.RoundedRectangleBorder(radius=Radii.SM),
+                # no explicit color or side — inherits on_surface / outline from theme
             ),
             on_click=self._handle_reset,
         )
@@ -51,18 +55,18 @@ class ActionBar(ft.Container):
         self.start_button = ft.FilledButton(
             content=ft.Row(
                 [
-                    ft.Icon(ft.Icons.AUTO_AWESOME, size=18, color=ObsidianColors.BG_DARK),
+                    ft.Icon(ft.Icons.AUTO_AWESOME, size=18, color=ObsidianColors.ON_PRIMARY),
                     ft.Text(
                         "Générer la Playlist IA (MMR)",
                         weight=ft.FontWeight.BOLD,
-                        color=ObsidianColors.BG_DARK,
+                        color=ObsidianColors.ON_PRIMARY,  # = BG_DARK — dark on amber (8.79:1)
                     ),
                 ],
                 spacing=8,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
             style=ft.ButtonStyle(
-                bgcolor=ObsidianColors.PRIMARY,
+                bgcolor=ObsidianColors.PRIMARY,  # brand action — explicit
                 padding=ft.Padding.symmetric(horizontal=20, vertical=12),
                 shape=ft.RoundedRectangleBorder(radius=Radii.SM),
             ),
@@ -77,13 +81,17 @@ class ActionBar(ft.Container):
                     ft.Row(
                         [
                             self.status_text,
-                            ft.Container(width=1, height=20, bgcolor=ObsidianColors.BORDER_DARK),
+                            ft.Container(
+                                width=1,
+                                height=20,
+                                bgcolor=ft.Colors.OUTLINE,  # = BORDER_DARK via ColorScheme
+                            ),
                             ft.Row(
                                 [
                                     ft.Text(
                                         "Balance MMR :",
                                         size=12,
-                                        color=ObsidianColors.TEXT_MUTED,
+                                        color=ObsidianColors.TEXT_MUTED,  # 3rd-level hierarchy — explicit
                                     ),
                                     self.lambda_slider,
                                     self.lambda_text,
@@ -107,8 +115,8 @@ class ActionBar(ft.Container):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             padding=ft.Padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
-            bgcolor=ObsidianColors.SURFACE_DARK,
-            border=ft.Border.only(top=ft.BorderSide(1, ObsidianColors.BORDER_DARK)),
+            bgcolor=ft.Colors.SURFACE_CONTAINER,  # = SURFACE_DARK via ColorScheme
+            border=ft.Border.only(top=ft.BorderSide(1, ft.Colors.OUTLINE)),  # = BORDER_DARK via ColorScheme
         )
 
     def update_state(self):
@@ -122,11 +130,11 @@ class ActionBar(ft.Container):
             self.status_text.color = ObsidianColors.PRIMARY
             self.start_button.content = ft.Row(
                 [
-                    ft.ProgressRing(width=16, height=16, stroke_width=2.5, color=ObsidianColors.BG_DARK),
+                    ft.ProgressRing(width=16, height=16, stroke_width=2.5, color=ObsidianColors.ON_PRIMARY),
                     ft.Text(
                         "Génération en cours…",
                         weight=ft.FontWeight.BOLD,
-                        color=ObsidianColors.BG_DARK,
+                        color=ObsidianColors.ON_PRIMARY,
                     ),
                 ],
                 spacing=8,
@@ -134,14 +142,14 @@ class ActionBar(ft.Container):
             )
         else:
             self.status_text.value = f"{lib.total_tracks_count} morceau(x) importé(s) | {liked_cnt}/3 Likés (Requis: 3)"
-            self.status_text.color = ObsidianColors.SUCCESS if ready else ObsidianColors.TEXT_SECONDARY
+            self.status_text.color = ObsidianColors.SUCCESS if ready else ft.Colors.ON_SURFACE_VARIANT
             self.start_button.content = ft.Row(
                 [
-                    ft.Icon(ft.Icons.AUTO_AWESOME, size=18, color=ObsidianColors.BG_DARK),
+                    ft.Icon(ft.Icons.AUTO_AWESOME, size=18, color=ObsidianColors.ON_PRIMARY),
                     ft.Text(
                         "Générer la Playlist IA (MMR)",
                         weight=ft.FontWeight.BOLD,
-                        color=ObsidianColors.BG_DARK,
+                        color=ObsidianColors.ON_PRIMARY,
                     ),
                 ],
                 spacing=8,
