@@ -180,9 +180,8 @@ class SplashScreen(ft.Container):
             content=ft.Text(
                 "AIC",
                 size=title_size,
-                weight=ft.FontWeight.BOLD,
                 color=ObsidianColors.TEXT_PRIMARY,
-                font_family="Cinzel Decorative",
+                font_family="Cinzel Decorative Bold",
             ),
             opacity=0.0,
             offset=ft.Offset(x=0, y=0.12),
@@ -190,15 +189,14 @@ class SplashScreen(ft.Container):
             animate_offset=ft.Animation(520, ft.AnimationCurve.EASE_OUT_CUBIC),
         )
 
-        # ── Sous-titre ────────────────────────────────────────────────────────
+        # ── Sous-titre (Cinzel Decorative Regular) ────────────────────────────
         subtitle_size = max(11, int(S * 0.030))
         self.subtitle_box = ft.Container(
             content=ft.Text(
                 "Audio Intelligence Companion",
                 size=subtitle_size,
-                weight=ft.FontWeight.W_500,
                 color=ObsidianColors.TEXT_MUTED,
-                font_family="Cinzel Decorative",
+                font_family="Cinzel Decorative Regular",
             ),
             opacity=0.0,
             offset=ft.Offset(x=0, y=0.10),

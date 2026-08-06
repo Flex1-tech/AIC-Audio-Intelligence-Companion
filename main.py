@@ -48,7 +48,7 @@ def main(page: ft.Page) -> None:
         # Polices embarquées localement (.ttf pour compatibilité Flutter Desktop)
         # Cinzel Decorative — assets/fonts/ (TTF officiel)
         page.fonts = {
-            "Cinzel Decorative": "fonts/CinzelDecorative-Bold.ttf",
+            "Cinzel Decorative Bold": "fonts/CinzelDecorative-Bold.ttf",
             "Cinzel Decorative Regular": "fonts/CinzelDecorative-Regular.ttf",
         }
 
