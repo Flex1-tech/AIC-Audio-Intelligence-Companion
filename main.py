@@ -45,11 +45,11 @@ def main(page: ft.Page) -> None:
         page.title = "AIC — Audio Intelligence Companion"
         page.theme_mode = ft.ThemeMode.DARK
 
-        # Polices embarquées localement (pas de dépendance réseau)
-        # Cinzel Decorative — téléchargée dans assets/fonts/ (woff2)
+        # Polices embarquées localement (.ttf pour compatibilité Flutter Desktop)
+        # Cinzel Decorative — assets/fonts/ (TTF officiel)
         page.fonts = {
-            "Cinzel Decorative": "fonts/CinzelDecorative-Bold.woff2",
-            "Cinzel Decorative Regular": "fonts/CinzelDecorative-Regular.woff2",
+            "Cinzel Decorative": "fonts/CinzelDecorative-Bold.ttf",
+            "Cinzel Decorative Regular": "fonts/CinzelDecorative-Regular.ttf",
         }
 
         # Résolution sécurisée de l'icône de fenêtre avec vérification d'existence
