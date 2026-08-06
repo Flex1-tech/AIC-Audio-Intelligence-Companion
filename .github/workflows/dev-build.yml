@@ -105,29 +105,38 @@ jobs:
           if (Test-Path stdout.txt) { Write-Host "=== STDOUT ==="; Get-Content stdout.txt }
           if (Test-Path stderr.txt) { Write-Host "=== STDERR ==="; Get-Content stderr.txt }
 
-      # ── 8. Affichage de aic_crash.log dans les logs CI ─────────────────────
-      - name: "Show aic_crash.log (if present)"
+      # ── 8. Affichage de aic_boot_trace.log et aic_crash.log ────────────────
+      - name: "Show boot trace and crash log"
         if: always()
         continue-on-error: true
         shell: pwsh
         run: |
           $appdata = $env:APPDATA
-          $candidates = @(
+          $trace_candidates = @(
+            "$appdata\AIC\logs\aic_boot_trace.log",
+            "$env:USERPROFILE\aic_boot_trace.log",
+            "aic_boot_trace.log",
+            "build\windows\aic_boot_trace.log"
+          )
+          foreach ($f in $trace_candidates) {
+            if (Test-Path $f) {
+              Write-Host "=== aic_boot_trace.log ($f) ==="
+              Get-Content $f
+            }
+          }
+          $crash_candidates = @(
             "$appdata\AIC\logs\aic_crash.log",
             "$appdata\AIC\aic_crash.log",
             "$env:USERPROFILE\aic_crash.log",
             "aic_crash.log",
             "build\windows\aic_crash.log"
           )
-          $found = $false
-          foreach ($f in $candidates) {
+          foreach ($f in $crash_candidates) {
             if (Test-Path $f) {
               Write-Host "=== aic_crash.log ($f) ==="
               Get-Content $f
-              $found = $true
             }
           }
-          if (-not $found) { Write-Host "No aic_crash.log found (no crash, or crash before hook)" }
 
       # ── 9. Upload artifacts ────────────────────────────────────────────────
       - name: "Upload build artifact"
@@ -145,9 +154,11 @@ jobs:
         with:
           name: "crash-logs-${{ github.sha }}"
           path: |
+            aic_boot_trace.log
             aic_crash.log
             stdout.txt
             stderr.txt
+            build/windows/aic_boot_trace.log
             build/windows/aic_crash.log
           if-no-files-found: ignore
           retention-days: 7

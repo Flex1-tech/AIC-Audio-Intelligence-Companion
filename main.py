@@ -1,59 +1,119 @@
 """Point d'entrée de l'application et initialisation de l'interface Flet."""
 
-# ── Crash logger ultra-précoce ────────────────────────────────────────────────
-# DOIT être la toute première chose executée, avant tous les imports lourds.
-# Capture les erreurs d'import (librosa, lancedb, onnxruntime, extraction…)
-# qui surviennent avant que le logger applicatif normal soit initialisé.
-# Le fichier aic_crash.log est écrit dans le répertoire de travail courant
-# afin d'être accessible même si le répertoire %APPDATA%/AIC n'existe pas encore.
+import datetime
+import os
+import pathlib
 import sys
 import traceback
-import pathlib
+
+
+def trace(msg: str) -> None:
+    """Traceur de diagnostic bas-niveau : écrit immédiatement chaque étape sur disque."""
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    pid = os.getpid()
+    log_line = f"[{timestamp}] [PID {pid}] {msg}\n"
+    print(log_line, end="", flush=True)
+
+    targets = [
+        pathlib.Path("aic_boot_trace.log"),
+        pathlib.Path.home() / "aic_boot_trace.log",
+    ]
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        targets.append(pathlib.Path(appdata) / "AIC" / "logs" / "aic_boot_trace.log")
+
+    for dest in targets:
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with open(dest, "a", encoding="utf-8") as f:
+                f.write(log_line)
+                f.flush()
+                os.fsync(f.fileno())
+        except Exception:
+            pass
+
+
+trace("=== DIAGNOSTIC BOOT START ===")
+trace(f"STEP 00: Python executable = {sys.executable}")
+trace(f"STEP 01: Python version = {sys.version}")
+trace(f"STEP 02: CWD = {pathlib.Path.cwd()}")
+trace(f"STEP 03: sys.path = {sys.path}")
+
+# Enregistrement dynamique des répertoires DLL pour C-extensions sous Windows (Python 3.8+)
+if os.name == "nt":
+    trace("STEP 04: Scanning & registering DLL directories for C-extensions...")
+    for p in sys.path:
+        p_path = pathlib.Path(p)
+        if p_path.is_dir():
+            try:
+                os.add_dll_directory(str(p_path))
+            except Exception:
+                pass
+            try:
+                for sub in p_path.iterdir():
+                    if sub.is_dir():
+                        try:
+                            os.add_dll_directory(str(sub))
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+    trace("STEP 04: DLL directories registered OK")
 
 
 def _early_crash_handler(exc_type, exc_value, exc_tb):
-    """Handler de dernier recours — actif dès le début, avant tout import lourd.
-
-    Ecrit le traceback dans plusieurs emplacements garantis lisibles meme dans
-    un build Flet packagé (CWD inconnu au moment du crash) :
-      - répertoire de travail courant (aic_crash.log)
-      - répertoire Home de l'utilisateur (aic_crash.log)
-    """
     lines = traceback.format_exception(exc_type, exc_value, exc_tb)
-    content = "=" * 72 + "\n" + "".join(lines)
-    candidates = [
-        pathlib.Path("aic_crash.log"),
-        pathlib.Path.home() / "aic_crash.log",
-    ]
-    for dest in candidates:
-        try:
-            with open(dest, "a", encoding="utf-8") as f:
-                f.write(content)
-        except Exception:
-            continue
+    trace(f"FATAL UNCAUGHT EXCEPTION:\n{''.join(lines)}")
     sys.__excepthook__(exc_type, exc_value, exc_tb)
 
 
 sys.excepthook = _early_crash_handler
 
-# ── Imports applicatifs ──────────────────────────────────────────────────────
-# noqa: E402 — ces imports viennent APRES le crash handler ultra-précoce.
-# L'ordre est intentionnel : sys.excepthook doit être actif avant tout import lourd
-# (flet, lancedb, onnxruntime…) pour capturer les erreurs d'import dans le build.
+# ── Imports applicatifs instrumentés ─────────────────────────────────────────
+trace("STEP 05: Importing threading...")
 import threading  # noqa: E402
+
+trace("STEP 06: Importing flet...")
 import flet as ft  # noqa: E402
 
+trace("STEP 07: Importing blake3...")
+import blake3  # noqa: E402, F401
+
+trace("STEP 08: Importing fleep...")
+import fleep  # noqa: E402, F401
+
+trace("STEP 09: Importing numpy...")
+import numpy  # noqa: E402, F401
+
+trace("STEP 10: Importing onnxruntime...")
+import onnxruntime  # noqa: E402, F401
+
+trace("STEP 11: Importing lancedb...")
+import lancedb  # noqa: E402, F401
+
+trace("STEP 12: Importing librosa...")
+import librosa  # noqa: E402, F401
+
+trace("STEP 13: Importing core.state...")
 from core.state import app_state  # noqa: E402
+
+trace("STEP 14: Importing controllers...")
 from controllers.library_controller import LibraryController  # noqa: E402
 from controllers.recommendation_controller import RecommendationController  # noqa: E402
+
+trace("STEP 15: Importing services...")
 from services.ai_engine_service import AIEngineService  # noqa: E402
 from services.database_service import DatabaseService  # noqa: E402
+
+trace("STEP 16: Importing UI components...")
 from ui.components.result_dialog import ResultDialog  # noqa: E402
 from ui.components.splash_screen import SplashScreen  # noqa: E402
 from ui.design_system import get_dark_theme, get_light_theme  # noqa: E402
 from ui.design_system.colors import ObsidianColors  # noqa: E402
 from ui.views.main_layout import MainLayout  # noqa: E402
 from utils.path_utils import setup_logging, get_asset_path, write_crash_log  # noqa: E402
+
+trace("STEP 17: All imports completed successfully OK")
 
 # Initialisation du logger applicatif
 logger = setup_logging()
@@ -85,18 +145,19 @@ threading.excepthook = _handle_thread_exception
 
 def main(page: ft.Page) -> None:
     """Initialise la page Flet, les services et les événements UI."""
+    trace("MAIN STEP 0: Entering main(page)")
     try:
+        trace("MAIN STEP 1: Setting page title & theme mode...")
         page.title = "AIC — Audio Intelligence Companion"
         page.theme_mode = ft.ThemeMode.DARK
 
-        # Polices embarquées localement (.ttf pour compatibilité Flutter Desktop)
-        # Cinzel Decorative — assets/fonts/ (TTF officiel)
+        trace("MAIN STEP 2: Registering fonts in page.fonts...")
         page.fonts = {
             "Cinzel Decorative Bold": "fonts/CinzelDecorative-Bold.ttf",
             "Cinzel Decorative Regular": "fonts/CinzelDecorative-Regular.ttf",
         }
 
-        # Résolution sécurisée de l'icône de fenêtre avec vérification d'existence
+        trace("MAIN STEP 3: Resolving window icon...")
         icon_path = get_asset_path("icon.ico") or get_asset_path("icon.png")
         if icon_path and icon_path.exists():
             try:
@@ -104,6 +165,7 @@ def main(page: ft.Page) -> None:
             except Exception as e:
                 logger.warning(f"Impossible de définir l'icône de fenêtre : {e}")
 
+        trace("MAIN STEP 4: Updating page themes and dimensions...")
         page.update()
         page.theme = get_light_theme()
         page.dark_theme = get_dark_theme()
@@ -113,11 +175,15 @@ def main(page: ft.Page) -> None:
         page.window.min_height = 600
         page.padding = 0
 
+        trace("MAIN STEP 5: Instantiating AIEngineService...")
         ai_service = AIEngineService()
+        trace("MAIN STEP 6: Instantiating DatabaseService...")
         db_service = DatabaseService()
+        trace("MAIN STEP 7: Instantiating Controllers...")
         library_controller = LibraryController()
         rec_controller = RecommendationController()
 
+        trace("MAIN STEP 8: Appending FilePicker service...")
         file_picker = ft.FilePicker()
         page.services.append(file_picker)
 
@@ -228,6 +294,7 @@ def main(page: ft.Page) -> None:
             success, msg = rec_controller.launch_vlc()
             _show_toast(msg, is_error=not success)
 
+        trace("MAIN STEP 9: Instantiating MainLayout...")
         layout = MainLayout(
             on_pick_files=handle_pick_files,
             on_pick_folder=handle_pick_folder,
@@ -246,6 +313,7 @@ def main(page: ft.Page) -> None:
             except Exception:
                 pass
 
+        trace("MAIN STEP 10: Subscribing to app_state...")
         app_state.subscribe(on_state_change)
 
         # ── Intégration du Splash Screen & Main Layout ────────────────────────
@@ -257,8 +325,10 @@ def main(page: ft.Page) -> None:
             except Exception:
                 pass
 
+        trace("MAIN STEP 11: Instantiating SplashScreen...")
         splash_screen = SplashScreen(page=page, on_complete=finish_splash)
 
+        trace("MAIN STEP 12: Creating root_stack...")
         root_stack = ft.Stack(
             [
                 layout,
@@ -267,27 +337,39 @@ def main(page: ft.Page) -> None:
             expand=True,
         )
 
+        trace("MAIN STEP 13: Adding root_stack to page...")
         page.add(root_stack)
+
+        trace("MAIN STEP 14: Scheduling splash animation task...")
 
         async def run_splash_task() -> None:
             try:
+                trace("SPLASH TASK: Starting animation...")
                 await splash_screen.start_animation_async()
+                trace("SPLASH TASK: Animation complete OK")
             except Exception as splash_err:
+                trace(f"SPLASH TASK ERROR: {splash_err}")
                 write_crash_log(type(splash_err), splash_err, splash_err.__traceback__, origin="SPLASH_ANIMATION_ERROR")
                 logger.error(f"Erreur animation Splash Screen : {splash_err}", exc_info=True)
 
         page.run_task(run_splash_task)
 
+        trace("MAIN STEP 15: Starting background preload thread...")
+
         def preload_background() -> None:
             try:
+                trace("PRELOAD THREAD: Preloading AI & Database resources...")
                 ai_service.preload_resources()
                 db_service.initialize_db()
                 app_state.notify()
+                trace("PRELOAD THREAD: Preload complete OK")
             except Exception as e:
+                trace(f"PRELOAD THREAD ERROR: {e}")
                 write_crash_log(type(e), e, e.__traceback__, origin="PRELOAD_BACKGROUND_ERROR")
                 logger.error(f"Erreur lors du préchargement en arrière-plan : {e}", exc_info=True)
 
         threading.Thread(target=preload_background, daemon=True).start()
+        trace("MAIN STEP 16: main(page) initialization loop completed successfully OK")
 
     except Exception as fatal_err:
         log_file_path = write_crash_log(
