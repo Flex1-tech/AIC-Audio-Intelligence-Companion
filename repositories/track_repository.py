@@ -9,11 +9,23 @@ class TrackRepository:
     """
     Repository d'accès aux données vectorielles LanceDB pour AIC.
     Encapsule la table 'audio_embeddings' et les requêtes BLAKE3 hash.
-    Utilise le répertoire de données utilisateur propre à l'OS (%APPDATA%/AIC/MusicRecommenderDB).
+    Utilise le répertoire de données utilisateur propre à l'OS (%APPDATA%/AIC/lancedb).
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or str(get_user_data_dir() / "MusicRecommenderDB")
+        if db_path is None:
+            user_dir = get_user_data_dir()
+            new_path = user_dir / "lancedb"
+            old_path = user_dir / "MusicRecommenderDB"
+            # Auto-migration de l'ancien dossier vers le nouveau nom
+            if old_path.exists() and not new_path.exists():
+                try:
+                    old_path.rename(new_path)
+                except Exception:
+                    pass
+            self.db_path = str(new_path)
+        else:
+            self.db_path = db_path
         self._table: Optional[lancedb.table.Table] = None
 
     def get_table(self) -> lancedb.table.Table:

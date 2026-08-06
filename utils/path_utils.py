@@ -37,6 +37,37 @@ def get_user_data_dir() -> Path:
     return data_dir
 
 
+def write_crash_log(exc_type, exc_value, exc_tb, origin: str = "CRASH") -> Path:
+    """
+    Écrit la trace complète de l'exception dans des emplacements persistants garantis :
+    1. %APPDATA%/AIC/logs/aic_crash.log (emplacement principal officiel)
+    2. %APPDATA%/AIC/aic_crash.log
+    3. CWD/aic_crash.log
+    4. ~/aic_crash.log
+    """
+    import traceback
+
+    lines = traceback.format_exception(exc_type, exc_value, exc_tb)
+    content = f"\n{'='*72}\n[{origin}] {sys.executable}\n" + "".join(lines)
+
+    primary_target = get_user_data_dir() / "logs" / "aic_crash.log"
+    targets = [
+        primary_target,
+        get_user_data_dir() / "aic_crash.log",
+        Path.cwd() / "aic_crash.log",
+        Path.home() / "aic_crash.log",
+    ]
+    for dest in targets:
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with open(dest, "a", encoding="utf-8") as f:
+                f.write(content)
+        except Exception:
+            continue
+
+    return primary_target
+
+
 def get_asset_path(filename: str) -> Optional[Path]:
     """
     Résolution multi-fallback des ressources embarquées (assets, modèles ML, icônes).
@@ -53,13 +84,14 @@ def get_asset_path(filename: str) -> Optional[Path]:
         return path_obj.resolve()
 
     clean_name = path_obj.name
+    rel_path = path_obj
     candidates = []
 
     # 1. Variable d'environnement Flet runtime
     flet_assets = os.environ.get("FLET_ASSETS_DIR")
     if flet_assets:
         flet_p = Path(flet_assets)
-        candidates.extend([flet_p / filename, flet_p / clean_name])
+        candidates.extend([flet_p / rel_path, flet_p / clean_name])
 
     # 2. Emplacement relatif à l'exécutable (Flutter Desktop bundle / serious_python)
     if getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS"):
@@ -67,9 +99,13 @@ def get_asset_path(filename: str) -> Optional[Path]:
         # Windows / Linux Flutter layout
         candidates.extend(
             [
+                exe_dir / "data" / "flutter_assets" / "assets" / rel_path,
                 exe_dir / "data" / "flutter_assets" / "assets" / clean_name,
+                exe_dir / "data" / "flutter_assets" / rel_path,
                 exe_dir / "data" / "flutter_assets" / clean_name,
+                exe_dir / "assets" / rel_path,
                 exe_dir / "assets" / clean_name,
+                exe_dir / rel_path,
                 exe_dir / clean_name,
             ]
         )
@@ -78,7 +114,9 @@ def get_asset_path(filename: str) -> Optional[Path]:
             mac_resources = exe_dir.parent / "Resources" / "flutter_assets"
             candidates.extend(
                 [
+                    mac_resources / "assets" / rel_path,
                     mac_resources / "assets" / clean_name,
+                    mac_resources / rel_path,
                     mac_resources / clean_name,
                 ]
             )
@@ -87,13 +125,22 @@ def get_asset_path(filename: str) -> Optional[Path]:
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
         mp = Path(meipass)
-        candidates.extend([mp / "assets" / clean_name, mp / clean_name])
+        candidates.extend(
+            [
+                mp / "assets" / rel_path,
+                mp / "assets" / clean_name,
+                mp / rel_path,
+                mp / clean_name,
+            ]
+        )
 
     # 4. Arborescence du code source Python (Path(__file__))
     root_dir = Path(__file__).resolve().parent.parent
     candidates.extend(
         [
+            root_dir / "assets" / rel_path,
             root_dir / "assets" / clean_name,
+            root_dir / rel_path,
             root_dir / clean_name,
         ]
     )
@@ -102,7 +149,9 @@ def get_asset_path(filename: str) -> Optional[Path]:
     cwd = Path.cwd()
     candidates.extend(
         [
+            cwd / "assets" / rel_path,
             cwd / "assets" / clean_name,
+            cwd / rel_path,
             cwd / clean_name,
         ]
     )

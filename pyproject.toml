@@ -56,7 +56,9 @@ managed = true
 [tool.flet]
 build_number = 1
 product      = "AIC — Audio Intelligence Companion"
-company      = "AIC Project"
+company      = "Flex1 Tech"
+copyright    = "Copyright © 2026 Flex1 Tech"
+org          = "tech.flex1"
 
 [tool.flet.app]
 path = "."

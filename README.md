@@ -1,7 +1,7 @@
 # AIC — Audio Intelligence Companion
 
-![GitHub Actions](https://img.shields.io/github/actions/workflow/status/Flex1-tech/Local_Recommendation_Engine/build-desktop.yml?branch=main&label=CI%2FCD&logo=github-actions&logoColor=white)
-![GitHub Release](https://img.shields.io/github/v/release/Flex1-tech/Local_Recommendation_Engine?label=Release&logo=github)
+![GitHub Actions](https://img.shields.io/github/actions/workflow/status/Flex1-tech/AIC-Audio-Intelligence-Companion/build-desktop.yml?branch=main&label=CI%2FCD&logo=github-actions&logoColor=white)
+![GitHub Release](https://img.shields.io/github/v/release/Flex1-tech/AIC-Audio-Intelligence-Companion?label=Release&logo=github)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
 ![Flet](https://img.shields.io/badge/Flet-0.86%2B-blueviolet?logo=flutter&logoColor=white)
 ![AI](https://img.shields.io/badge/AI-MusiCNN-orange?logo=tensorflow&logoColor=white)
@@ -30,11 +30,11 @@ Les versions compilées pour **Windows**, **Linux** et **macOS** sont disponible
 
 **Latest release**
 
-https://github.com/Flex1-tech/Local_Recommendation_Engine/releases/latest
+https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest
 
 **All releases**
 
-https://github.com/Flex1-tech/Local_Recommendation_Engine/releases
+https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases
 
 ---
 
@@ -48,11 +48,11 @@ Les binaires publiés sont prêts à être exécutés et ne nécessitent pas l'i
 | Linux (x64) | `AIC-<version>-Linux-x64.zip` | `AIC` |
 | macOS (Apple Silicon) | `AIC-<version>-macOS-arm64.zip` | `AIC.app` |
 
-Téléchargez l'archive correspondant à votre plateforme depuis la [dernière Release](https://github.com/Flex1-tech/Local_Recommendation_Engine/releases/latest).
+Téléchargez l'archive correspondant à votre plateforme depuis la [dernière Release](https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest).
 
 ### Windows
 
-1. Télécharger l'archive `AIC-<version>-Windows-x64.zip` depuis la page [Releases](https://github.com/Flex1-tech/Local_Recommendation_Engine/releases/latest).
+1. Télécharger l'archive `AIC-<version>-Windows-x64.zip` depuis la page [Releases](https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest).
 2. Extraire l'archive ZIP.
 3. Ouvrir le dossier extrait.
 4. Double-cliquer sur `AIC.exe`.
@@ -63,7 +63,7 @@ Téléchargez l'archive correspondant à votre plateforme depuis la [dernière R
 
 ### Linux
 
-1. Télécharger l'archive `AIC-<version>-Linux-x64.zip` depuis la page [Releases](https://github.com/Flex1-tech/Local_Recommendation_Engine/releases/latest).
+1. Télécharger l'archive `AIC-<version>-Linux-x64.zip` depuis la page [Releases](https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest).
 2. Extraire l'archive.
 3. Si nécessaire, attribuer les permissions d'exécution :
    ```bash
@@ -83,7 +83,7 @@ Téléchargez l'archive correspondant à votre plateforme depuis la [dernière R
 > [!IMPORTANT]
 > Les binaires macOS sont générés exclusivement pour l'architecture **Apple Silicon (arm64)**. Ils ne sont pas compatibles avec les Mac à processeur Intel.
 
-1. Télécharger l'archive `AIC-<version>-macOS-arm64.zip` depuis la page [Releases](https://github.com/Flex1-tech/Local_Recommendation_Engine/releases/latest).
+1. Télécharger l'archive `AIC-<version>-macOS-arm64.zip` depuis la page [Releases](https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest).
 2. Extraire l'archive.
 3. L'application n'étant pas signée avec un certificat Apple, ouvrez-la via :
    - **Clic droit** (ou `Control` + clic) sur `AIC.app`
@@ -109,7 +109,7 @@ Téléchargez l'archive correspondant à votre plateforme depuis la [dernière R
 Le projet suit les principes de la **Clean Architecture** et du **Domain-Driven Design (DDD)**.
 
 ```text
-Local_Recommendation_Engine/
+AIC-Audio-Intelligence-Companion/
 │
 ├── core/                  # État global de l'application
 ├── domain/                # Modèles métier
@@ -168,8 +168,8 @@ Local_Recommendation_Engine/
 Cloner le dépôt :
 
 ```bash
-git clone https://github.com/Flex1-tech/Local_Recommendation_Engine.git
-cd Local_Recommendation_Engine
+git clone https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion.git
+cd AIC-Audio-Intelligence-Companion
 ```
 
 Créer un environnement virtuel :
@@ -299,7 +299,7 @@ Lorsqu'un tag `v*` est poussé :
 
 Les binaires sont ensuite disponibles dans :
 
-https://github.com/Flex1-tech/Local_Recommendation_Engine/releases
+https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases
 
 ---
 

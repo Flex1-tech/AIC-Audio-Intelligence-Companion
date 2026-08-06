@@ -1,4 +1,4 @@
-﻿---
+---
 # ═══════════════════════════════════════════════════════════════════════════════
 #  AIC — Dev Build (Windows) — WORKFLOW TEMPORAIRE DE DIAGNOSTIC
 #
@@ -74,8 +74,15 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
-          $exe = "build\windows\AIC\AIC.exe"
-          if (Test-Path $exe) {
+          $exe_candidates = @(
+            "build\windows\AIC.exe",
+            "build\windows\AIC\AIC.exe"
+          )
+          $exe = $null
+          foreach ($cand in $exe_candidates) {
+            if (Test-Path $cand) { $exe = $cand; break }
+          }
+          if ($exe) {
             Write-Host "Launching $exe ..."
             $proc = Start-Process -FilePath $exe -PassThru -RedirectStandardOutput stdout.txt -RedirectStandardError stderr.txt -NoNewWindow
             Start-Sleep -Seconds 12
@@ -104,10 +111,13 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
+          $appdata = $env:APPDATA
           $candidates = @(
-            "aic_crash.log",
+            "$appdata\AIC\logs\aic_crash.log",
+            "$appdata\AIC\aic_crash.log",
             "$env:USERPROFILE\aic_crash.log",
-            "build\windows\AIC\aic_crash.log"
+            "aic_crash.log",
+            "build\windows\aic_crash.log"
           )
           $found = $false
           foreach ($f in $candidates) {
@@ -138,7 +148,7 @@ jobs:
             aic_crash.log
             stdout.txt
             stderr.txt
-            build/windows/AIC/aic_crash.log
+            build/windows/aic_crash.log
           if-no-files-found: ignore
           retention-days: 7
 

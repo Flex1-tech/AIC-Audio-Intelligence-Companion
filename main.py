@@ -53,19 +53,19 @@ from ui.components.splash_screen import SplashScreen  # noqa: E402
 from ui.design_system import get_dark_theme, get_light_theme  # noqa: E402
 from ui.design_system.colors import ObsidianColors  # noqa: E402
 from ui.views.main_layout import MainLayout  # noqa: E402
-from utils.path_utils import setup_logging, get_asset_path, get_user_data_dir  # noqa: E402
+from utils.path_utils import setup_logging, get_asset_path, write_crash_log  # noqa: E402
 
 # Initialisation du logger applicatif
 logger = setup_logging()
 
 
 def _handle_uncaught_exception(exc_type, exc_value, exc_traceback):
-    """Hook enrichi : log via le logger ET via le crash handler ultra-précoce."""
+    """Hook enrichi : log via le logger ET via write_crash_log."""
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
-    # Écriture dans aic_crash.log (redirection vers le handler précoce)
-    _early_crash_handler(exc_type, exc_value, exc_traceback)
+    # Écriture systématique dans aic_crash.log (%APPDATA%/AIC/logs/aic_crash.log, CWD, Home)
+    write_crash_log(exc_type, exc_value, exc_traceback, origin="UNCAUGHT_MAIN_PROCESS")
     # Écriture dans aic.log (logger applicatif)
     logger.critical("Uncaught exception in main process:", exc_info=(exc_type, exc_value, exc_traceback))
 
@@ -74,6 +74,7 @@ sys.excepthook = _handle_uncaught_exception
 
 
 def _handle_thread_exception(args):
+    write_crash_log(args.exc_type, args.exc_value, args.exc_traceback, origin="UNCAUGHT_THREAD_EXCEPTION")
     logger.error(
         "Uncaught exception in background thread:", exc_info=(args.exc_type, args.exc_value, args.exc_traceback)
     )
@@ -269,7 +270,11 @@ def main(page: ft.Page) -> None:
         page.add(root_stack)
 
         async def run_splash_task() -> None:
-            await splash_screen.start_animation_async()
+            try:
+                await splash_screen.start_animation_async()
+            except Exception as splash_err:
+                write_crash_log(type(splash_err), splash_err, splash_err.__traceback__, origin="SPLASH_ANIMATION_ERROR")
+                logger.error(f"Erreur animation Splash Screen : {splash_err}", exc_info=True)
 
         page.run_task(run_splash_task)
 
@@ -279,47 +284,57 @@ def main(page: ft.Page) -> None:
                 db_service.initialize_db()
                 app_state.notify()
             except Exception as e:
+                write_crash_log(type(e), e, e.__traceback__, origin="PRELOAD_BACKGROUND_ERROR")
                 logger.error(f"Erreur lors du préchargement en arrière-plan : {e}", exc_info=True)
 
         threading.Thread(target=preload_background, daemon=True).start()
 
     except Exception as fatal_err:
-        logger.critical("Erreur fatale au démarrage d'AIC:", exc_info=True)
-        log_file_path = get_user_data_dir() / "logs" / "aic.log"
-        page.clean()
-        page.add(
-            ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Icon(ft.Icons.ERROR_OUTLINED, color=ObsidianColors.ERROR, size=48),
-                        ft.Text(
-                            "Erreur lors du démarrage d'AIC",
-                            size=20,
-                            weight=ft.FontWeight.BOLD,
-                            color=ObsidianColors.TEXT_PRIMARY,
-                        ),
-                        ft.Text(
-                            f"Détails de l'erreur : {fatal_err}",
-                            size=13,
-                            color=ObsidianColors.TEXT_SECONDARY,
-                        ),
-                        ft.Text(
-                            f"Le journal détaillé a été enregistré dans :\n{log_file_path}",
-                            size=12,
-                            color=ObsidianColors.TEXT_MUTED,
-                            font_family="monospace",
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=12,
-                ),
-                alignment=ft.Alignment.CENTER,
-                padding=30,
-                expand=True,
-            )
+        log_file_path = write_crash_log(
+            type(fatal_err), fatal_err, fatal_err.__traceback__, origin="FATAL_STARTUP_ERROR"
         )
+        logger.critical("Erreur fatale au démarrage d'AIC:", exc_info=True)
+        try:
+            page.clean()
+            page.add(
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Icon(ft.Icons.ERROR_OUTLINED, color=ObsidianColors.ERROR, size=48),
+                            ft.Text(
+                                "Erreur lors du démarrage d'AIC",
+                                size=20,
+                                weight=ft.FontWeight.BOLD,
+                                color=ObsidianColors.TEXT_PRIMARY,
+                            ),
+                            ft.Text(
+                                f"Détails de l'erreur : {fatal_err}",
+                                size=13,
+                                color=ObsidianColors.TEXT_SECONDARY,
+                            ),
+                            ft.Text(
+                                f"Le journal détaillé a été enregistré dans :\n{log_file_path}",
+                                size=12,
+                                color=ObsidianColors.TEXT_MUTED,
+                                font_family="monospace",
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=12,
+                    ),
+                    alignment=ft.Alignment.CENTER,
+                    padding=30,
+                    expand=True,
+                )
+            )
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    try:
+        ft.run(main)
+    except Exception as main_run_err:
+        write_crash_log(type(main_run_err), main_run_err, main_run_err.__traceback__, origin="FT_RUN_MAIN_ERROR")
+        sys.exit(1)
