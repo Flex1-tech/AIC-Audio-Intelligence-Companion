@@ -22,7 +22,7 @@ on:
 env:
   PYTHONUTF8: "1"
   FLET_CLI_NO_RICH_OUTPUT: "1"
-  UV_PYTHON: "3.11"
+  UV_PYTHON: "3.12"
 
 jobs:
   build-windows-dev:
