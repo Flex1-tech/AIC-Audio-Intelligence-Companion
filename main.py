@@ -1,6 +1,42 @@
 """Point d'entrée de l'application et initialisation de l'interface Flet."""
 
+# ── Crash logger ultra-précoce ────────────────────────────────────────────────
+# DOIT être la toute première chose executée, avant tous les imports lourds.
+# Capture les erreurs d'import (librosa, lancedb, onnxruntime, extraction…)
+# qui surviennent avant que le logger applicatif normal soit initialisé.
+# Le fichier aic_crash.log est écrit dans le répertoire de travail courant
+# afin d'être accessible même si le répertoire %APPDATA%/AIC n'existe pas encore.
 import sys
+import traceback
+import pathlib
+
+
+def _early_crash_handler(exc_type, exc_value, exc_tb):
+    """Handler de dernier recours — actif dès le début, avant tout import lourd.
+
+    Ecrit le traceback dans plusieurs emplacements garantis lisibles meme dans
+    un build Flet packagé (CWD inconnu au moment du crash) :
+      - répertoire de travail courant (aic_crash.log)
+      - répertoire Home de l'utilisateur (aic_crash.log)
+    """
+    lines = traceback.format_exception(exc_type, exc_value, exc_tb)
+    content = "=" * 72 + "\n" + "".join(lines)
+    candidates = [
+        pathlib.Path("aic_crash.log"),
+        pathlib.Path.home() / "aic_crash.log",
+    ]
+    for dest in candidates:
+        try:
+            with open(dest, "a", encoding="utf-8") as f:
+                f.write(content)
+        except Exception:
+            continue
+    sys.__excepthook__(exc_type, exc_value, exc_tb)
+
+
+sys.excepthook = _early_crash_handler
+
+# ── Imports applicatifs ───────────────────────────────────────────────────────
 import threading
 import flet as ft
 
@@ -21,9 +57,13 @@ logger = setup_logging()
 
 
 def _handle_uncaught_exception(exc_type, exc_value, exc_traceback):
+    """Hook enrichi : log via le logger ET via le crash handler ultra-précoce."""
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
+    # Écriture dans aic_crash.log (redirection vers le handler précoce)
+    _early_crash_handler(exc_type, exc_value, exc_traceback)
+    # Écriture dans aic.log (logger applicatif)
     logger.critical("Uncaught exception in main process:", exc_info=(exc_type, exc_value, exc_traceback))
 
 
