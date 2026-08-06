@@ -36,21 +36,24 @@ def _early_crash_handler(exc_type, exc_value, exc_tb):
 
 sys.excepthook = _early_crash_handler
 
-# ── Imports applicatifs ───────────────────────────────────────────────────────
-import threading
-import flet as ft
+# ── Imports applicatifs ──────────────────────────────────────────────────────
+# noqa: E402 — ces imports viennent APRES le crash handler ultra-précoce.
+# L'ordre est intentionnel : sys.excepthook doit être actif avant tout import lourd
+# (flet, lancedb, onnxruntime…) pour capturer les erreurs d'import dans le build.
+import threading  # noqa: E402
+import flet as ft  # noqa: E402
 
-from core.state import app_state
-from controllers.library_controller import LibraryController
-from controllers.recommendation_controller import RecommendationController
-from services.ai_engine_service import AIEngineService
-from services.database_service import DatabaseService
-from ui.components.result_dialog import ResultDialog
-from ui.components.splash_screen import SplashScreen
-from ui.design_system import get_dark_theme, get_light_theme
-from ui.design_system.colors import ObsidianColors
-from ui.views.main_layout import MainLayout
-from utils.path_utils import setup_logging, get_asset_path, get_user_data_dir
+from core.state import app_state  # noqa: E402
+from controllers.library_controller import LibraryController  # noqa: E402
+from controllers.recommendation_controller import RecommendationController  # noqa: E402
+from services.ai_engine_service import AIEngineService  # noqa: E402
+from services.database_service import DatabaseService  # noqa: E402
+from ui.components.result_dialog import ResultDialog  # noqa: E402
+from ui.components.splash_screen import SplashScreen  # noqa: E402
+from ui.design_system import get_dark_theme, get_light_theme  # noqa: E402
+from ui.design_system.colors import ObsidianColors  # noqa: E402
+from ui.views.main_layout import MainLayout  # noqa: E402
+from utils.path_utils import setup_logging, get_asset_path, get_user_data_dir  # noqa: E402
 
 # Initialisation du logger applicatif
 logger = setup_logging()

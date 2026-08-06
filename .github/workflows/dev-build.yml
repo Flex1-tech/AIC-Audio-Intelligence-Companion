@@ -1,0 +1,151 @@
+﻿---
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AIC — Dev Build (Windows) — WORKFLOW TEMPORAIRE DE DIAGNOSTIC
+#
+#  OBJECTIF : détecter la cause du crash "fenêtre blanche puis fermeture"
+#             en obtenant les logs aic_crash.log et aic.log produits par
+#             le handler ultra-précoce injecté dans main.py.
+#
+#  DÉCLENCHEURS : push sur la branche dev (tout commit)
+#  PLATEFORMES  : Windows uniquement (priorité diagnostic build desktop)
+#
+#  CE WORKFLOW EST TEMPORAIRE — à supprimer une fois le build stable.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: "[DEV] Build Windows — Diagnostic"
+
+on:
+  push:
+    branches:
+      - dev
+
+env:
+  PYTHONUTF8: "1"
+  FLET_CLI_NO_RICH_OUTPUT: "1"
+  UV_PYTHON: "3.11"
+
+jobs:
+  build-windows-dev:
+    name: "Build Windows (dev)"
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      # ── 2. Setup uv ────────────────────────────────────────────────────────
+      - name: "Setup uv"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+
+      # ── 3. Sync dépendances (avec groupe dev = flet[build] + Flutter CLI) ──
+      - name: "uv sync (dev group)"
+        run: uv sync --group dev
+        shell: bash
+
+      # ── 4. Vérification flet CLI ───────────────────────────────────────────
+      - name: "flet --version"
+        run: uv run flet --version
+        shell: bash
+
+      # ── 5. Build Windows ───────────────────────────────────────────────────
+      - name: "flet build windows"
+        id: build
+        continue-on-error: true
+        run: |
+          uv run flet build windows \
+            --yes \
+            --verbose \
+            --no-rich-output
+        shell: bash
+        env:
+          FLET_APP_NAME: "AIC"
+
+      # ── 6. Lancement du build pour récupérer aic_crash.log ────────────────
+      - name: "Run AIC.exe and capture crash log"
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $exe = "build\windows\AIC\AIC.exe"
+          if (Test-Path $exe) {
+            Write-Host "Launching $exe ..."
+            $proc = Start-Process -FilePath $exe -PassThru -RedirectStandardOutput stdout.txt -RedirectStandardError stderr.txt -NoNewWindow
+            Start-Sleep -Seconds 12
+            if (!$proc.HasExited) {
+              $proc.Kill()
+              Write-Host "Process killed after 12 seconds (no crash — good sign)."
+            } else {
+              Write-Host "Process exited with code $($proc.ExitCode)"
+            }
+          } else {
+            Write-Host "AIC.exe not found — build likely failed."
+          }
+
+      # ── 7. Affichage stdout/stderr dans les logs CI ───────────────────────
+      - name: "Show stdout / stderr from AIC.exe run"
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          if (Test-Path stdout.txt) { Write-Host "=== STDOUT ==="; Get-Content stdout.txt }
+          if (Test-Path stderr.txt) { Write-Host "=== STDERR ==="; Get-Content stderr.txt }
+
+      # ── 8. Affichage de aic_crash.log dans les logs CI ─────────────────────
+      - name: "Show aic_crash.log (if present)"
+        if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "aic_crash.log",
+            "$env:USERPROFILE\aic_crash.log",
+            "build\windows\AIC\aic_crash.log"
+          )
+          $found = $false
+          foreach ($f in $candidates) {
+            if (Test-Path $f) {
+              Write-Host "=== aic_crash.log ($f) ==="
+              Get-Content $f
+              $found = $true
+            }
+          }
+          if (-not $found) { Write-Host "No aic_crash.log found (no crash, or crash before hook)" }
+
+      # ── 9. Upload artifacts ────────────────────────────────────────────────
+      - name: "Upload build artifact"
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "aic-windows-dev-${{ github.sha }}"
+          path: build/windows
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: "Upload crash logs"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "crash-logs-${{ github.sha }}"
+          path: |
+            aic_crash.log
+            stdout.txt
+            stderr.txt
+            build/windows/AIC/aic_crash.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # ── 10. Fail le job si le build a échoué ──────────────────────────────
+      - name: "Fail if build failed"
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "flet build windows failed — check logs above."
+          exit 1
+        shell: bash
