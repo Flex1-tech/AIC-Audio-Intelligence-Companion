@@ -25,7 +25,7 @@ from utils.path_utils import get_asset_path
 
 # ── Configuration centralisee de l'animation (en pourcentages de total_ms) ───
 SPLASH_ANIMATION_CONFIG = {
-    "total_ms": 3000,
+    "total_ms": 5000,
     "logo_intro": (0.00, 0.25),  # 0% -> 25% : Apparition structure A logo & fond
     "wave_dim": (0.15, 0.35),  # 15% -> 35% : Signal onde dormant (opacite 0.22)
     "wave_sweep": (0.28, 0.60),  # 28% -> 60% : Balayage du faisceau ambre L->R
