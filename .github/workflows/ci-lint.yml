@@ -30,7 +30,7 @@ on:
 
 env:
   PYTHONUTF8: 1
-  UV_PYTHON: "3.11"
+  UV_PYTHON: "3.12"
 
 jobs:
   lint-and-check:

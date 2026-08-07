@@ -38,7 +38,7 @@ on:
 env:
   PYTHONUTF8: 1              # Encodage UTF-8 forcé
   FLET_CLI_NO_RICH_OUTPUT: 1 # Logs bruts sans ANSI dans la CI
-  UV_PYTHON: "3.11"          # Version Python gérée par uv
+  UV_PYTHON: "3.12"          # Version Python gérée par uv
 
 jobs:
   build:
