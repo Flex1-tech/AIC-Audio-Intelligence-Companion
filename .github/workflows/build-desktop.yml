@@ -151,7 +151,6 @@ jobs:
           uv run flet build ${{ matrix.platform }} \
             ${{ matrix.extra_args }} \
             --python-version 3.12 \
-            --no-cleanup-packages \
             --yes \
             --verbose \
             --no-rich-output

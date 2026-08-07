@@ -78,7 +78,6 @@ jobs:
         run: |
           uv run flet build windows \
             --python-version 3.12 \
-            --no-cleanup-packages \
             --yes \
             --verbose \
             --no-rich-output
