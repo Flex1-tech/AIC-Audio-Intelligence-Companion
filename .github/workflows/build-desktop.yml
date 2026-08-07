@@ -128,20 +128,79 @@ jobs:
         run: uv run flet --version
         shell: bash
 
-      # ── 6. Build ─────────────────────────────────────────────────────────────
-      # `uv run flet build <platform>` exécute flet dans l'env uv.
-      # Flutter SDK est téléchargé automatiquement par flet[build] au premier run.
+      # ── 6. Preserve Native Package Resources (.libs & .pyi stubs) ─────────
+      - name: "Preserve Native Package Resources (.libs & .pyi stubs)"
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $sp_root = (Get-Item ".venv\Lib\site-packages").FullName
+          $hidden_dirs = Get-ChildItem -Path $sp_root -Recurse -Directory | Where-Object { $_.Name -like ".*libs*" }
+          foreach ($d in $hidden_dirs) {
+            $parent = $d.Parent.FullName
+            $clean_name = $d.Name.TrimStart('.')
+            $dest = Join-Path $parent $clean_name
+            if (!(Test-Path $dest)) {
+              Write-Host "Un-hiding native directory $($d.FullName) -> $dest"
+              Copy-Item -Path $d.FullName -Destination $dest -Recurse -Force
+            }
+          }
+
+      # ── 7. Build ─────────────────────────────────────────────────────────────
       - name: "flet build ${{ matrix.platform }}"
         run: |
           uv run flet build ${{ matrix.platform }} \
             ${{ matrix.extra_args }} \
             --python-version 3.12 \
+            --no-cleanup-packages \
             --yes \
             --verbose \
             --no-rich-output
         shell: bash
         env:
           FLET_APP_NAME: "AIC"
+
+      # ── 8. Native Integrity Audit Guard (CI Verification) ─────────────────
+      - name: "Native Integrity Audit Guard (CI Verification)"
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $build_folder = "build\windows"
+          if (!(Test-Path $build_folder)) {
+            Write-Host "::error::Build folder $build_folder not found!"
+            exit 1
+          }
+
+          $missing = @()
+
+          # 1. Audit native binaries (.dll & .pyd)
+          $venv_dlls = Get-ChildItem -Path ".venv\Lib\site-packages" -Recurse -Include "*.dll", "*.pyd"
+          foreach ($f in $venv_dlls) {
+            $name = $f.Name
+            $found = Get-ChildItem -Path $build_folder -Recurse -Filter $name -ErrorAction SilentlyContinue
+            if (!$found) {
+              $missing += "DLL/PYD: $name (from $($f.FullName))"
+            }
+          }
+
+          # 2. Audit PYI stub files (.pyi)
+          $venv_pyis = Get-ChildItem -Path ".venv\Lib\site-packages" -Recurse -Include "*.pyi"
+          foreach ($f in $venv_pyis) {
+            $name = $f.Name
+            $found = Get-ChildItem -Path $build_folder -Recurse -Filter $name -ErrorAction SilentlyContinue
+            if (!$found) {
+              $missing += "PYI STUB: $name (from $($f.FullName))"
+            }
+          }
+
+          if ($missing.Count -gt 0) {
+            Write-Host "::error::PACKAGING INTEGRITY AUDIT FAILED! The following $($missing.Count) native/stub resources were omitted from the build:"
+            foreach ($m in $missing) {
+              Write-Host "  MISSING: $m"
+            }
+            exit 1
+          } else {
+            Write-Host "SUCCESS: Packaging Integrity Audit PASSED. All $($venv_dlls.Count) native binaries and $($venv_pyis.Count) PYI stubs are 100% present in the build artifact."
+          }
 
       # ── 7. Upload artifact ───────────────────────────────────────────────────
       # Nom : aic-<platform>-<sha court> pour traçabilité.
