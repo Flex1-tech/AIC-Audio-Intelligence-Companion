@@ -390,9 +390,10 @@ def process_files_batch(
                 table.update(where=f"file_hash = '{h}'", values={"file_path": path})
             results[path] = np.array(row["vector"], dtype=np.float32)
         else:
-            # À calculer
-            vector = compute_embedding(path, session)
-            if vector is not None:
+            # À calculer — retourne (embedding, taggram)
+            result = compute_embedding(path, session)
+            if result is not None:
+                vector, taggram = result
                 results[path] = vector
                 to_insert.append(
                     {
@@ -400,6 +401,7 @@ def process_files_batch(
                         "file_path": path,
                         "file_hash": h,
                         "file_size_bytes": meta["file"].stat().st_size,
+                        "taggram": taggram,
                         "vector": vector,
                     }
                 )
@@ -474,7 +476,15 @@ def audio_to_musicnn_batch(
     return patches
 
 
-def compute_embedding(path: str, session: ort.InferenceSession) -> Optional[np.ndarray]:
+def compute_embedding(path: str, session: ort.InferenceSession) -> Optional[tuple[np.ndarray, np.ndarray]]:
+    """Calcule l'embedding et le taggram d'une piste audio via MusiCNN.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray] | None
+        (embedding L2-normalisé dim=200, taggram moyenné dim=50),
+        ou None si le fichier est invalide ou vide.
+    """
 
     file = Path(path)
 
@@ -510,7 +520,9 @@ def compute_embedding(path: str, session: ort.InferenceSession) -> Optional[np.n
         return None
 
     input_name = session.get_inputs()[0].name
-    output_name = session.get_outputs()[1].name
+    # Sortie 0 : taggram (50 tags MSD) — Sortie 1 : embedding latent (200 dims)
+    taggram_name = session.get_outputs()[0].name
+    embedding_name = session.get_outputs()[1].name
 
     # CHAQUE SEGMENT
     all_patches = []
@@ -528,11 +540,12 @@ def compute_embedding(path: str, session: ort.InferenceSession) -> Optional[np.n
     # CONCATENATION GLOBALE (pour éviter les appels multiples à ONNX Runtime)
     all_patches = np.concatenate(all_patches, axis=0)
 
-    # ONNX
-    all_outputs = session.run([output_name], {input_name: all_patches})[0]
+    # ONNX — récupération des deux sorties en un seul appel
+    raw_taggrams, raw_embeddings = session.run([taggram_name, embedding_name], {input_name: all_patches})
 
-    # moyenne des patches
+    # Moyenne par segment puis moyenne globale
     segment_embeddings = []
+    segment_taggrams = []
 
     start = 0
 
@@ -540,18 +553,19 @@ def compute_embedding(path: str, session: ort.InferenceSession) -> Optional[np.n
 
         end = start + count
 
-        segment_outputs = all_outputs[start:end]
-
-        segment_embedding = np.mean(segment_outputs, axis=0)
-
-        segment_embeddings.append(segment_embedding)
+        segment_embeddings.append(np.mean(raw_embeddings[start:end], axis=0))
+        segment_taggrams.append(np.mean(raw_taggrams[start:end], axis=0))
 
         start = end
 
     # MOYENNE GLOBALE
     final_embedding = np.mean(segment_embeddings, axis=0)
+    final_taggram = np.mean(segment_taggrams, axis=0)
 
-    return l2_normalize(final_embedding.astype(np.float32))
+    return (
+        l2_normalize(final_embedding.astype(np.float32)),
+        final_taggram.astype(np.float32),
+    )
 
 
 def mmr_ranking(
