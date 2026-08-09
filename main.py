@@ -39,18 +39,7 @@ trace(f"STEP 01: Python version = {sys.version}")
 trace(f"STEP 02: CWD = {pathlib.Path.cwd()}")
 trace(f"STEP 03: sys.path = {sys.path}")
 
-# Enregistrement récursif générique des répertoires contenant des DLLs / C-extensions (.dll, .pyd)
-if os.name == "nt" and hasattr(os, "add_dll_directory"):
-    trace("STEP 04: Recursively registering all C-extension DLL directories...")
-    for root_entry in list(sys.path):
-        if root_entry and os.path.isdir(root_entry):
-            for dirpath, _, filenames in os.walk(root_entry):
-                if any(f.endswith(".dll") or f.endswith(".pyd") for f in filenames):
-                    try:
-                        os.add_dll_directory(dirpath)
-                    except Exception:
-                        pass
-    trace("STEP 04: C-extension DLL directories registered OK")
+
 
 
 def _early_crash_handler(exc_type, exc_value, exc_tb):

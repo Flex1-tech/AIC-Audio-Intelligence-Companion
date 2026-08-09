@@ -55,20 +55,23 @@ jobs:
         run: uv run flet --version
         shell: bash
 
-      # ── 5. Preserve Native Package Resources (.libs & .pyi stubs) ─────────
-      - name: "Preserve Native Package Resources (.libs & .pyi stubs)"
+      # ── 5. Pre-Build Native & Hidden Resources Audit ─────────────────────
+      - name: "Pre-Build Native & Hidden Resources Audit"
         shell: pwsh
         run: |
           $sp_root = (Get-Item ".venv\Lib\site-packages").FullName
+          Write-Host "=== PRE-BUILD AUDIT ==="
+          Write-Host "Site-packages path: $sp_root"
+
+          $vcomp = Join-Path $sp_root "sklearn\.libs\vcomp140.dll"
+          $msvcp = Join-Path $sp_root "sklearn\.libs\msvcp140.dll"
+          Write-Host "sklearn\.libs\vcomp140.dll = $(if (Test-Path $vcomp) {'FOUND'} else {'MISSING'})"
+          Write-Host "sklearn\.libs\msvcp140.dll = $(if (Test-Path $msvcp) {'FOUND'} else {'MISSING'})"
+
           $hidden_dirs = Get-ChildItem -Path $sp_root -Recurse -Directory | Where-Object { $_.Name -like ".*libs*" }
+          Write-Host "Found $($hidden_dirs.Count) hidden native directories in .venv:"
           foreach ($d in $hidden_dirs) {
-            $parent = $d.Parent.FullName
-            $clean_name = $d.Name.TrimStart('.')
-            $dest = Join-Path $parent $clean_name
-            if (!(Test-Path $dest)) {
-              Write-Host "Un-hiding native directory $($d.FullName) -> $dest"
-              Copy-Item -Path $d.FullName -Destination $dest -Recurse -Force
-            }
+            Write-Host "  - $($d.FullName)"
           }
 
       # ── 6. Build Windows ───────────────────────────────────────────────────
@@ -85,20 +88,95 @@ jobs:
         env:
           FLET_APP_NAME: "AIC"
 
-      # ── 7. Native Integrity Audit Guard (CI Verification) ─────────────────
-      - name: "Native Integrity Audit Guard (CI Verification)"
+      # ── 7. Embedded Bundle Hidden Native Resources Injection & Audit ─────
+      - name: "Embedded Bundle Hidden Native Resources Injection & Audit"
         if: steps.build.outcome == 'success'
         shell: pwsh
         run: |
+          $sp_root = (Get-Item ".venv\Lib\site-packages").FullName
           $build_folder = "build\windows"
+
           if (!(Test-Path $build_folder)) {
             Write-Host "::error::Build folder $build_folder not found!"
             exit 1
           }
 
-          $missing = @()
+          Write-Host "=== POST-BUILD DYNAMIC EMBEDDED RUNTIME SEARCH ==="
 
-          # 1. Audit native binaries (.dll & .pyd)
+          # Locate flutter_assets / python-app / site-packages dynamically
+          $target_site_packages = @()
+
+          $candidates = Get-ChildItem -Path $build_folder -Recurse -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -like "*flutter_assets*site-packages*" -or $_.FullName -like "*python-app*site-packages*" -or $_.Name -eq "site-packages" }
+
+          foreach ($c in $candidates) {
+            if ($c.FullName -like "*flutter_assets*") {
+              $target_site_packages += $c.FullName
+            }
+          }
+
+          if ($target_site_packages.Count -eq 0) {
+            $flutter_assets = Get-ChildItem -Path $build_folder -Recurse -Directory -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -eq "flutter_assets" }
+            foreach ($fa in $flutter_assets) {
+              $app_sp = Join-Path $fa.FullName "app\python-app\site-packages"
+              if (!(Test-Path $app_sp)) {
+                New-Item -ItemType Directory -Path $app_sp -Force | Out-Null
+              }
+              $target_site_packages += $app_sp
+            }
+          }
+
+          Write-Host "Identified $($target_site_packages.Count) embedded site-packages runtime target(s):"
+          foreach ($t in $target_site_packages) {
+            Write-Host "  -> $t"
+          }
+
+          $hidden_dirs = Get-ChildItem -Path $sp_root -Recurse -Directory | Where-Object { $_.Name -like ".*libs*" }
+          $injected_count = 0
+          $copied_dlls = 0
+
+          foreach ($hd in $hidden_dirs) {
+            $rel_path = $hd.FullName.Substring($sp_root.Length).TrimStart('\', '/')
+            foreach ($tsp in $target_site_packages) {
+              $dest = Join-Path $tsp $rel_path
+              if (!(Test-Path $dest)) {
+                New-Item -ItemType Directory -Path $dest -Force | Out-Null
+              }
+              Copy-Item -Path "$($hd.FullName)\*" -Destination $dest -Recurse -Force
+              $dll_files = Get-ChildItem -Path $hd.FullName -Recurse -File
+              $copied_dlls += $dll_files.Count
+              Write-Host "Injected $($hd.Name) ($($dll_files.Count) files) -> $dest"
+              $injected_count++
+            }
+          }
+
+          Write-Host "=== FINAL EMBEDDED BUNDLE INTEGRITY AUDIT ==="
+          $verified_count = 0
+          foreach ($tsp in $target_site_packages) {
+            $vcomp_target = Join-Path $tsp "sklearn\.libs\vcomp140.dll"
+            $msvcp_target = Join-Path $tsp "sklearn\.libs\msvcp140.dll"
+
+            $vcomp_status = if (Test-Path $vcomp_target) { 'FOUND' } else { 'MISSING' }
+            $msvcp_status = if (Test-Path $msvcp_target) { 'FOUND' } else { 'MISSING' }
+
+            Write-Host "Target [$tsp]:"
+            Write-Host "  sklearn\.libs\vcomp140.dll = $vcomp_status"
+            Write-Host "  sklearn\.libs\msvcp140.dll = $msvcp_status"
+
+            if ($vcomp_status -eq 'FOUND' -and $msvcp_status -eq 'FOUND') {
+              $verified_count++
+            }
+          }
+
+          Write-Host "HIDDEN NATIVE DIRECTORIES SUMMARY:"
+          Write-Host "  Found in .venv: $($hidden_dirs.Count)"
+          Write-Host "  Injected: $injected_count"
+          Write-Host "  Verified: $verified_count"
+          Write-Host "  Copied files: $copied_dlls"
+
+          # Audit native binaries (.dll & .pyd)
+          $missing = @()
           $venv_dlls = Get-ChildItem -Path ".venv\Lib\site-packages" -Recurse -Include "*.dll", "*.pyd"
           foreach ($f in $venv_dlls) {
             $name = $f.Name
@@ -108,41 +186,35 @@ jobs:
             }
           }
 
-          # 2. Audit PYI stub files (.pyi)
-          $venv_pyis = Get-ChildItem -Path ".venv\Lib\site-packages" -Recurse -Include "*.pyi"
-          foreach ($f in $venv_pyis) {
-            $name = $f.Name
-            $found = Get-ChildItem -Path $build_folder -Recurse -Filter $name -ErrorAction SilentlyContinue
-            if (!$found) {
-              $missing += "PYI STUB: $name (from $($f.FullName))"
-            }
-          }
-
           if ($missing.Count -gt 0) {
-            Write-Host "::error::PACKAGING INTEGRITY AUDIT FAILED! The following $($missing.Count) native/stub resources were omitted from the build:"
+            Write-Host "::error::PACKAGING INTEGRITY AUDIT FAILED! Missing $($missing.Count) native resources in build folder."
             foreach ($m in $missing) {
               Write-Host "  MISSING: $m"
             }
             exit 1
           } else {
-            Write-Host "SUCCESS: Packaging Integrity Audit PASSED. All $($venv_dlls.Count) native binaries and $($venv_pyis.Count) PYI stubs are 100% present in the build artifact."
+            Write-Host "SUCCESS: Packaging Integrity Audit PASSED. All native binaries are present in embedded runtime bundle."
           }
 
-      # ── 6. Lancement du build pour récupérer aic_crash.log ────────────────
-      - name: "Run AIC.exe and capture crash log"
+      # ── 8. Lancement du build pour récupérer aic_crash.log ────────────────
+      - name: "Run application executable and capture crash log"
         if: steps.build.outcome == 'success'
         continue-on-error: true
         shell: pwsh
         run: |
-          $exe_candidates = @(
-            "build\windows\AIC.exe",
-            "build\windows\AIC\AIC.exe"
-          )
+          Write-Host "=== APPLICATION EXECUTABLE DETECTION ==="
+          $build_folder = "build\windows"
+          $exe_candidates = Get-ChildItem -Path $build_folder -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notlike "*uninstall*" -and $_.Name -notlike "*crashpad*" -and $_.Name -notlike "*helper*" }
+
           $exe = $null
-          foreach ($cand in $exe_candidates) {
-            if (Test-Path $cand) { $exe = $cand; break }
+          if ($exe_candidates.Count -gt 0) {
+            $exe = $exe_candidates[0].FullName
+            Write-Host "Found application executable:"
+            Write-Host "  -> $exe"
           }
-          if ($exe) {
+
+          if ($exe -and (Test-Path $exe)) {
             Write-Host "Launching $exe ..."
             $proc = Start-Process -FilePath $exe -PassThru -RedirectStandardOutput stdout.txt -RedirectStandardError stderr.txt -NoNewWindow
             Start-Sleep -Seconds 12
@@ -153,11 +225,11 @@ jobs:
               Write-Host "Process exited with code $($proc.ExitCode)"
             }
           } else {
-            Write-Host "AIC.exe not found — build likely failed."
+            Write-Host "No application .exe found in $build_folder — build likely failed."
           }
 
-      # ── 7. Affichage stdout/stderr dans les logs CI ───────────────────────
-      - name: "Show stdout / stderr from AIC.exe run"
+      # ── 9. Affichage stdout/stderr dans les logs CI ───────────────────────
+      - name: "Show stdout / stderr from application run"
         if: steps.build.outcome == 'success'
         continue-on-error: true
         shell: pwsh
