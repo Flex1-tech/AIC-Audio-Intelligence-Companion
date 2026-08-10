@@ -40,8 +40,6 @@ trace(f"STEP 02: CWD = {pathlib.Path.cwd()}")
 trace(f"STEP 03: sys.path = {sys.path}")
 
 
-
-
 def _early_crash_handler(exc_type, exc_value, exc_tb):
     lines = traceback.format_exception(exc_type, exc_value, exc_tb)
     trace(f"FATAL UNCAUGHT EXCEPTION:\n{''.join(lines)}")

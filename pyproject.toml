@@ -60,6 +60,7 @@ company        = "Flex1 Tech"
 copyright      = "Copyright © 2026 Flex1 Tech"
 org            = "tech.flex1"
 python_version = "3.12"
+artifact       = "AIC"
 
 [tool.flet.app]
 path = "."

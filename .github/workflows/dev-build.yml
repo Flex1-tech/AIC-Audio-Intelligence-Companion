@@ -196,40 +196,38 @@ jobs:
             Write-Host "SUCCESS: Packaging Integrity Audit PASSED. All native binaries are present in embedded runtime bundle."
           }
 
-      # ── 8. Lancement du build pour récupérer aic_crash.log ────────────────
-      - name: "Run application executable and capture crash log"
+      # ── 8. Lancement de AIC.exe pour capturer les logs de diagnostic ────────
+      - name: "Run AIC.exe and capture crash log"
         if: steps.build.outcome == 'success'
         continue-on-error: true
         shell: pwsh
         run: |
-          Write-Host "=== APPLICATION EXECUTABLE DETECTION ==="
-          $build_folder = "build\windows"
-          $exe_candidates = Get-ChildItem -Path $build_folder -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -notlike "*uninstall*" -and $_.Name -notlike "*crashpad*" -and $_.Name -notlike "*helper*" }
-
+          $exe_candidates = @(
+            "build\windows\x64\runner\Release\AIC.exe",
+            "build\windows\AIC.exe",
+            "build\windows\AIC\AIC.exe"
+          )
           $exe = $null
-          if ($exe_candidates.Count -gt 0) {
-            $exe = $exe_candidates[0].FullName
-            Write-Host "Found application executable:"
-            Write-Host "  -> $exe"
+          foreach ($cand in $exe_candidates) {
+            if (Test-Path $cand) { $exe = $cand; break }
           }
-
-          if ($exe -and (Test-Path $exe)) {
-            Write-Host "Launching $exe ..."
-            $proc = Start-Process -FilePath $exe -PassThru -RedirectStandardOutput stdout.txt -RedirectStandardError stderr.txt -NoNewWindow
-            Start-Sleep -Seconds 12
-            if (!$proc.HasExited) {
-              $proc.Kill()
-              Write-Host "Process killed after 12 seconds (no crash — good sign)."
-            } else {
-              Write-Host "Process exited with code $($proc.ExitCode)"
-            }
+          if ($null -eq $exe) {
+            Write-Host "::error::AIC.exe was not found in any expected location."
+            Write-Host "Build produced no AIC.exe — check that [tool.flet] artifact = 'AIC' is set in pyproject.toml."
+            exit 1
+          }
+          Write-Host "Launching $exe ..."
+          $proc = Start-Process -FilePath $exe -PassThru -RedirectStandardOutput stdout.txt -RedirectStandardError stderr.txt -NoNewWindow
+          Start-Sleep -Seconds 12
+          if (!$proc.HasExited) {
+            $proc.Kill()
+            Write-Host "Process killed after 12 seconds (no crash — good sign)."
           } else {
-            Write-Host "No application .exe found in $build_folder — build likely failed."
+            Write-Host "Process exited with code $($proc.ExitCode)"
           }
 
       # ── 9. Affichage stdout/stderr dans les logs CI ───────────────────────
-      - name: "Show stdout / stderr from application run"
+      - name: "Show stdout / stderr from AIC.exe run"
         if: steps.build.outcome == 'success'
         continue-on-error: true
         shell: pwsh
