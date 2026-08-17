@@ -20,6 +20,9 @@ class RecommendationController:
         """
         Exécute le processus MMR dans un thread séparé avec retour visuel réactif.
         """
+        import traceback
+        caller_stack = "".join(traceback.format_stack()[-3:])
+        print(f"[GENERATION_TRIGGER] RecommendationController.run_recommendation_async called from:\n{caller_stack}")
         if not app_state.library.is_recommendation_ready:
             if on_error:
                 on_error("Veuillez liker au moins 3 morceaux pour générer une recommandation.")
@@ -32,14 +35,14 @@ class RecommendationController:
         def _worker():
             try:
                 playlist_paths = self.playlist_service.generate_recommendations(lambda_mmr=app_state.session.lambda_mmr)
-                self.playlist_service.export_m3u8(playlist_paths)
+                export_res = self.playlist_service.export_m3u8(playlist_paths)
 
                 app_state.is_processing = False
                 app_state.processing_status_message = "Prêt"
                 app_state.notify()
 
                 if on_success:
-                    on_success(playlist_paths)
+                    on_success(export_res)
 
             except Exception as e:
                 app_state.is_processing = False

@@ -677,20 +677,161 @@ def recommend_playlist(
     return playlist_paths
 
 
+def _get_existing_tables(db) -> list[str]:
+    """Helper pour récupérer la liste des tables LanceDB sans déclencher de DeprecationWarning."""
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        if hasattr(db, "table_names"):
+            return list(db.table_names())
+    return []
+
+
+def _detect_schema_version(table) -> str:
+    """Détecte la version du schéma de la table LanceDB.
+
+    Returns:
+        'v1' : ancien schéma (title, artist, duration_seconds, pas de taggram)
+        'v2' : nouveau schéma (taggram[50], pas de title/artist/duration_seconds)
+        'unknown' : schéma non reconnu
+    """
+    col_names = {field.name for field in table.schema}
+    has_taggram = "taggram" in col_names
+    has_legacy = "title" in col_names or "artist" in col_names or "duration_seconds" in col_names
+
+    if has_taggram and not has_legacy:
+        return "v2"
+    if has_legacy and not has_taggram:
+        return "v1"
+    if has_taggram and has_legacy:
+        return "v1_mixed"  # Transition partielle
+    return "unknown"
+
+
+def _migrate_v1_to_v2(db, table) -> "lancedb.table.Table":
+    """Migre la table audio_embeddings du schéma v1 (legacy) vers le schéma v2 (actuel).
+
+    Stratégie :
+        1. Sauvegarde de l'ancienne table sous audio_embeddings_backup_v1
+        2. Récupération de toutes les lignes migrables (celles qui ont un vecteur valide)
+        3. Suppression de l'ancienne table
+        4. Recréation avec le nouveau schéma via TrackEmbeddingModel
+        5. Insertion des lignes récupérées avec un taggram vide (zeros)
+        6. En cas d'échec, la sauvegarde reste intacte pour rollback manuel
+
+    Returns:
+        La nouvelle table migrée.
+    """
+    import logging
+    log = logging.getLogger("aic.migration")
+
+    log.info("[MIGRATION] Schéma v1 détecté. Début de la migration vers v2...")
+    print("[MIGRATION] Schéma v1 détecté. Début de la migration vers v2...")
+
+    # 1. Sauvegarde : copie vers une table backup
+    backup_name = "audio_embeddings_backup_v1"
+    try:
+        existing_tables = _get_existing_tables(db)
+        if backup_name in existing_tables:
+            log.info(f"[MIGRATION] Backup '{backup_name}' déjà présent — sauvegarde ignorée.")
+        else:
+            old_rows = table.search().limit(100_000).to_list()
+            if old_rows:
+                import pyarrow as pa
+                backup_tbl = db.create_table(backup_name, data=old_rows, exist_ok=True)
+                log.info(f"[MIGRATION] {len(old_rows)} lignes sauvegardées dans '{backup_name}'.")
+            else:
+                log.info("[MIGRATION] Table vide, pas de sauvegarde nécessaire.")
+    except Exception as backup_err:
+        log.warning(f"[MIGRATION] Sauvegarde échouée (non bloquant) : {backup_err}")
+
+    # 2. Récupération des lignes migrables
+    migrated_rows = []
+    try:
+        old_rows = table.search().limit(100_000).to_list()
+        for row in old_rows:
+            vec = row.get("vector")
+            if vec is None:
+                continue
+            vec_arr = np.array(vec, dtype=np.float32)
+            if vec_arr.shape != (200,):
+                continue
+            # Taggram vide (zeros) — sera recalculé lors de la prochaine recommandation
+            taggram = np.zeros(50, dtype=np.float32)
+            migrated_rows.append({
+                "file_hash": row.get("file_hash", ""),
+                "file_name": row.get("file_name", ""),
+                "file_path": row.get("file_path", ""),
+                "file_size_bytes": int(row.get("file_size_bytes", 0)),
+                "taggram": taggram,
+                "vector": vec_arr,
+            })
+        log.info(f"[MIGRATION] {len(migrated_rows)}/{len(old_rows)} lignes récupérées pour migration.")
+    except Exception as read_err:
+        log.error(f"[MIGRATION] Erreur lecture ancienne table : {read_err}")
+        migrated_rows = []
+
+    # 3. Suppression de l'ancienne table et recréation avec le nouveau schéma
+    try:
+        db.drop_table("audio_embeddings")
+    except Exception as drop_err:
+        log.error(f"[MIGRATION] Impossible de supprimer l'ancienne table : {drop_err}")
+        raise RuntimeError(f"Migration annulée : suppression échouée — {drop_err}")
+
+    new_table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel, exist_ok=False)
+
+    # 4. Insertion des lignes migrées
+    if migrated_rows:
+        try:
+            new_table.add(migrated_rows)
+            log.info(f"[MIGRATION] {len(migrated_rows)} lignes insérées dans la nouvelle table v2.")
+            print(f"[MIGRATION] Migration terminée : {len(migrated_rows)} entrées conservées.")
+        except Exception as insert_err:
+            log.error(f"[MIGRATION] Insertion échouée : {insert_err}")
+            # La table est vide mais valide — pas de rollback automatique
+            print(f"[MIGRATION] AVERTISSEMENT : Insertion échouée ({insert_err}). La table est vide. Rollback : renommer {backup_name}.")
+    else:
+        log.info("[MIGRATION] Aucune ligne à migrer. Nouvelle table vide créée.")
+        print("[MIGRATION] Migration terminée : nouvelle table vide créée.")
+
+    return new_table
+
+
 def initialize_database(db_path: str) -> lancedb.table.Table:
     """
     Initialise la connexion à LanceDB et retourne la table d'embeddings.
-    Idempotent et optimisé : ouvre la table si elle existe déjà, et ne crée l'index
-    scalaire sur file_hash que s'il n'est pas encore présent (<1ms si déjà indexé).
+
+    Gestion du cycle de vie complet :
+    - Si la table n'existe pas → création avec le schéma actuel (v2)
+    - Si la table existe avec le schéma v1 (legacy) → migration automatique vers v2
+    - Si la table existe avec le schéma v2 → ouverture directe (idempotent)
+
+    Migration v1→v2 :
+    - v1 : file_hash, file_name, file_path, file_size_bytes, vector[200], title, artist, duration_seconds
+    - v2 : file_hash, file_name, file_path, file_size_bytes, taggram[50], vector[200]
     """
     db = lancedb.connect(db_path)
-    table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel, exist_ok=True)
+    existing_tables = _get_existing_tables(db)
 
-    # Vérifie si l'index sur file_hash existe déjà pour éviter toute reconstruction inutile
+    if "audio_embeddings" not in existing_tables:
+        # Première utilisation : création directe avec le schéma v2
+        table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel, exist_ok=True)
+    else:
+        table = db.open_table("audio_embeddings")
+        version = _detect_schema_version(table)
+
+        if version in ("v1", "v1_mixed", "unknown"):
+            # Migration nécessaire
+            table = _migrate_v1_to_v2(db, table)
+        # version == "v2" → table déjà à jour, rien à faire
+
+    # Index scalaire sur file_hash (idempotent, <1ms si déjà indexé)
     if not any("file_hash" in idx.columns for idx in table.list_indices()):
         table.create_index("file_hash", config=BTree(), replace=True)
 
     return table
+
+
 
 
 def make_m3u(playlist_paths: list[str], output_path: str) -> None:

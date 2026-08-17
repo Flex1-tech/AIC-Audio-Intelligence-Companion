@@ -112,6 +112,7 @@ class HeaderBar(ft.Container):
                                 icon=ft.Icons.BRIGHTNESS_4_OUTLINED,
                                 icon_size=18,
                                 tooltip="Changer le thème",
+                                mouse_cursor=ft.MouseCursor.CLICK,
                                 on_click=self._handle_theme_toggle,
                                 # no icon_color — inherits on_surface_variant from theme
                             ),

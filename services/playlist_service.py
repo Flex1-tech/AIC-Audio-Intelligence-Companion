@@ -1,6 +1,6 @@
 import subprocess
 import time
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from extraction import recommend_playlist, make_m3u
 from utils.audio_utils import find_vlc
 from providers.musicnn_provider import MusicnnProvider
@@ -8,14 +8,23 @@ from repositories.track_repository import TrackRepository
 from core.state import app_state
 
 
+from services.playlist_export_service import PlaylistExportService, ExportResult
+
+
 class PlaylistService:
     """
     Service de recommandation MMR, génération de playlists .m3u8 et exécution de VLC.
     """
 
-    def __init__(self, provider: MusicnnProvider = None, repository: TrackRepository = None):
+    def __init__(
+        self,
+        provider: MusicnnProvider = None,
+        repository: TrackRepository = None,
+        export_service: PlaylistExportService = None,
+    ):
         self.provider = provider or MusicnnProvider()
         self.repository = repository or TrackRepository()
+        self.export_service = export_service or PlaylistExportService()
 
     def generate_recommendations(self, lambda_mmr: float = 0.7) -> List[str]:
         """
@@ -29,8 +38,7 @@ class PlaylistService:
         session = self.provider.get_session()
         table = self.repository.get_table()
 
-        # Exécution de recommend_playlist (qui calcule aussi
-        # process_files_batch)
+        # Exécution de recommend_playlist (qui calcule aussi process_files_batch)
         recommended_paths = recommend_playlist(path_dict=path_dict, session=session, table=table, lambda_mmr=lambda_mmr)
 
         duration_ms = (time.time() - start_time) * 1000.0
@@ -50,11 +58,15 @@ class PlaylistService:
         )
         return recommended_paths
 
-    def export_m3u8(self, playlist_paths: List[str], output_path: str = "playlist.m3u8") -> str:
-        make_m3u(playlist_paths, output_path)
-        app_state.session.last_generated_playlist_path = output_path
-        app_state.notify()
-        return output_path
+    def export_m3u8(
+        self,
+        playlist_paths: List[str],
+        custom_folder: Optional[str] = None,
+    ) -> ExportResult:
+        """
+        Exporte la playlist de manière sécurisée via PlaylistExportService.
+        """
+        return self.export_service.export_playlist(playlist_paths, custom_folder=custom_folder)
 
     def launch_vlc(self, playlist_path: str = "playlist.m3u8") -> Tuple[bool, str]:
         vlc_path = app_state.session.vlc_custom_path or find_vlc()

@@ -62,7 +62,7 @@ def run_ffprobe(cmd, timeout=5):
 
 
 def is_valid_media(filepath):
-    """Retourne True si ffprobe valide le fichier comme média lisible."""
+    """Retourne True si ffprobe valide le fichier comme média lisible (fallback True si ffprobe indisponible)."""
     try:
         result = run_ffprobe(
             [
@@ -73,8 +73,8 @@ def is_valid_media(filepath):
             ]
         )
         return result.returncode == 0
-    except subprocess.SubprocessError:
-        return False
+    except Exception:
+        return True
 
 
 def find_vlc():

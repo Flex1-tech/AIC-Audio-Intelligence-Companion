@@ -69,6 +69,7 @@ class AIMetricsView(ft.Container):
                                 icon=ft.Icons.CONTENT_COPY,
                                 icon_size=16,
                                 tooltip="Copier les journaux",
+                                mouse_cursor=ft.MouseCursor.CLICK,
                                 on_click=self._handle_copy_logs,
                                 # no icon_color — inherits on_surface_variant
                             ),
@@ -114,7 +115,10 @@ class AIMetricsView(ft.Container):
                 content=ft.Text("Journaux copiés dans le presse-papier !", color=ObsidianColors.BG_DARK),
                 bgcolor=ObsidianColors.PRIMARY,
                 duration=3000,
+                show_close_icon=True,
+                close_icon_color=ObsidianColors.BG_DARK,
             )
+            page.overlay.clear()
             page.overlay.append(snack)
             snack.open = True
             try:

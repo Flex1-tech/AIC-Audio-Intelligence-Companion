@@ -47,7 +47,7 @@ class ActionBar(ft.Container):
             content="Réinitialiser",
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=Radii.SM),
-                # no explicit color or side — inherits on_surface / outline from theme
+                mouse_cursor=ft.MouseCursor.CLICK,
             ),
             on_click=self._handle_reset,
         )
@@ -69,6 +69,7 @@ class ActionBar(ft.Container):
                 bgcolor=ObsidianColors.PRIMARY,  # brand action — explicit
                 padding=ft.Padding.symmetric(horizontal=20, vertical=12),
                 shape=ft.RoundedRectangleBorder(radius=Radii.SM),
+                mouse_cursor=ft.MouseCursor.FORBIDDEN,
             ),
             disabled=True,
             on_click=self._handle_start,
@@ -159,6 +160,10 @@ class ActionBar(ft.Container):
         self.start_button.disabled = not ready or processing
         self.lambda_slider.disabled = processing
         self.reset_button.disabled = processing
+
+        cursor = ft.MouseCursor.WAIT if processing else (ft.MouseCursor.CLICK if ready else ft.MouseCursor.FORBIDDEN)
+        self.start_button.style.mouse_cursor = cursor
+        self.reset_button.style.mouse_cursor = ft.MouseCursor.WAIT if processing else ft.MouseCursor.CLICK
         try:
             self.update()
         except RuntimeError:
@@ -174,9 +179,13 @@ class ActionBar(ft.Container):
             pass
 
     def _handle_start(self, e):
+        ctrl = getattr(e, "control", None)
+        print(f"[GENERATION_TRIGGER] ActionBar._handle_start event={e}, control={ctrl}")
         if self.on_start_recommendation:
             self.on_start_recommendation()
 
     def _handle_reset(self, e):
+        ctrl = getattr(e, "control", None)
+        print(f"[EVENT] ActionBar._handle_reset event={e}, control={ctrl}")
         if self.on_reset:
             self.on_reset()

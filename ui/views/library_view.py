@@ -40,7 +40,7 @@ class LibraryView(ft.Container):
                 ],
                 spacing=6,
             ),
-            style=ft.ButtonStyle(bgcolor=ObsidianColors.PRIMARY),
+            style=ft.ButtonStyle(bgcolor=ObsidianColors.PRIMARY, mouse_cursor=ft.MouseCursor.CLICK),
             on_click=lambda e: (e.page.run_task(self.on_pick_files) if self.on_pick_files else None),
         )
 
@@ -52,7 +52,7 @@ class LibraryView(ft.Container):
                 ],
                 spacing=6,
             ),
-            # no explicit style colors — inherits on_surface / outline from theme
+            style=ft.ButtonStyle(mouse_cursor=ft.MouseCursor.CLICK),
             on_click=lambda e: (e.page.run_task(self.on_pick_folder) if self.on_pick_folder else None),
         )
 
@@ -194,8 +194,13 @@ class LibraryView(ft.Container):
         """
         self._is_loading = loading
         self._loader_text.value = message
-        self._btn_files.disabled = loading or app_state.is_processing
-        self._btn_folder.disabled = loading or app_state.is_processing
+        disabled = loading or app_state.is_processing
+        self._btn_files.disabled = disabled
+        self._btn_folder.disabled = disabled
+
+        cursor = ft.MouseCursor.WAIT if loading else (ft.MouseCursor.FORBIDDEN if app_state.is_processing else ft.MouseCursor.CLICK)
+        self._btn_files.style.mouse_cursor = cursor
+        self._btn_folder.style.mouse_cursor = cursor
         self._loader_row.visible = loading
         try:
             self._btn_files.update()
@@ -241,9 +246,11 @@ class LibraryView(ft.Container):
             pass
 
     def _handle_search_change(self, e) -> None:
+        print(f"[EVENT] LibraryView._handle_search_change val={e.control.value}")
         if self.on_search:
             self.on_search(e.control.value)
 
     def _handle_filter_toggle(self, e) -> None:
+        print(f"[EVENT] LibraryView._handle_filter_toggle selected={e.control.selected}")
         app_state.session.filter_liked_only = e.control.selected
         self.refresh_tracks()

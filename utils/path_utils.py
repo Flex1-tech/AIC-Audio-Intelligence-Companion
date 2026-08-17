@@ -37,6 +37,59 @@ def get_user_data_dir() -> Path:
     return data_dir
 
 
+def get_default_playlist_dir() -> Path:
+    """
+    Retourne le dossier de destination par défaut des playlists selon l'OS (Cross-platform) :
+    - Windows : ~/Music/Playlists (ex: C:\\Users\\<user>\\Music\\Playlists)
+    - macOS : ~/Music/Playlists
+    - Linux : $XDG_MUSIC_DIR/Playlists ou ~/Music/Playlists
+    Fallback automatique vers APPDATA/AIC/playlists si ~/Music est inaccessible.
+    """
+    if os.name == "nt":
+        user_music = Path.home() / "Music"
+    elif sys.platform == "darwin":
+        user_music = Path.home() / "Music"
+    else:  # Linux / Unix
+        xdg_music = os.environ.get("XDG_MUSIC_DIR")
+        user_music = Path(xdg_music) if xdg_music else Path.home() / "Music"
+
+    playlist_dir = user_music / "Playlists"
+    try:
+        playlist_dir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        playlist_dir = get_user_data_dir() / "playlists"
+        playlist_dir.mkdir(parents=True, exist_ok=True)
+
+    return playlist_dir.resolve()
+
+
+def open_folder(folder_path: str) -> bool:
+    """
+    Ouvre un dossier dans l'explorateur de fichiers natif de l'OS (Cross-platform).
+    - Windows : os.startfile / explorer
+    - macOS : open
+    - Linux : xdg-open
+    """
+    import subprocess
+
+    path_obj = Path(folder_path)
+    if not path_obj.exists():
+        return False
+
+    target = str(path_obj.resolve())
+
+    try:
+        if os.name == "nt":
+            os.startfile(target)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", target])
+        else:  # Linux / Unix
+            subprocess.Popen(["xdg-open", target])
+        return True
+    except Exception:
+        return False
+
+
 def write_crash_log(exc_type, exc_value, exc_tb, origin: str = "CRASH") -> Path:
     """
     Écrit la trace complète de l'exception dans des emplacements persistants garantis :

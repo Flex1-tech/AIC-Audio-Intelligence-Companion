@@ -4,6 +4,7 @@ import datetime
 import os
 import pathlib
 import sys
+import tempfile
 import traceback
 
 
@@ -38,6 +39,26 @@ trace(f"STEP 00: Python executable = {sys.executable}")
 trace(f"STEP 01: Python version = {sys.version}")
 trace(f"STEP 02: CWD = {pathlib.Path.cwd()}")
 trace(f"STEP 03: sys.path = {sys.path}")
+
+# ── Configuration du cache Numba cross-plateforme (Windows, macOS, Linux) ──────
+# Sans cela, Numba (@jit cache=True dans librosa/core/notation.py) tente
+# d'écrire son cache dans le répertoire source du .py packagé, qui pointe
+# vers le chemin CI runner introuvable sur la machine utilisateur.
+if os.name == "nt":
+    _base_cache = pathlib.Path(os.environ.get("LOCALAPPDATA") or pathlib.Path.home() / "AppData" / "Local")
+elif sys.platform == "darwin":
+    _base_cache = pathlib.Path.home() / "Library" / "Caches"
+else:  # Linux / Unix
+    _xdg_cache = os.environ.get("XDG_CACHE_HOME")
+    _base_cache = pathlib.Path(_xdg_cache) if _xdg_cache else pathlib.Path.home() / ".cache"
+
+_aic_numba_cache = _base_cache / "AIC" / "numba_cache"
+try:
+    _aic_numba_cache.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("NUMBA_CACHE_DIR", str(_aic_numba_cache))
+except Exception:
+    pass  # Fallback silencieux : Numba utilisera le répertoire par défaut
+trace(f"STEP 04: NUMBA_CACHE_DIR = {os.environ.get('NUMBA_CACHE_DIR', 'default')}")
 
 
 def _early_crash_handler(exc_type, exc_value, exc_tb):
@@ -90,7 +111,7 @@ from ui.components.splash_screen import SplashScreen  # noqa: E402
 from ui.design_system import get_dark_theme, get_light_theme  # noqa: E402
 from ui.design_system.colors import ObsidianColors  # noqa: E402
 from ui.views.main_layout import MainLayout  # noqa: E402
-from utils.path_utils import setup_logging, get_asset_path, write_crash_log  # noqa: E402
+from utils.path_utils import setup_logging, get_asset_path, write_crash_log, open_folder  # noqa: E402
 
 trace("STEP 17: All imports completed successfully OK")
 
@@ -166,16 +187,19 @@ def main(page: ft.Page) -> None:
         file_picker = ft.FilePicker()
         page.services.append(file_picker)
 
-        def _show_toast(message: str, is_error: bool = False) -> None:
-            """Affiche une notification toast sur le thread UI avec contraste WCAG optimisé."""
+        def _show_toast(message: str, is_error: bool = False, duration: int = 4000) -> None:
+            """Affiche une notification toast dismissible (croix × uniquement) sur le thread UI."""
             snack = ft.SnackBar(
                 content=ft.Text(
                     message,
                     color=ObsidianColors.TEXT_WHITE if is_error else ObsidianColors.BG_DARK,
                 ),
                 bgcolor=ObsidianColors.ERROR_BG if is_error else ObsidianColors.PRIMARY,
-                duration=4000,
+                duration=duration,
+                show_close_icon=True,
+                close_icon_color=ObsidianColors.TEXT_WHITE if is_error else ObsidianColors.BG_DARK,
             )
+            page.overlay.clear()
             page.overlay.append(snack)
             snack.open = True
             try:
@@ -184,6 +208,9 @@ def main(page: ft.Page) -> None:
                 pass
 
         async def handle_pick_files() -> None:
+            if app_state.is_processing:
+                _show_toast("Un traitement ou un import est déjà en cours. Veuillez patienter.", is_error=False)
+                return
             layout.library_view.set_loading(True)
             files = await file_picker.pick_files(
                 allow_multiple=True,
@@ -202,6 +229,10 @@ def main(page: ft.Page) -> None:
 
             def on_complete_files(valid_count: int, invalid_count: int) -> None:
                 async def _finish() -> None:
+                    app_state.session.filter_liked_only = False
+                    app_state.session.search_query = ""
+                    layout.library_view.search_entry.value = ""
+                    layout.library_view.filter_chip.selected = False
                     layout.library_view.set_loading(False)
                     _show_toast(f"{valid_count} morceau(x) ajouté(s) ({invalid_count} ignoré(s))")
                     app_state.notify()
@@ -211,6 +242,9 @@ def main(page: ft.Page) -> None:
             library_controller.import_files_async(file_paths, on_complete=on_complete_files)
 
         async def handle_pick_folder() -> None:
+            if app_state.is_processing:
+                _show_toast("Un traitement ou un import est déjà en cours. Veuillez patienter.", is_error=False)
+                return
             layout.library_view.set_loading(True)
             folder_path = await file_picker.get_directory_path(
                 dialog_title="Sélectionner un dossier musical pour AIC",
@@ -223,6 +257,10 @@ def main(page: ft.Page) -> None:
 
             def on_complete_folder(valid_count: int, invalid_count: int) -> None:
                 async def _finish() -> None:
+                    app_state.session.filter_liked_only = False
+                    app_state.session.search_query = ""
+                    layout.library_view.search_entry.value = ""
+                    layout.library_view.filter_chip.selected = False
                     layout.library_view.set_loading(False)
                     _show_toast(f"{valid_count} morceau(x) indexé(s) depuis le dossier ({invalid_count} ignoré(s))")
                     app_state.notify()
@@ -232,15 +270,27 @@ def main(page: ft.Page) -> None:
             library_controller.import_folder_async(folder_path, on_complete=on_complete_folder)
 
         def handle_like_track(file_path: str) -> None:
+            if app_state.is_processing:
+                _show_toast("Impossible de modifier les likes pendant un traitement.", is_error=False)
+                return
             library_controller.toggle_like(file_path)
 
         def handle_delete_track(file_path: str) -> None:
+            if app_state.is_processing:
+                _show_toast("Impossible de supprimer un morceau pendant un traitement.", is_error=False)
+                return
             library_controller.remove_track(file_path)
 
         def handle_search(query: str) -> None:
             library_controller.set_search_query(query)
 
         def handle_reset() -> None:
+            if app_state.is_processing:
+                _show_toast("Impossible de réinitialiser la bibliothèque pendant un traitement.", is_error=False)
+                return
+            if app_state.library.total_tracks_count == 0:
+                _show_toast("La bibliothèque est déjà vide.", is_error=False)
+                return
             library_controller.reset_library()
             _show_toast("Bibliothèque réinitialisée.")
 
@@ -248,13 +298,53 @@ def main(page: ft.Page) -> None:
             page.theme_mode = ft.ThemeMode.LIGHT if page.theme_mode == ft.ThemeMode.DARK else ft.ThemeMode.DARK
             page.update()
 
+        async def handle_pick_export_folder() -> None:
+            folder_path = await file_picker.get_directory_path(
+                dialog_title="Sélectionner le dossier d'exportation des playlists",
+            )
+            if folder_path:
+                app_state.session.export_folder_path = folder_path
+                layout.settings_view.update_export_folder(folder_path)
+                _show_toast(f"Dossier d'exportation mis à jour : {folder_path}")
+
         def handle_start_recommendation() -> None:
-            def on_success(playlist_paths: list) -> None:
+            trace("[GENERATION_TRIGGER] handle_start_recommendation called!")
+            print("[GENERATION_TRIGGER] handle_start_recommendation called!")
+            if app_state.is_processing:
+                _show_toast("Un calcul de recommandation est déjà en cours. Veuillez patienter.", is_error=False)
+                return
+            total_count = app_state.library.total_tracks_count
+            liked_count = app_state.library.liked_tracks_count
+            if total_count == 0:
+                _show_toast("Aucune chanson dans la bibliothèque. Importez des fichiers audio pour commencer.", is_error=False, duration=5000)
+                return
+            if not app_state.library.is_recommendation_ready:
+                if liked_count == 0:
+                    _show_toast("Aucune chanson likée. Likez au moins 3 chansons pour générer une playlist.", is_error=False, duration=5000)
+                else:
+                    remaining = max(0, 3 - liked_count)
+                    _show_toast(f"Vous avez {liked_count}/3 morceau(x) liké(s). Likez encore {remaining} morceau(x) pour générer la playlist.", is_error=False, duration=5000)
+                return
+
+            def on_success(export_res) -> None:
                 async def _open_modal() -> None:
+                    def _do_open_folder() -> None:
+                        success = open_folder(export_res.folder_path)
+                        if not success:
+                            _show_toast("Impossible d'ouvrir le dossier de destination.", is_error=True)
+
+                    async def _do_change_folder() -> None:
+                        page.pop_dialog()
+                        await handle_pick_export_folder()
+
                     dialog = ResultDialog(
-                        count=len(playlist_paths),
-                        file_path=app_state.session.last_generated_playlist_path,
+                        count=export_res.track_count,
+                        file_name=export_res.file_name,
+                        file_path=export_res.file_path,
+                        folder_path=export_res.folder_path,
                         on_launch_vlc=_launch_vlc,
+                        on_open_folder=_do_open_folder,
+                        on_change_folder=_do_change_folder,
                         on_close=lambda: page.pop_dialog(),
                     )
                     page.show_dialog(dialog)
@@ -262,14 +352,29 @@ def main(page: ft.Page) -> None:
                 page.run_task(_open_modal)
 
             def on_error(err: str) -> None:
+                # Traduit les erreurs techniques en messages utilisateur intelligibles
+                user_msg = err
+                if "no locator available" in err or "cannot cache function" in err:
+                    user_msg = "Erreur de configuration du cache audio. Redémarrez l'application."
+                elif "FileNotFoundError" in err or "ffmpeg" in err.lower():
+                    user_msg = "Fichier audio introuvable ou format non supporté."
+                elif "OutOfMemoryError" in err or "MemoryError" in err:
+                    user_msg = "Mémoire insuffisante pour traiter les fichiers. Réduisez le nombre de morceaux."
+                elif len(err) > 120:
+                    # Tronquer les messages techniques trop longs
+                    user_msg = err[:120] + "…"
+
                 async def _show_err() -> None:
-                    _show_toast(f"Erreur : {err}", is_error=True)
+                    _show_toast(f"Erreur recommandation : {user_msg}", is_error=True, duration=6000)
 
                 page.run_task(_show_err)
 
             rec_controller.run_recommendation_async(on_success=on_success, on_error=on_error)
 
         def _launch_vlc() -> None:
+            if not app_state.session.last_generated_playlist_path:
+                _show_toast("Aucune playlist n'a encore été générée. Cliquez d'abord sur 'Générer la Playlist IA'.", is_error=False)
+                return
             success, msg = rec_controller.launch_vlc()
             _show_toast(msg, is_error=not success)
 
@@ -283,6 +388,7 @@ def main(page: ft.Page) -> None:
             on_start_recommendation=handle_start_recommendation,
             on_reset=handle_reset,
             on_theme_toggle=handle_theme_toggle,
+            on_pick_export_folder=handle_pick_export_folder,
         )
 
         def on_state_change() -> None:
