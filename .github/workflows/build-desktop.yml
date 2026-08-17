@@ -276,6 +276,7 @@ jobs:
         with:
           name: "aic-${{ matrix.platform }}-${{ github.sha }}"
           path: ${{ matrix.artifact_path }}
+          include-hidden-files: true  # Préserve les répertoires masqués comme sklearn/.libs (purgés par défaut)
           if-no-files-found: error
           retention-days: 30
 

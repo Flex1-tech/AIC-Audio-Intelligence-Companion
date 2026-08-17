@@ -268,6 +268,7 @@ jobs:
         with:
           name: "aic-windows-dev-${{ github.sha }}"
           path: build/windows
+          include-hidden-files: true  # Préserve les répertoires masqués comme sklearn/.libs (purgés par défaut)
           if-no-files-found: warn
           retention-days: 7
 
