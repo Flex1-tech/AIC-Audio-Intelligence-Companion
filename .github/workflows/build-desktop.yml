@@ -176,28 +176,14 @@ jobs:
 
           Write-Host "=== POST-BUILD DYNAMIC EMBEDDED RUNTIME SEARCH ==="
 
-          # Locate flutter_assets / python-app / site-packages dynamically
-          $target_site_packages = @()
+          # Locate ALL site-packages directories under build\windows dynamically
+          $target_site_packages = Get-ChildItem -Path $build_folder -Recurse -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -eq "site-packages" } |
+            Select-Object -ExpandProperty FullName -Unique
 
-          $candidates = Get-ChildItem -Path $build_folder -Recurse -Directory -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -like "*flutter_assets*site-packages*" -or $_.FullName -like "*python-app*site-packages*" -or $_.Name -eq "site-packages" }
-
-          foreach ($c in $candidates) {
-            if ($c.FullName -like "*flutter_assets*") {
-              $target_site_packages += $c.FullName
-            }
-          }
-
-          if ($target_site_packages.Count -eq 0) {
-            $flutter_assets = Get-ChildItem -Path $build_folder -Recurse -Directory -ErrorAction SilentlyContinue |
-              Where-Object { $_.Name -eq "flutter_assets" }
-            foreach ($fa in $flutter_assets) {
-              $app_sp = Join-Path $fa.FullName "app\python-app\site-packages"
-              if (!(Test-Path $app_sp)) {
-                New-Item -ItemType Directory -Path $app_sp -Force | Out-Null
-              }
-              $target_site_packages += $app_sp
-            }
+          if ($null -eq $target_site_packages -or $target_site_packages.Count -eq 0) {
+            Write-Host "::error::No site-packages directories found under $build_folder!"
+            exit 1
           }
 
           Write-Host "Identified $($target_site_packages.Count) embedded site-packages runtime target(s):"
@@ -225,7 +211,7 @@ jobs:
           }
 
           Write-Host "=== FINAL EMBEDDED BUNDLE INTEGRITY AUDIT ==="
-          $verified_count = 0
+          $failed_targets = 0
           foreach ($tsp in $target_site_packages) {
             $vcomp_target = Join-Path $tsp "sklearn\.libs\vcomp140.dll"
             $msvcp_target = Join-Path $tsp "sklearn\.libs\msvcp140.dll"
@@ -237,16 +223,29 @@ jobs:
             Write-Host "  sklearn\.libs\vcomp140.dll = $vcomp_status"
             Write-Host "  sklearn\.libs\msvcp140.dll = $msvcp_status"
 
-            if ($vcomp_status -eq 'FOUND' -and $msvcp_status -eq 'FOUND') {
-              $verified_count++
+            if ($vcomp_status -ne 'FOUND' -or $msvcp_status -ne 'FOUND') {
+              $failed_targets++
             }
           }
 
-          Write-Host "HIDDEN NATIVE DIRECTORIES SUMMARY:"
-          Write-Host "  Found in .venv: $($hidden_dirs.Count)"
-          Write-Host "  Injected: $injected_count"
-          Write-Host "  Verified: $verified_count"
-          Write-Host "  Copied files: $copied_dlls"
+          if ($failed_targets -gt 0) {
+            Write-Host "::error::CRITICAL NATIVE RESOURCE VERIFICATION FAILED! Missing required DLLs in $failed_targets target(s)."
+            exit 1
+          }
+
+          # Audit executable presence explicitly
+          $exe = "build\windows\AIC.exe"
+          if (!(Test-Path $exe)) {
+            $exe_candidates = @("build\windows\AIC.exe", "build\windows\x64\runner\Release\AIC.exe")
+            foreach ($cand in $exe_candidates) {
+              if (Test-Path $cand) { $exe = $cand; break }
+            }
+          }
+          if (!(Test-Path $exe)) {
+            Write-Host "::error::EXECUTABLE AIC.exe MISSING! Expected at build\windows\AIC.exe"
+            exit 1
+          }
+          Write-Host "Executable verified: $exe = FOUND"
 
           # Audit native binaries (.dll & .pyd)
           $missing = @()
