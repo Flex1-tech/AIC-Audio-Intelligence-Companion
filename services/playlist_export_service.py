@@ -2,9 +2,18 @@ import datetime
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
-from extraction import make_m3u
 from utils.path_utils import get_default_playlist_dir
 from core.state import app_state
+
+
+def make_m3u(playlist_paths: List[str], output_path: str) -> None:
+    """Génère un fichier .m3u à partir d'une liste de chemins de fichiers audio."""
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("#EXTM3U\n")
+        for path in playlist_paths:
+            p = Path(path)
+            f.write(f"#EXTINF:-1,{p.stem}\n")
+            f.write((p if p.is_absolute() else p.resolve()).as_uri() + "\n")
 
 
 @dataclass

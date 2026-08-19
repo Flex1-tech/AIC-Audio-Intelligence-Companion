@@ -811,9 +811,6 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
 
 def make_m3u(playlist_paths: list[str], output_path: str) -> None:
     """Génère un fichier .m3u à partir d'une liste de chemins de fichiers audio."""
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("#EXTM3U\n")
-        for path in playlist_paths:
-            p = Path(path)
-            f.write(f"#EXTINF:-1,{p.stem}\n")
-            f.write(p.as_uri() + "\n")
+    from services.playlist_export_service import make_m3u as _make_m3u
+
+    _make_m3u(playlist_paths, output_path)
