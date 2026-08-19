@@ -147,7 +147,7 @@ def get_asset_path(filename: str) -> Optional[Path]:
         candidates.extend([flet_p / rel_path, flet_p / clean_name])
 
     # 2. Emplacement relatif à l'exécutable (Flutter Desktop bundle / serious_python)
-    if getattr(sys, "frozen", False) or hasattr(sys, "_MEIPASS"):
+    if getattr(sys, "executable", None):
         exe_dir = Path(sys.executable).resolve().parent
         # Windows / Linux Flutter layout
         candidates.extend(
