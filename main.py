@@ -39,6 +39,54 @@ trace(f"STEP 01: Python version = {sys.version}")
 trace(f"STEP 02: CWD = {pathlib.Path.cwd()}")
 trace(f"STEP 03: sys.path = {sys.path}")
 
+
+def trace_environment_and_assets() -> None:
+    """Diagnostic exhaustif de l'environnement de runtime et de la résolution des 8 assets critiques."""
+    trace("=== SYSTEM & ENVIRONMENT DIAGNOSTIC ===")
+    trace(f"sys.executable  = {sys.executable}")
+    trace(f"sys.argv        = {sys.argv}")
+    trace(f"sys.prefix      = {getattr(sys, 'prefix', None)}")
+    trace(f"sys.base_prefix = {getattr(sys, 'base_prefix', None)}")
+    trace(f"sys.frozen      = {getattr(sys, 'frozen', None)}")
+    trace(f"sys._MEIPASS    = {getattr(sys, '_MEIPASS', None)}")
+    trace(f"CWD             = {pathlib.Path.cwd()}")
+    try:
+        trace(f"main.py path    = {pathlib.Path(__file__).resolve()}")
+    except Exception as e:
+        trace(f"main.py path err = {e}")
+
+    exe_dir = pathlib.Path(sys.executable).resolve().parent
+    trace(f"exe_dir         = {exe_dir}")
+
+    assets_to_test = [
+        "icon.ico",
+        "icon.png",
+        "icon.svg",
+        "layer_letterform.svg",
+        "layer_wave.svg",
+        "msd-musicnn-1.onnx",
+        "fonts/CinzelDecorative-Bold.ttf",
+        "fonts/CinzelDecorative-Regular.ttf",
+    ]
+
+    trace("=== ASSET RESOLUTION DIAGNOSTIC ===")
+    for asset in assets_to_test:
+        try:
+            resolved = get_asset_path(asset)
+            exists = resolved.exists() if resolved else False
+            is_file = resolved.is_file() if resolved else False
+            direct_bundle_path = exe_dir / "data" / "flutter_assets" / "assets" / asset
+            direct_exists = direct_bundle_path.exists()
+            trace(
+                f"ASSET '{asset}':\n"
+                f"  get_asset_path() -> {resolved}\n"
+                f"  EXISTS={exists} | IS_FILE={is_file}\n"
+                f"  Direct Flutter Bundle ({direct_bundle_path}) -> EXISTS={direct_exists}"
+            )
+        except Exception as asset_err:
+            trace(f"ASSET '{asset}' DIAGNOSTIC ERROR: {asset_err}")
+
+
 # ── Configuration du cache Numba cross-plateforme (Windows, macOS, Linux) ──────
 # Sans cela, Numba (@jit cache=True dans librosa/core/notation.py) tente
 # d'écrire son cache dans le répertoire source du .py packagé, qui pointe
@@ -145,6 +193,7 @@ threading.excepthook = _handle_thread_exception
 def main(page: ft.Page) -> None:
     """Initialise la page Flet, les services et les événements UI."""
     trace("MAIN STEP 0: Entering main(page)")
+    trace_environment_and_assets()
     try:
         trace("MAIN STEP 1: Setting page title & theme mode...")
         page.title = "AIC — Audio Intelligence Companion"
