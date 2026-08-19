@@ -198,7 +198,11 @@ class LibraryView(ft.Container):
         self._btn_files.disabled = disabled
         self._btn_folder.disabled = disabled
 
-        cursor = ft.MouseCursor.WAIT if loading else (ft.MouseCursor.FORBIDDEN if app_state.is_processing else ft.MouseCursor.CLICK)
+        cursor = (
+            ft.MouseCursor.WAIT
+            if loading
+            else (ft.MouseCursor.FORBIDDEN if app_state.is_processing else ft.MouseCursor.CLICK)
+        )
         self._btn_files.style.mouse_cursor = cursor
         self._btn_folder.style.mouse_cursor = cursor
         self._loader_row.visible = loading

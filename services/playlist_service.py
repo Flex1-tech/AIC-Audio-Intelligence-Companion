@@ -1,7 +1,7 @@
 import subprocess
 import time
 from typing import List, Tuple, Optional
-from extraction import recommend_playlist, make_m3u
+from extraction import recommend_playlist
 from utils.audio_utils import find_vlc
 from providers.musicnn_provider import MusicnnProvider
 from repositories.track_repository import TrackRepository

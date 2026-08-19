@@ -4,7 +4,6 @@ import datetime
 import os
 import pathlib
 import sys
-import tempfile
 import traceback
 
 
@@ -316,14 +315,26 @@ def main(page: ft.Page) -> None:
             total_count = app_state.library.total_tracks_count
             liked_count = app_state.library.liked_tracks_count
             if total_count == 0:
-                _show_toast("Aucune chanson dans la bibliothèque. Importez des fichiers audio pour commencer.", is_error=False, duration=5000)
+                _show_toast(
+                    "Aucune chanson dans la bibliothèque. Importez des fichiers audio pour commencer.",
+                    is_error=False,
+                    duration=5000,
+                )
                 return
             if not app_state.library.is_recommendation_ready:
                 if liked_count == 0:
-                    _show_toast("Aucune chanson likée. Likez au moins 3 chansons pour générer une playlist.", is_error=False, duration=5000)
+                    _show_toast(
+                        "Aucune chanson likée. Likez au moins 3 chansons pour générer une playlist.",
+                        is_error=False,
+                        duration=5000,
+                    )
                 else:
                     remaining = max(0, 3 - liked_count)
-                    _show_toast(f"Vous avez {liked_count}/3 morceau(x) liké(s). Likez encore {remaining} morceau(x) pour générer la playlist.", is_error=False, duration=5000)
+                    _show_toast(
+                        f"Vous avez {liked_count}/3 morceau(x) liké(s). Likez encore {remaining} morceau(x) pour générer la playlist.",
+                        is_error=False,
+                        duration=5000,
+                    )
                 return
 
             def on_success(export_res) -> None:
@@ -373,7 +384,10 @@ def main(page: ft.Page) -> None:
 
         def _launch_vlc() -> None:
             if not app_state.session.last_generated_playlist_path:
-                _show_toast("Aucune playlist n'a encore été générée. Cliquez d'abord sur 'Générer la Playlist IA'.", is_error=False)
+                _show_toast(
+                    "Aucune playlist n'a encore été générée. Cliquez d'abord sur 'Générer la Playlist IA'.",
+                    is_error=False,
+                )
                 return
             success, msg = rec_controller.launch_vlc()
             _show_toast(msg, is_error=not success)

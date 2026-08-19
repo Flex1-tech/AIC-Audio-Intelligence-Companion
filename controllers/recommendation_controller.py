@@ -21,6 +21,7 @@ class RecommendationController:
         Exécute le processus MMR dans un thread séparé avec retour visuel réactif.
         """
         import traceback
+
         caller_stack = "".join(traceback.format_stack()[-3:])
         print(f"[GENERATION_TRIGGER] RecommendationController.run_recommendation_async called from:\n{caller_stack}")
         if not app_state.library.is_recommendation_ready:

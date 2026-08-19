@@ -680,6 +680,7 @@ def recommend_playlist(
 def _get_existing_tables(db) -> list[str]:
     """Helper pour récupérer la liste des tables LanceDB sans déclencher de DeprecationWarning."""
     import warnings
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
         if hasattr(db, "table_names"):
@@ -723,6 +724,7 @@ def _migrate_v1_to_v2(db, table) -> "lancedb.table.Table":
         La nouvelle table migrée.
     """
     import logging
+
     log = logging.getLogger("aic.migration")
 
     log.info("[MIGRATION] Schéma v1 détecté. Début de la migration vers v2...")
@@ -737,8 +739,7 @@ def _migrate_v1_to_v2(db, table) -> "lancedb.table.Table":
         else:
             old_rows = table.search().limit(100_000).to_list()
             if old_rows:
-                import pyarrow as pa
-                backup_tbl = db.create_table(backup_name, data=old_rows, exist_ok=True)
+                db.create_table(backup_name, data=old_rows, exist_ok=True)
                 log.info(f"[MIGRATION] {len(old_rows)} lignes sauvegardées dans '{backup_name}'.")
             else:
                 log.info("[MIGRATION] Table vide, pas de sauvegarde nécessaire.")
@@ -758,14 +759,16 @@ def _migrate_v1_to_v2(db, table) -> "lancedb.table.Table":
                 continue
             # Taggram vide (zeros) — sera recalculé lors de la prochaine recommandation
             taggram = np.zeros(50, dtype=np.float32)
-            migrated_rows.append({
-                "file_hash": row.get("file_hash", ""),
-                "file_name": row.get("file_name", ""),
-                "file_path": row.get("file_path", ""),
-                "file_size_bytes": int(row.get("file_size_bytes", 0)),
-                "taggram": taggram,
-                "vector": vec_arr,
-            })
+            migrated_rows.append(
+                {
+                    "file_hash": row.get("file_hash", ""),
+                    "file_name": row.get("file_name", ""),
+                    "file_path": row.get("file_path", ""),
+                    "file_size_bytes": int(row.get("file_size_bytes", 0)),
+                    "taggram": taggram,
+                    "vector": vec_arr,
+                }
+            )
         log.info(f"[MIGRATION] {len(migrated_rows)}/{len(old_rows)} lignes récupérées pour migration.")
     except Exception as read_err:
         log.error(f"[MIGRATION] Erreur lecture ancienne table : {read_err}")
@@ -789,7 +792,9 @@ def _migrate_v1_to_v2(db, table) -> "lancedb.table.Table":
         except Exception as insert_err:
             log.error(f"[MIGRATION] Insertion échouée : {insert_err}")
             # La table est vide mais valide — pas de rollback automatique
-            print(f"[MIGRATION] AVERTISSEMENT : Insertion échouée ({insert_err}). La table est vide. Rollback : renommer {backup_name}.")
+            print(
+                f"[MIGRATION] AVERTISSEMENT : Insertion échouée ({insert_err}). La table est vide. Rollback : renommer {backup_name}."
+            )
     else:
         log.info("[MIGRATION] Aucune ligne à migrer. Nouvelle table vide créée.")
         print("[MIGRATION] Migration terminée : nouvelle table vide créée.")
@@ -830,8 +835,6 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
         table.create_index("file_hash", config=BTree(), replace=True)
 
     return table
-
-
 
 
 def make_m3u(playlist_paths: list[str], output_path: str) -> None:

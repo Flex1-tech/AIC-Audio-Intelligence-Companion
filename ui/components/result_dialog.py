@@ -81,7 +81,9 @@ class ResultDialog(ft.AlertDialog):
                                 ),
                                 ft.Row(
                                     [
-                                        ft.Icon(ft.Icons.INSERT_DRIVE_FILE_OUTLINED, size=16, color=ObsidianColors.PRIMARY),
+                                        ft.Icon(
+                                            ft.Icons.INSERT_DRIVE_FILE_OUTLINED, size=16, color=ObsidianColors.PRIMARY
+                                        ),
                                         ft.Text(
                                             "Fichier :",
                                             size=12,
