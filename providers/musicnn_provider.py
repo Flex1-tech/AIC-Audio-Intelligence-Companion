@@ -1,8 +1,10 @@
-import onnxruntime as ort
-from typing import Optional
-import numpy as np
+from __future__ import annotations
 
-from extraction import load_musicnn, compute_embedding
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import onnxruntime as ort
+    import numpy as np
 
 
 class MusicnnProvider:
@@ -16,6 +18,8 @@ class MusicnnProvider:
 
     def get_session(self) -> ort.InferenceSession:
         if self._session is None:
+            from extraction import load_musicnn
+
             self._session = load_musicnn(self.model_path)
         return self._session
 
@@ -23,5 +27,7 @@ class MusicnnProvider:
         return self._session is not None
 
     def extract_embedding(self, file_path: str) -> Optional[np.ndarray]:
+        from extraction import compute_embedding
+
         session = self.get_session()
         return compute_embedding(file_path, session)

@@ -1,21 +1,19 @@
 """Pipeline d'extraction de caractéristiques audio et base vectorielle LanceDB."""
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
 import subprocess
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from blake3 import blake3
-import lancedb
-from lancedb.index import BTree
-import librosa
 import numpy as np
-import onnxruntime as ort
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
 
-from schema import TrackEmbeddingModel
 from utils.path_utils import get_asset_path
+
+if TYPE_CHECKING:
+    import lancedb
+    import onnxruntime as ort
 
 
 def extract_representative_batch(
@@ -26,48 +24,10 @@ def extract_representative_batch(
     overlap: float = 0.5,
     rms_threshold_ratio: float = 0.1,
 ) -> np.ndarray:
-    """Extrait les segments audio les plus représentatifs via un clustering léger.
-
-    Pipeline :
-        audio
-          ↓
-        segmentation avec overlap
-          ↓
-        suppression segments silencieux
-          ↓
-        extraction features rapides
-          ↓
-        normalisation
-          ↓
-        KMeans
-          ↓
-        sélection des segments représentatifs
-
-    Parameters
-    ----------
-    audio : np.ndarray
-        Signal audio mono float32.
-
-    sr : int
-        Fréquence d'échantillonnage en Hz.
-
-    segment_duration : int
-        Durée de chaque segment en secondes.
-
-    n_segments : int
-        Nombre de segments représentatifs à retourner.
-
-    overlap : float
-        Fraction de chevauchement entre segments.
-
-    rms_threshold_ratio : float
-        Ratio de seuil d'énergie pour filtrer le silence.
-
-    Returns
-    -------
-    np.ndarray
-        Tableau NumPy float32 contenant les segments représentatifs concaténés.
-    """
+    """Extrait les segments audio les plus représentatifs via un clustering léger."""
+    import librosa
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import StandardScaler
 
     # SECURITE
     if audio is None or len(audio) == 0:
@@ -268,6 +228,8 @@ def has_vector_index(table):
 
 
 def get_file_hash(filepath: str):
+    from blake3 import blake3
+
     hasher = blake3()
     hasher.update_mmap(filepath)
     return hasher.hexdigest()
@@ -291,6 +253,8 @@ def resolve_onnx_model_path(filename: str = "msd-musicnn-1.onnx") -> str:
 
 def load_musicnn(onnx_path: str = "msd-musicnn-1.onnx") -> ort.InferenceSession:
     """Charge la session d'inférence ONNX Runtime pour le modèle MusiCNN."""
+    import onnxruntime as ort
+
     resolved_path = resolve_onnx_model_path(onnx_path)
 
     so = ort.SessionOptions()
@@ -434,6 +398,8 @@ def audio_to_musicnn_batch(
 
     if not (0.0 <= patch_overlap < 1.0):
         raise ValueError("patch_overlap must be in [0,1)")
+
+    import librosa
 
     # MEL SPECTROGRAM
 
@@ -781,6 +747,8 @@ def _migrate_v1_to_v2(db, table) -> "lancedb.table.Table":
         log.error(f"[MIGRATION] Impossible de supprimer l'ancienne table : {drop_err}")
         raise RuntimeError(f"Migration annulée : suppression échouée — {drop_err}")
 
+    from schema import TrackEmbeddingModel
+
     new_table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel, exist_ok=False)
 
     # 4. Insertion des lignes migrées
@@ -815,6 +783,10 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
     - v1 : file_hash, file_name, file_path, file_size_bytes, vector[200], title, artist, duration_seconds
     - v2 : file_hash, file_name, file_path, file_size_bytes, taggram[50], vector[200]
     """
+    import lancedb
+    from lancedb.index import BTree
+    from schema import TrackEmbeddingModel
+
     db = lancedb.connect(db_path)
     existing_tables = _get_existing_tables(db)
 

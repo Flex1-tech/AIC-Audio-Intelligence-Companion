@@ -1,8 +1,10 @@
-from typing import List, Dict, Optional, Any
-import lancedb
+from __future__ import annotations
 
-from extraction import initialize_database, get_file_hash, get_existing_embeddings
+from typing import List, Dict, Optional, Any, TYPE_CHECKING
 from utils.path_utils import get_user_data_dir
+
+if TYPE_CHECKING:
+    import lancedb
 
 
 class TrackRepository:
@@ -30,6 +32,8 @@ class TrackRepository:
 
     def get_table(self) -> lancedb.table.Table:
         if self._table is None:
+            from extraction import initialize_database
+
             self._table = initialize_database(self.db_path)
         return self._table
 
@@ -45,10 +49,14 @@ class TrackRepository:
         if not hashes:
             return {}
         try:
+            from extraction import get_existing_embeddings
+
             tbl = self.get_table()
             return get_existing_embeddings(hashes, tbl)
         except Exception:
             return {}
 
     def compute_file_hash(self, file_path: str) -> str:
+        from extraction import get_file_hash
+
         return get_file_hash(file_path)

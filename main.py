@@ -123,25 +123,7 @@ import threading  # noqa: E402
 trace("STEP 06: Importing flet...")
 import flet as ft  # noqa: E402
 
-trace("STEP 07: Importing blake3...")
-import blake3  # noqa: E402, F401
-
-trace("STEP 08: Importing fleep...")
-import fleep  # noqa: E402, F401
-
-trace("STEP 09: Importing numpy...")
-import numpy  # noqa: E402, F401
-
-trace("STEP 10: Importing onnxruntime...")
-import onnxruntime  # noqa: E402, F401
-
-trace("STEP 11: Importing lancedb...")
-import lancedb  # noqa: E402, F401
-
-trace("STEP 12: Importing librosa...")
-import librosa  # noqa: E402, F401
-
-trace("STEP 13: Importing core.state...")
+trace("STEP 07: Importing core.state...")
 from core.state import app_state  # noqa: E402
 
 trace("STEP 14: Importing controllers...")

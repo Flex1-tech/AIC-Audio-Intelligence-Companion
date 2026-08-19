@@ -1,7 +1,6 @@
 import subprocess
 import time
 from typing import List, Tuple, Optional
-from extraction import recommend_playlist
 from utils.audio_utils import find_vlc
 from providers.musicnn_provider import MusicnnProvider
 from repositories.track_repository import TrackRepository
@@ -30,6 +29,8 @@ class PlaylistService:
         """
         Déclenche l'inférence audio ONNX et l'algorithme MMR LanceDB.
         """
+        from extraction import recommend_playlist
+
         start_time = time.time()
 
         # Prépare le dict path_dict {path: is_liked} requis par extraction.py
