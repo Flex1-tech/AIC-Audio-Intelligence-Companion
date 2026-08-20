@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from typing import List, Dict, Optional, Any, TYPE_CHECKING
 from utils.path_utils import get_user_data_dir
 
@@ -29,12 +30,15 @@ class TrackRepository:
         else:
             self.db_path = db_path
         self._table: Optional[lancedb.table.Table] = None
+        self._lock = threading.Lock()
 
     def get_table(self) -> lancedb.table.Table:
         if self._table is None:
-            from extraction import initialize_database
+            with self._lock:
+                if self._table is None:
+                    from extraction import initialize_database
 
-            self._table = initialize_database(self.db_path)
+                    self._table = initialize_database(self.db_path)
         return self._table
 
     def count_rows(self) -> int:

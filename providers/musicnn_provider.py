@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -15,12 +16,15 @@ class MusicnnProvider:
     def __init__(self, model_path: str = "msd-musicnn-1.onnx"):
         self.model_path = model_path
         self._session: Optional[ort.InferenceSession] = None
+        self._lock = threading.Lock()
 
     def get_session(self) -> ort.InferenceSession:
         if self._session is None:
-            from extraction import load_musicnn
+            with self._lock:
+                if self._session is None:
+                    from extraction import load_musicnn
 
-            self._session = load_musicnn(self.model_path)
+                    self._session = load_musicnn(self.model_path)
         return self._session
 
     def is_model_loaded(self) -> bool:
