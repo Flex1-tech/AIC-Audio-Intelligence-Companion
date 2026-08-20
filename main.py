@@ -488,9 +488,21 @@ def main(page: ft.Page) -> None:
 
         def preload_background() -> None:
             try:
+                import time
+
                 trace("PRELOAD THREAD: Preloading AI & Database resources...")
+                t0_onnx = time.monotonic()
+                trace("PRELOAD THREAD: ONNX INIT START")
                 ai_service.preload_resources()
+                t1_onnx = time.monotonic()
+                trace(f"PRELOAD THREAD: ONNX READY (duration: {t1_onnx - t0_onnx:.3f}s)")
+
+                t0_db = time.monotonic()
+                trace("PRELOAD THREAD: LANCEDB INIT START")
                 db_service.initialize_db()
+                t1_db = time.monotonic()
+                trace(f"PRELOAD THREAD: LANCEDB READY (duration: {t1_db - t0_db:.3f}s)")
+
                 app_state.notify()
                 trace("PRELOAD THREAD: Preload complete OK")
             except Exception as e:
