@@ -694,7 +694,6 @@ def _migrate_v1_to_v2(db, table) -> "lancedb.table.Table":
     log = logging.getLogger("aic.migration")
 
     log.info("[MIGRATION] Schéma v1 détecté. Début de la migration vers v2...")
-    print("[MIGRATION] Schéma v1 détecté. Début de la migration vers v2...")
 
     # 1. Sauvegarde : copie vers une table backup
     backup_name = "audio_embeddings_backup_v1"
@@ -756,16 +755,15 @@ def _migrate_v1_to_v2(db, table) -> "lancedb.table.Table":
         try:
             new_table.add(migrated_rows)
             log.info(f"[MIGRATION] {len(migrated_rows)} lignes insérées dans la nouvelle table v2.")
-            print(f"[MIGRATION] Migration terminée : {len(migrated_rows)} entrées conservées.")
+            log.info(f"[MIGRATION] Migration terminée : {len(migrated_rows)} entrées conservées.")
         except Exception as insert_err:
             log.error(f"[MIGRATION] Insertion échouée : {insert_err}")
             # La table est vide mais valide — pas de rollback automatique
-            print(
+            log.warning(
                 f"[MIGRATION] AVERTISSEMENT : Insertion échouée ({insert_err}). La table est vide. Rollback : renommer {backup_name}."
             )
     else:
         log.info("[MIGRATION] Aucune ligne à migrer. Nouvelle table vide créée.")
-        print("[MIGRATION] Migration terminée : nouvelle table vide créée.")
 
     return new_table
 

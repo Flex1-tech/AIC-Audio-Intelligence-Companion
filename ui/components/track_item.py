@@ -119,11 +119,9 @@ class TrackItem(ft.Container):
         )
 
     def _handle_like(self, e=None):
-        print(f"[EVENT] TrackItem._handle_like called for track: {self.track.file_name}")
         if self.on_like:
             self.on_like(self.track.file_path)
 
     def _handle_delete(self, e=None):
-        print(f"[EVENT] TrackItem._handle_delete called for track: {self.track.file_name}")
         if self.on_delete:
             self.on_delete(self.track.file_path)

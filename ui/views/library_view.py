@@ -250,11 +250,9 @@ class LibraryView(ft.Container):
             pass
 
     def _handle_search_change(self, e) -> None:
-        print(f"[EVENT] LibraryView._handle_search_change val={e.control.value}")
         if self.on_search:
             self.on_search(e.control.value)
 
     def _handle_filter_toggle(self, e) -> None:
-        print(f"[EVENT] LibraryView._handle_filter_toggle selected={e.control.selected}")
         app_state.session.filter_liked_only = e.control.selected
         self.refresh_tracks()

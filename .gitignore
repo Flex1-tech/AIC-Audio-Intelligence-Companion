@@ -53,6 +53,8 @@ build/
 
 # ── Logs & Artefacts de diagnostic temporaires ────────────────────────────────
 log
+*.log
 aic_boot_trace.log
+aic_crash.log
 aic-windows-dev-*/
 crash-logs-*/

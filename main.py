@@ -1,96 +1,26 @@
-"""Point d'entrée de l'application et initialisation de l'interface Flet."""
-
-import datetime
 import os
 import pathlib
 import sys
-import traceback
+import threading
 
+import flet as ft
 
-def trace(msg: str) -> None:
-    """Traceur de diagnostic bas-niveau : écrit immédiatement chaque étape sur disque."""
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-    pid = os.getpid()
-    log_line = f"[{timestamp}] [PID {pid}] {msg}\n"
-    print(log_line, end="", flush=True)
+from core.state import app_state
+from controllers.library_controller import LibraryController
+from controllers.recommendation_controller import RecommendationController
+from services.ai_engine_service import AIEngineService
+from services.database_service import DatabaseService
+from ui.components.result_dialog import ResultDialog
+from ui.components.splash_screen import SplashScreen
+from ui.design_system import get_dark_theme, get_light_theme
+from ui.design_system.colors import ObsidianColors
+from ui.views.main_layout import MainLayout
+from utils.path_utils import setup_logging, get_asset_path, write_crash_log, open_folder
 
-    targets = [
-        pathlib.Path("aic_boot_trace.log"),
-        pathlib.Path.home() / "aic_boot_trace.log",
-    ]
-    appdata = os.environ.get("APPDATA")
-    if appdata:
-        targets.append(pathlib.Path(appdata) / "AIC" / "logs" / "aic_boot_trace.log")
-
-    for dest in targets:
-        try:
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            with open(dest, "a", encoding="utf-8") as f:
-                f.write(log_line)
-                f.flush()
-                os.fsync(f.fileno())
-        except Exception:
-            pass
-
-
-trace("=== DIAGNOSTIC BOOT START ===")
-trace(f"STEP 00: Python executable = {sys.executable}")
-trace(f"STEP 01: Python version = {sys.version}")
-trace(f"STEP 02: CWD = {pathlib.Path.cwd()}")
-trace(f"STEP 03: sys.path = {sys.path}")
-
-
-def trace_environment_and_assets() -> None:
-    """Diagnostic exhaustif de l'environnement de runtime et de la résolution des 8 assets critiques."""
-    trace("=== SYSTEM & ENVIRONMENT DIAGNOSTIC ===")
-    trace(f"sys.executable  = {sys.executable}")
-    trace(f"sys.argv        = {sys.argv}")
-    trace(f"sys.prefix      = {getattr(sys, 'prefix', None)}")
-    trace(f"sys.base_prefix = {getattr(sys, 'base_prefix', None)}")
-    trace(f"sys.frozen      = {getattr(sys, 'frozen', None)}")
-    trace(f"sys._MEIPASS    = {getattr(sys, '_MEIPASS', None)}")
-    trace(f"CWD             = {pathlib.Path.cwd()}")
-    try:
-        trace(f"main.py path    = {pathlib.Path(__file__).resolve()}")
-    except Exception as e:
-        trace(f"main.py path err = {e}")
-
-    exe_dir = pathlib.Path(sys.executable).resolve().parent
-    trace(f"exe_dir         = {exe_dir}")
-
-    assets_to_test = [
-        "icon.ico",
-        "icon.png",
-        "icon.svg",
-        "layer_letterform.svg",
-        "layer_wave.svg",
-        "msd-musicnn-1.onnx",
-        "fonts/CinzelDecorative-Bold.ttf",
-        "fonts/CinzelDecorative-Regular.ttf",
-    ]
-
-    trace("=== ASSET RESOLUTION DIAGNOSTIC ===")
-    for asset in assets_to_test:
-        try:
-            resolved = get_asset_path(asset)
-            exists = resolved.exists() if resolved else False
-            is_file = resolved.is_file() if resolved else False
-            direct_bundle_path = exe_dir / "data" / "flutter_assets" / "assets" / asset
-            direct_exists = direct_bundle_path.exists()
-            trace(
-                f"ASSET '{asset}':\n"
-                f"  get_asset_path() -> {resolved}\n"
-                f"  EXISTS={exists} | IS_FILE={is_file}\n"
-                f"  Direct Flutter Bundle ({direct_bundle_path}) -> EXISTS={direct_exists}"
-            )
-        except Exception as asset_err:
-            trace(f"ASSET '{asset}' DIAGNOSTIC ERROR: {asset_err}")
-
+# Initialisation du logger applicatif centralisé
+logger = setup_logging()
 
 # ── Configuration du cache Numba cross-plateforme (Windows, macOS, Linux) ──────
-# Sans cela, Numba (@jit cache=True dans librosa/core/notation.py) tente
-# d'écrire son cache dans le répertoire source du .py packagé, qui pointe
-# vers le chemin CI runner introuvable sur la machine utilisateur.
 if os.name == "nt":
     _base_cache = pathlib.Path(os.environ.get("LOCALAPPDATA") or pathlib.Path.home() / "AppData" / "Local")
 elif sys.platform == "darwin":
@@ -105,47 +35,6 @@ try:
     os.environ.setdefault("NUMBA_CACHE_DIR", str(_aic_numba_cache))
 except Exception:
     pass  # Fallback silencieux : Numba utilisera le répertoire par défaut
-trace(f"STEP 04: NUMBA_CACHE_DIR = {os.environ.get('NUMBA_CACHE_DIR', 'default')}")
-
-
-def _early_crash_handler(exc_type, exc_value, exc_tb):
-    lines = traceback.format_exception(exc_type, exc_value, exc_tb)
-    trace(f"FATAL UNCAUGHT EXCEPTION:\n{''.join(lines)}")
-    sys.__excepthook__(exc_type, exc_value, exc_tb)
-
-
-sys.excepthook = _early_crash_handler
-
-# ── Imports applicatifs instrumentés ─────────────────────────────────────────
-trace("STEP 05: Importing threading...")
-import threading  # noqa: E402
-
-trace("STEP 06: Importing flet...")
-import flet as ft  # noqa: E402
-
-trace("STEP 07: Importing core.state...")
-from core.state import app_state  # noqa: E402
-
-trace("STEP 14: Importing controllers...")
-from controllers.library_controller import LibraryController  # noqa: E402
-from controllers.recommendation_controller import RecommendationController  # noqa: E402
-
-trace("STEP 15: Importing services...")
-from services.ai_engine_service import AIEngineService  # noqa: E402
-from services.database_service import DatabaseService  # noqa: E402
-
-trace("STEP 16: Importing UI components...")
-from ui.components.result_dialog import ResultDialog  # noqa: E402
-from ui.components.splash_screen import SplashScreen  # noqa: E402
-from ui.design_system import get_dark_theme, get_light_theme  # noqa: E402
-from ui.design_system.colors import ObsidianColors  # noqa: E402
-from ui.views.main_layout import MainLayout  # noqa: E402
-from utils.path_utils import setup_logging, get_asset_path, write_crash_log, open_folder  # noqa: E402
-
-trace("STEP 17: All imports completed successfully OK")
-
-# Initialisation du logger applicatif
-logger = setup_logging()
 
 
 def _handle_uncaught_exception(exc_type, exc_value, exc_traceback):
@@ -174,20 +63,15 @@ threading.excepthook = _handle_thread_exception
 
 def main(page: ft.Page) -> None:
     """Initialise la page Flet, les services et les événements UI."""
-    trace("MAIN STEP 0: Entering main(page)")
-    trace_environment_and_assets()
     try:
-        trace("MAIN STEP 1: Setting page title & theme mode...")
         page.title = "AIC — Audio Intelligence Companion"
         page.theme_mode = ft.ThemeMode.DARK
 
-        trace("MAIN STEP 2: Registering fonts in page.fonts...")
         page.fonts = {
             "Cinzel Decorative Bold": "fonts/CinzelDecorative-Bold.ttf",
             "Cinzel Decorative Regular": "fonts/CinzelDecorative-Regular.ttf",
         }
 
-        trace("MAIN STEP 3: Resolving window icon...")
         icon_path = get_asset_path("icon.ico") or get_asset_path("icon.png")
         if icon_path and icon_path.exists():
             try:
@@ -195,7 +79,6 @@ def main(page: ft.Page) -> None:
             except Exception as e:
                 logger.warning(f"Impossible de définir l'icône de fenêtre : {e}")
 
-        trace("MAIN STEP 4: Updating page themes and dimensions...")
         page.update()
         page.theme = get_light_theme()
         page.dark_theme = get_dark_theme()
@@ -205,15 +88,11 @@ def main(page: ft.Page) -> None:
         page.window.min_height = 600
         page.padding = 0
 
-        trace("MAIN STEP 5: Instantiating AIEngineService...")
         ai_service = AIEngineService()
-        trace("MAIN STEP 6: Instantiating DatabaseService...")
         db_service = DatabaseService()
-        trace("MAIN STEP 7: Instantiating Controllers...")
         library_controller = LibraryController()
         rec_controller = RecommendationController()
 
-        trace("MAIN STEP 8: Appending FilePicker service...")
         file_picker = ft.FilePicker()
         page.services.append(file_picker)
 
@@ -338,8 +217,6 @@ def main(page: ft.Page) -> None:
                 _show_toast(f"Dossier d'exportation mis à jour : {folder_path}")
 
         def handle_start_recommendation() -> None:
-            trace("[GENERATION_TRIGGER] handle_start_recommendation called!")
-            print("[GENERATION_TRIGGER] handle_start_recommendation called!")
             if app_state.is_processing:
                 _show_toast("Un calcul de recommandation est déjà en cours. Veuillez patienter.", is_error=False)
                 return
@@ -423,7 +300,6 @@ def main(page: ft.Page) -> None:
             success, msg = rec_controller.launch_vlc()
             _show_toast(msg, is_error=not success)
 
-        trace("MAIN STEP 9: Instantiating MainLayout...")
         layout = MainLayout(
             on_pick_files=handle_pick_files,
             on_pick_folder=handle_pick_folder,
@@ -443,7 +319,6 @@ def main(page: ft.Page) -> None:
             except Exception:
                 pass
 
-        trace("MAIN STEP 10: Subscribing to app_state...")
         app_state.subscribe(on_state_change)
 
         # ── Intégration du Splash Screen & Main Layout ────────────────────────
@@ -455,10 +330,8 @@ def main(page: ft.Page) -> None:
             except Exception:
                 pass
 
-        trace("MAIN STEP 11: Instantiating SplashScreen...")
         splash_screen = SplashScreen(page=page, on_complete=finish_splash)
 
-        trace("MAIN STEP 12: Creating root_stack...")
         root_stack = ft.Stack(
             [
                 layout,
@@ -467,51 +340,29 @@ def main(page: ft.Page) -> None:
             expand=True,
         )
 
-        trace("MAIN STEP 13: Adding root_stack to page...")
         page.add(root_stack)
-
-        trace("MAIN STEP 14: Scheduling splash animation task...")
 
         async def run_splash_task() -> None:
             try:
-                trace("SPLASH TASK: Starting animation...")
                 await splash_screen.start_animation_async()
-                trace("SPLASH TASK: Animation complete OK")
             except Exception as splash_err:
-                trace(f"SPLASH TASK ERROR: {splash_err}")
                 write_crash_log(type(splash_err), splash_err, splash_err.__traceback__, origin="SPLASH_ANIMATION_ERROR")
                 logger.error(f"Erreur animation Splash Screen : {splash_err}", exc_info=True)
 
         page.run_task(run_splash_task)
 
-        trace("MAIN STEP 15: Starting background preload thread...")
-
         def preload_background() -> None:
             try:
-                import time
-
-                trace("PRELOAD THREAD: Preloading AI & Database resources...")
-                t0_onnx = time.monotonic()
-                trace("PRELOAD THREAD: ONNX INIT START")
+                logger.info("Préchargement des ressources IA et base de données en arrière-plan...")
                 ai_service.preload_resources()
-                t1_onnx = time.monotonic()
-                trace(f"PRELOAD THREAD: ONNX READY (duration: {t1_onnx - t0_onnx:.3f}s)")
-
-                t0_db = time.monotonic()
-                trace("PRELOAD THREAD: LANCEDB INIT START")
                 db_service.initialize_db()
-                t1_db = time.monotonic()
-                trace(f"PRELOAD THREAD: LANCEDB READY (duration: {t1_db - t0_db:.3f}s)")
-
                 app_state.notify()
-                trace("PRELOAD THREAD: Preload complete OK")
+                logger.info("Préchargement des ressources terminé avec succès.")
             except Exception as e:
-                trace(f"PRELOAD THREAD ERROR: {e}")
                 write_crash_log(type(e), e, e.__traceback__, origin="PRELOAD_BACKGROUND_ERROR")
                 logger.error(f"Erreur lors du préchargement en arrière-plan : {e}", exc_info=True)
 
         threading.Thread(target=preload_background, daemon=True).start()
-        trace("MAIN STEP 16: main(page) initialization loop completed successfully OK")
 
     except Exception as fatal_err:
         log_file_path = write_crash_log(

@@ -179,13 +179,9 @@ class ActionBar(ft.Container):
             pass
 
     def _handle_start(self, e):
-        ctrl = getattr(e, "control", None)
-        print(f"[GENERATION_TRIGGER] ActionBar._handle_start event={e}, control={ctrl}")
         if self.on_start_recommendation:
             self.on_start_recommendation()
 
     def _handle_reset(self, e):
-        ctrl = getattr(e, "control", None)
-        print(f"[EVENT] ActionBar._handle_reset event={e}, control={ctrl}")
         if self.on_reset:
             self.on_reset()
