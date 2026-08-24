@@ -7,6 +7,7 @@ Usage:
   uv run flet run tests/splash_preview/main.py --web --port 8570
 
 Routes URL:
+  http://localhost:8570/?v=production
   http://localhost:8570/?v=v3current
   http://localhost:8570/?v=v3immersive
   http://localhost:8570/?v=v3fullscreen
@@ -35,7 +36,7 @@ logger = logging.getLogger("splash_preview_app")
 
 
 def main(page: ft.Page):
-    page.title = "AIC Splash Screen — Laboratoire d'Immersion"
+    page.title = "AIC Splash Screen — Laboratoire V3"
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = ObsidianColors.BG_DARK
     page.padding = 0
@@ -60,7 +61,7 @@ def main(page: ft.Page):
             except Exception:
                 pass
 
-        splash_cls = VARIANTS.get(v_key, VARIANTS["v3immersive"])
+        splash_cls = VARIANTS.get(v_key, VARIANTS["production"])
         splash_instance = splash_cls(page=page, on_complete=on_splash_complete)
 
         container_slot.content = splash_instance
@@ -74,13 +75,13 @@ def main(page: ft.Page):
         asyncio.create_task(launch_variant(v_key))
 
     def on_replay_click(e):
-        current_v = getattr(page, "_current_v", "v3immersive")
+        current_v = getattr(page, "_current_v", "production")
         asyncio.create_task(launch_variant(current_v))
 
     url_v = page.query.get("v") if page.query else None
     if isinstance(url_v, list):
         url_v = url_v[0]
-    initial_v = url_v if url_v in VARIANTS else "v3immersive"
+    initial_v = url_v if url_v in VARIANTS else "production"
     page._current_v = initial_v
 
     buttons = []
@@ -108,7 +109,7 @@ def main(page: ft.Page):
     control_bar = ft.Container(
         content=ft.Row(
             [
-                ft.Text("IMMERSION LAB:", size=11, weight=ft.FontWeight.BOLD, color=ObsidianColors.PRIMARY),
+                ft.Text("V3 LAB:", size=11, weight=ft.FontWeight.BOLD, color=ObsidianColors.PRIMARY),
                 ft.Row(buttons, spacing=4, scroll=ft.ScrollMode.AUTO),
                 replay_btn,
                 status_text,

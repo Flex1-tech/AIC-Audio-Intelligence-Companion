@@ -1,6 +1,6 @@
 # Rapport Factuel — Évaluation d'Immersion Splash Screen AIC V3.2
 
-> **Principe de méthode** : Code Flet → Exécution réelle Flet Web (`tests/splash_preview/main.py`) → Observation → Comparaison → Décision.  
+> **Principe de méthode** : Code Flet → Exécution réelle Flet Web (`tests/splash_preview/main.py`) → Observation → Comparaison → Décision.
 > Aucune image artificielle ou mockup généré n'a été utilisé pour la prise de décision.
 
 ---
