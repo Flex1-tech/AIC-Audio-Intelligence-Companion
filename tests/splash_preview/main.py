@@ -1,16 +1,15 @@
 """
 tests/splash_preview/main.py
 -----------------------------
-Application Flet Web de comparaison visuelle interactive pour le Splash Screen AIC V3.1.
+Application Flet Web de comparaison visuelle interactive pour le Splash Screen AIC V3.
 
 Usage:
-  uv run flet run tests/splash_preview/main.py --web --port 8560
+  uv run flet run tests/splash_preview/main.py --web --port 8570
 
 Routes URL:
-  http://localhost:8560/?v=v3current
-  http://localhost:8560/?v=v31a
-  http://localhost:8560/?v=v31b
-  http://localhost:8560/?v=v31c
+  http://localhost:8570/?v=v3current
+  http://localhost:8570/?v=v3immersive
+  http://localhost:8570/?v=v3fullscreen
 """
 
 import asyncio
@@ -36,7 +35,7 @@ logger = logging.getLogger("splash_preview_app")
 
 
 def main(page: ft.Page):
-    page.title = "AIC Splash Screen — Laboratoire V3.1"
+    page.title = "AIC Splash Screen — Laboratoire d'Immersion"
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = ObsidianColors.BG_DARK
     page.padding = 0
@@ -61,7 +60,7 @@ def main(page: ft.Page):
             except Exception:
                 pass
 
-        splash_cls = VARIANTS.get(v_key, VARIANTS["v31a"])
+        splash_cls = VARIANTS.get(v_key, VARIANTS["v3immersive"])
         splash_instance = splash_cls(page=page, on_complete=on_splash_complete)
 
         container_slot.content = splash_instance
@@ -75,13 +74,13 @@ def main(page: ft.Page):
         asyncio.create_task(launch_variant(v_key))
 
     def on_replay_click(e):
-        current_v = getattr(page, "_current_v", "v31a")
+        current_v = getattr(page, "_current_v", "v3immersive")
         asyncio.create_task(launch_variant(current_v))
 
     url_v = page.query.get("v") if page.query else None
     if isinstance(url_v, list):
         url_v = url_v[0]
-    initial_v = url_v if url_v in VARIANTS else "v31a"
+    initial_v = url_v if url_v in VARIANTS else "v3immersive"
     page._current_v = initial_v
 
     buttons = []
@@ -109,7 +108,7 @@ def main(page: ft.Page):
     control_bar = ft.Container(
         content=ft.Row(
             [
-                ft.Text("V3.1 PREVIEW LAB:", size=11, weight=ft.FontWeight.BOLD, color=ObsidianColors.PRIMARY),
+                ft.Text("IMMERSION LAB:", size=11, weight=ft.FontWeight.BOLD, color=ObsidianColors.PRIMARY),
                 ft.Row(buttons, spacing=4, scroll=ft.ScrollMode.AUTO),
                 replay_btn,
                 status_text,
