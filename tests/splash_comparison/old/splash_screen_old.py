@@ -5,10 +5,8 @@ Ancienne version du Splash Screen AIC (Commit 73707ef - Obsidian Horizon v1).
 Rendu Flet 0.86.4 adaptatif (Icon Box 100x100 + Égaliseur 5 barres animées + Halo Ambre réactif + Typographie système).
 """
 
-import sys
 import asyncio
 import logging
-from pathlib import Path
 from typing import Callable, Optional
 
 import flet as ft
@@ -55,21 +53,11 @@ class SplashScreenOLD(ft.Container):
             )
 
         # ── 2. Barres d'égaliseur audio animées (#FE8F40) ─────────────────────
-        self.wave_bar1 = ft.Container(
-            width=3, height=8, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.4
-        )
-        self.wave_bar2 = ft.Container(
-            width=3, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.7
-        )
-        self.wave_bar3 = ft.Container(
-            width=3, height=22, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=1.0
-        )
-        self.wave_bar4 = ft.Container(
-            width=3, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.7
-        )
-        self.wave_bar5 = ft.Container(
-            width=3, height=8, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.4
-        )
+        self.wave_bar1 = ft.Container(width=3, height=8, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.4)
+        self.wave_bar2 = ft.Container(width=3, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.7)
+        self.wave_bar3 = ft.Container(width=3, height=22, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=1.0)
+        self.wave_bar4 = ft.Container(width=3, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.7)
+        self.wave_bar5 = ft.Container(width=3, height=8, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.4)
 
         self.wave_container = ft.Row(
             [

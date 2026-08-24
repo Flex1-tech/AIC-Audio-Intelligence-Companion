@@ -1,22 +1,21 @@
 """
 ui/components/splash_screen.py
 -------------------------------
-Splash Screen AIC V3 — Version Finale Équilibrée.
+Splash Screen AIC V3.1 — Évolution Conservatrice (Ambre Pur & Amplitude Accrue).
 
-Fondation : OLD v1 (commit 73707ef)
-- Composition compacte : carte Obsidian 110×110 px centrée.
-- Logo icon.svg (64×64) dans la carte, fallback ft.Icons.GRAPHIC_EQ.
-- Égaliseur audio 5 barres dynamiques (#FE8F40 Ambre).
-- Halo BoxShadow Ambre pulsant (spread=6, blur=28 → spread=2, blur=14).
-- Titre "AIC" 38pt bold blanc — typographie système (lisibilité maximale).
+Architecture :
+- Baseline : Fondation V3 / OLD v1 (Carte Obsidian 110×110 px centrée).
+- Identité couleur audio : 100% Ambre (#FE8F40 / ObsidianColors.PRIMARY).
+  * Equalizer = Ambre #FE8F40
+  * Halo BoxShadow = Ambre #FE8F40
+  * Sous-titre = Ambre #FE8F40
+- Amplitude animation :
+  * Barres d'égaliseur 4px de large (vs 3px), hauteur max 40px (vs 32px) +25% de mouvement.
+  * Halo pulsant réactif renforcé (spread=8, blur=34 → spread=3, blur=18).
+- Glow ambiant radial Ambre doux (#FE8F40 à 10% d'opacité) en arrière-plan.
+- Typographie : Système Bold 38pt (lisibilité maximale instantanée).
 - Rythme strict ~2.3 secondes.
-- Fallback GRAPHIC_EQ si icon.svg / icon.png absents.
-
-Éléments NEW v2 intégrés (validés par comparaison visuelle) :
-1. Sous-titre "Audio Intelligence Companion" en Cyan Électrique (#30C4EF)
-   → Rétablit l'équilibre de marque Cyan (IA) + Ambre (Audio).
-2. Glow ambiant radial Cyan/Ambre en fond (bg_glow)
-   → Offre une atmosphère subtile derrière la carte sans altérer le halo pulsant.
+- Fallback automatique ft.Icons.GRAPHIC_EQ si assets absents.
 """
 
 import asyncio
@@ -34,9 +33,9 @@ logger = logging.getLogger("aic.splash")
 
 class SplashScreen(ft.Container):
     """
-    Splash Screen AIC V3.
-    Fondation OLD v1 (carte 110×110, halo pulsant, 2.3s)
-    + Sous-titre Cyan #30C4EF + Radial glow ambiant subtil.
+    Splash Screen AIC V3.1.
+    Fondation V3 (110×110 px, 2.3s) avec signal audio Ambre #FE8F40 pur
+    et amplitude visuelle d'égaliseur accrue (max 40px).
     """
 
     def __init__(
@@ -44,10 +43,10 @@ class SplashScreen(ft.Container):
         page: ft.Page,
         on_complete: Optional[Callable[[], None]] = None,
     ):
-        logger.info("SPLASH: INIT")
+        logger.info("SPLASH V3.1: INIT")
         self.on_complete_callback = on_complete
 
-        # Dimensions écran pour le glow ambiant
+        # Dimensions écran pour le glow ambiant ambre
         w = (page.window.width or 900) if page.window else 900
         h = (page.window.height or 700) if page.window else 700
 
@@ -69,12 +68,12 @@ class SplashScreen(ft.Container):
                 color=ObsidianColors.PRIMARY,
             )
 
-        # ── 2. Barres égaliseur audio (#FE8F40 Ambre) ─────────────────────────
-        self.wave_bar1 = ft.Container(width=3, height=8, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.4)
-        self.wave_bar2 = ft.Container(width=3, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.7)
-        self.wave_bar3 = ft.Container(width=3, height=22, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=1.0)
-        self.wave_bar4 = ft.Container(width=3, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.7)
-        self.wave_bar5 = ft.Container(width=3, height=8, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.4)
+        # ── 2. Barres égaliseur audio (#FE8F40 Ambre — Amplitude accrue) ─────
+        self.wave_bar1 = ft.Container(width=4, height=10, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.5)
+        self.wave_bar2 = ft.Container(width=4, height=18, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.8)
+        self.wave_bar3 = ft.Container(width=4, height=28, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=1.0)
+        self.wave_bar4 = ft.Container(width=4, height=18, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.8)
+        self.wave_bar5 = ft.Container(width=4, height=10, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.5)
 
         self.wave_container = ft.Row(
             [
@@ -97,7 +96,7 @@ class SplashScreen(ft.Container):
                     logo_content,
                     ft.Container(
                         content=self.wave_container,
-                        alignment=ft.Alignment(0, 0.55),
+                        alignment=ft.Alignment(0, 0.58),
                     ),
                 ],
                 alignment=ft.Alignment.CENTER,
@@ -116,7 +115,7 @@ class SplashScreen(ft.Container):
             shadow=None,
         )
 
-        # ── 4. Glow ambiant de fond (Cyan 12% + Ambre 8%) — Élément NEW ───────
+        # ── 4. Glow ambiant de fond (Ambre 10% opacité) ───────────────────────
         self.bg_glow = ft.Container(
             width=min(420, w),
             height=min(420, h),
@@ -126,17 +125,16 @@ class SplashScreen(ft.Container):
                 center=ft.Alignment(0, 0),
                 radius=0.50,
                 colors=[
-                    "rgba(48, 196, 239, 0.12)",  # Cyan IA
-                    "rgba(254, 143, 64, 0.08)",  # Ambre Audio
+                    "rgba(254, 143, 64, 0.10)",  # Ambre Audio
                     "rgba(15, 17, 23, 0.0)",
                 ],
-                stops=[0.0, 0.45, 1.0],
+                stops=[0.0, 1.0],
             ),
             opacity=0.0,
             animate_opacity=ft.Animation(600, ft.AnimationCurve.EASE_OUT_CUBIC),
         )
 
-        # ── 5. Ligne séparatrice ──────────────────────────────────────────────
+        # ── 5. Ligne séparatrice ambre ─────────────────────────────────────────
         self.wave_reveal_line = ft.Container(
             width=0,
             height=2,
@@ -146,7 +144,7 @@ class SplashScreen(ft.Container):
             animate_opacity=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
         )
 
-        # ── 6. Titre "AIC" (Système Bold — Lisibilité) ────────────────────────
+        # ── 6. Titre "AIC" (Système Bold — Blanc #F9FAFB) ──────────────────────
         self.title_text = ft.Text(
             "AIC",
             size=38,
@@ -162,12 +160,12 @@ class SplashScreen(ft.Container):
             animate_offset=ft.Animation(450, ft.AnimationCurve.EASE_OUT_CUBIC),
         )
 
-        # ── 7. Sous-titre (Cyan Électrique #30C4EF — Élément NEW) ─────────────
+        # ── 7. Sous-titre (Ambre #FE8F40 — Identité Audio Pur) ────────────────
         self.subtitle_text = ft.Text(
             "Audio Intelligence Companion",
             size=13,
             weight=ft.FontWeight.W_500,
-            color=ObsidianColors.ACCENT_CYAN,  # Cyan brand color
+            color=ObsidianColors.PRIMARY,  # Ambre #FE8F40
         )
 
         self.subtitle_box = ft.Container(
@@ -211,14 +209,14 @@ class SplashScreen(ft.Container):
             opacity=1.0,
             animate_opacity=ft.Animation(400, ft.AnimationCurve.EASE_IN_OUT),
         )
-        logger.info("SPLASH: BUILD")
+        logger.info("SPLASH V3.1: BUILD")
 
     async def start_animation_async(self) -> None:
         """
-        Séquence d'animation asynchrone V3 finale (2.3s total).
-        OLD v1 baseline + éveil simultané du glow ambiant.
+        Séquence d'animation asynchrone V3.1 (~2.3s total).
+        Égaliseur amplitude accrue (max 40px) + Halo ambre vif.
         """
-        logger.info("SPLASH: ANIMATION START")
+        logger.info("SPLASH V3.1: ANIMATION START")
         callback_called = False
         try:
             # Phase 1 : Apparition fond ambiant & Logo (t=0 → t=50ms)
@@ -235,19 +233,19 @@ class SplashScreen(ft.Container):
             self.wave_container.opacity = 1.0
             self._safe_update(self.wave_container)
 
-            # Phase 3 : Impulsion Halo Ambre & expansion barres (t=700ms)
+            # Phase 3 : Impulsion Halo Ambre vif & expansion barres max 40px (t=700ms)
             await asyncio.sleep(0.30)
             self.logo_box.shadow = ft.BoxShadow(
-                spread_radius=6,
-                blur_radius=28,
-                color="#40FE8F40",  # Halo ambre fort
+                spread_radius=8,
+                blur_radius=34,
+                color="#48FE8F40",  # Halo ambre fort
                 offset=ft.Offset(0, 0),
             )
-            self.wave_bar1.height = 14
-            self.wave_bar2.height = 24
-            self.wave_bar3.height = 32
-            self.wave_bar4.height = 24
-            self.wave_bar5.height = 14
+            self.wave_bar1.height = 16
+            self.wave_bar2.height = 28
+            self.wave_bar3.height = 40
+            self.wave_bar4.height = 28
+            self.wave_bar5.height = 16
             self._safe_update(self.logo_box)
 
             # Phase 4 : Titre "AIC" (t=1000ms)
@@ -259,14 +257,14 @@ class SplashScreen(ft.Container):
             # Phase 4b : Atténuation douce du halo (t=1150ms)
             await asyncio.sleep(0.15)
             self.logo_box.shadow = ft.BoxShadow(
-                spread_radius=2,
-                blur_radius=14,
-                color="#1AFE8F40",  # Halo ambre atténué
+                spread_radius=3,
+                blur_radius=18,
+                color="#20FE8F40",  # Halo ambre atténué
                 offset=ft.Offset(0, 0),
             )
             self._safe_update(self.logo_box)
 
-            # Phase 5 : Sous-titre Cyan (t=1350ms)
+            # Phase 5 : Sous-titre Ambre (t=1350ms)
             await asyncio.sleep(0.20)
             self.subtitle_box.opacity = 1.0
             self.subtitle_box.offset = ft.Offset(x=0, y=0)
@@ -274,23 +272,23 @@ class SplashScreen(ft.Container):
 
             # Phase 6 : Maintien & fondu de sortie (t=1900ms → t=2300ms)
             await asyncio.sleep(0.60)
-            logger.info("SPLASH: ANIMATION COMPLETE")
+            logger.info("SPLASH V3.1: ANIMATION COMPLETE")
             self.opacity = 0.0
             self._safe_update(self)
 
             await asyncio.sleep(0.40)
 
         except asyncio.CancelledError:
-            logger.info("SPLASH: ANIMATION CANCELLED")
+            logger.info("SPLASH V3.1: ANIMATION CANCELLED")
         except Exception as e:
-            logger.error(f"SPLASH: ANIMATION ERROR: {e}", exc_info=True)
+            logger.error(f"SPLASH V3.1: ANIMATION ERROR: {e}", exc_info=True)
         finally:
             if self.on_complete_callback and not callback_called:
                 callback_called = True
                 try:
                     self.on_complete_callback()
                 except Exception as cb_err:
-                    logger.error(f"SPLASH: CALLBACK ERROR: {cb_err}", exc_info=True)
+                    logger.error(f"SPLASH V3.1: CALLBACK ERROR: {cb_err}", exc_info=True)
 
     def _safe_update(self, control: ft.Control) -> None:
         try:

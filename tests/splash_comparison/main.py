@@ -18,13 +18,13 @@ if str(project_root) not in sys.path:
 
 os.environ["FLET_ASSETS_DIR"] = str(project_root / "assets")
 
-import flet as ft
-from ui.design_system.colors import ObsidianColors
-from ui.design_system.theme import get_dark_theme
-from utils.path_utils import get_asset_path
+import flet as ft  # noqa: E402
+from ui.design_system.colors import ObsidianColors  # noqa: E402
+from ui.design_system.theme import get_dark_theme  # noqa: E402
+from utils.path_utils import get_asset_path  # noqa: E402
 
-from tests.splash_comparison.old.splash_screen_old import SplashScreenOLD
-from tests.splash_comparison.new.splash_screen_new import SplashScreenNEW
+from tests.splash_comparison.old.splash_screen_old import SplashScreenOLD  # noqa: E402
+from tests.splash_comparison.new.splash_screen_new import SplashScreenNEW  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("splash_comparison")

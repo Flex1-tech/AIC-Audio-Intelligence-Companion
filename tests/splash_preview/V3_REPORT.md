@@ -1,7 +1,7 @@
 # Rapport Final Factuel — AIC Splash Screen V3
 
-> **Fondation unique** : OLD v1 (`tests/splash_comparison/old/splash_screen_old.py`)  
-> **Source d'expérimentation** : NEW v2 (`tests/splash_comparison/new/splash_screen_new.py`)  
+> **Fondation unique** : OLD v1 (`tests/splash_comparison/old/splash_screen_old.py`)
+> **Source d'expérimentation** : NEW v2 (`tests/splash_comparison/new/splash_screen_new.py`)
 > **Laboratoire de preview** : `tests/splash_preview/main.py` (port 8560)
 
 ---
@@ -109,8 +109,8 @@ flake8...................................................................Passed
 
 ## 5. Verdict Final
 
-> **V3 est-elle réellement meilleure que OLD v1 ?**  
-> **OUI.**  
+> **V3 est-elle réellement meilleure que OLD v1 ?**
+> **OUI.**
 > V3 préserve **100% de la solidité visuelle, de la rapidité (2.3s) et de la structure compacte (110×110) de OLD v1**, tout en corrigeant le seul vrai manque de OLD v1 : l'absence du **Cyan `#30C4EF`** d'AIC et la sécheresse du fond noir pur grâce au radial glow très doux.
 
 *Aucun composant externe du projet (`main.py`, `theme.py`, `sidebar.py`, etc.) n'a été modifié.*

@@ -4,7 +4,6 @@ tests/splash_comparison/new/splash_screen_new.py
 Nouvelle version du Splash Screen AIC (v2 SVG Multi-couches + Faisceau Scanner + Cinzel Decorative).
 """
 
-import sys
 import asyncio
 import logging
 from typing import Callable, Optional

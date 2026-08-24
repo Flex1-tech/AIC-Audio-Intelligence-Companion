@@ -1,19 +1,16 @@
 """
 tests/splash_preview/main.py
 -----------------------------
-Application Flet Web de comparaison visuelle interactive pour le Splash Screen AIC V3.
+Application Flet Web de comparaison visuelle interactive pour le Splash Screen AIC V3.1.
 
 Usage:
   uv run flet run tests/splash_preview/main.py --web --port 8560
 
 Routes URL:
-  http://localhost:8560/?v=old
-  http://localhost:8560/?v=new
-  http://localhost:8560/?v=v3base
-  http://localhost:8560/?v=v3svg
-  http://localhost:8560/?v=v3cinzel
-  http://localhost:8560/?v=v3cyan
-  http://localhost:8560/?v=v3glow
+  http://localhost:8560/?v=v3current
+  http://localhost:8560/?v=v31a
+  http://localhost:8560/?v=v31b
+  http://localhost:8560/?v=v31c
 """
 
 import asyncio
@@ -23,41 +20,30 @@ from pathlib import Path
 
 import flet as ft
 
-# Inserer le dossier racine du projet dans sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tests.splash_preview.splash_variants import (
+from tests.splash_preview.splash_variants import (  # noqa: E402
     VARIANTS,
     VARIANT_LABELS,
     VARIANT_ORDER,
 )
-from ui.design_system.colors import ObsidianColors
+from ui.design_system.colors import ObsidianColors  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("splash_preview_app")
 
 
 def main(page: ft.Page):
-    page.title = "AIC Splash Screen — Laboratoire V3"
+    page.title = "AIC Splash Screen — Laboratoire V3.1"
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = ObsidianColors.BG_DARK
     page.padding = 0
     page.spacing = 0
 
-    # Charger les polices si disponibles dans assets/fonts/
-    fonts_dir = PROJECT_ROOT / "assets" / "fonts"
-    if fonts_dir.exists():
-        page.fonts = {
-            "Cinzel Decorative Bold": str(fonts_dir / "CinzelDecorative-Bold.ttf"),
-            "Cinzel Decorative Regular": str(fonts_dir / "CinzelDecorative-Regular.ttf"),
-        }
-
     current_task = None
     container_slot = ft.Container(expand=True, alignment=ft.Alignment.CENTER)
-
-    # Status / Info bar
     status_text = ft.Text("Prêt", size=12, color=ObsidianColors.TEXT_MUTED)
 
     def on_splash_complete():
@@ -75,7 +61,7 @@ def main(page: ft.Page):
             except Exception:
                 pass
 
-        splash_cls = VARIANTS.get(v_key, VARIANTS["v3base"])
+        splash_cls = VARIANTS.get(v_key, VARIANTS["v31a"])
         splash_instance = splash_cls(page=page, on_complete=on_splash_complete)
 
         container_slot.content = splash_instance
@@ -89,18 +75,15 @@ def main(page: ft.Page):
         asyncio.create_task(launch_variant(v_key))
 
     def on_replay_click(e):
-        # Relancer la variante courante
-        current_v = getattr(page, "_current_v", "v3base")
+        current_v = getattr(page, "_current_v", "v31a")
         asyncio.create_task(launch_variant(current_v))
 
-    # Determiner la variante initiale depuis l'URL
     url_v = page.query.get("v") if page.query else None
     if isinstance(url_v, list):
         url_v = url_v[0]
-    initial_v = url_v if url_v in VARIANTS else "v3base"
+    initial_v = url_v if url_v in VARIANTS else "v31a"
     page._current_v = initial_v
 
-    # Construire la barre de controle superieure
     buttons = []
     for v_key in VARIANT_ORDER:
         btn = ft.TextButton(
@@ -126,7 +109,7 @@ def main(page: ft.Page):
     control_bar = ft.Container(
         content=ft.Row(
             [
-                ft.Text("PREVIEW LAB:", size=11, weight=ft.FontWeight.BOLD, color=ObsidianColors.ACCENT_CYAN),
+                ft.Text("V3.1 PREVIEW LAB:", size=11, weight=ft.FontWeight.BOLD, color=ObsidianColors.PRIMARY),
                 ft.Row(buttons, spacing=4, scroll=ft.ScrollMode.AUTO),
                 replay_btn,
                 status_text,
@@ -151,7 +134,6 @@ def main(page: ft.Page):
         )
     )
 
-    # Lancer l'animation au chargement
     asyncio.create_task(launch_variant(initial_v))
 
 
