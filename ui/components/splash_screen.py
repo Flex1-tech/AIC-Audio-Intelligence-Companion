@@ -1,63 +1,42 @@
 """
 ui/components/splash_screen.py
-------------------------------
-Splash Screen premium v2 — AIC / Obsidian Horizon Design System.
+-------------------------------
+Splash Screen AIC V3 — Version Finale Équilibrée.
 
-Architecture :
-- Logo responsive : 65 % de la plus petite dimension de la fenetre (clamped 300-560 px).
-- SVG divise en 2 couches animees independamment :
-    * layer_letterform.svg -- structure "A" (3 paths #30C4EF)
-    * layer_wave.svg       -- onde sonore (70 paths #FE8F40 et variantes)
-- Effet "IA qui s'eveille" : un faisceau radial ambre parcourt la zone de l'onde (L->R).
-- Typographie de branding : Cinzel Decorative (embarquee dans assets/fonts/).
-- Timing centralise par pourcentage (SPLASH_ANIMATION_CONFIG) : modification instantanee
-  de la vitesse globale en changeant uniquement ``total_ms``.
-- Compatible Flet 0.86.4 (ft.Scale / ft.Offset / ft.BoxFit / ft.AnimationCurve).
+Fondation : OLD v1 (commit 73707ef)
+- Composition compacte : carte Obsidian 110×110 px centrée.
+- Logo icon.svg (64×64) dans la carte, fallback ft.Icons.GRAPHIC_EQ.
+- Égaliseur audio 5 barres dynamiques (#FE8F40 Ambre).
+- Halo BoxShadow Ambre pulsant (spread=6, blur=28 → spread=2, blur=14).
+- Titre "AIC" 38pt bold blanc — typographie système (lisibilité maximale).
+- Rythme strict ~2.3 secondes.
+- Fallback GRAPHIC_EQ si icon.svg / icon.png absents.
+
+Éléments NEW v2 intégrés (validés par comparaison visuelle) :
+1. Sous-titre "Audio Intelligence Companion" en Cyan Électrique (#30C4EF)
+   → Rétablit l'équilibre de marque Cyan (IA) + Ambre (Audio).
+2. Glow ambiant radial Cyan/Ambre en fond (bg_glow)
+   → Offre une atmosphère subtile derrière la carte sans altérer le halo pulsant.
 """
 
 import asyncio
+import logging
 from typing import Callable, Optional
 
 import flet as ft
 
 from ui.design_system.colors import ObsidianColors
+from ui.design_system.spacing import Radii
 from utils.path_utils import get_asset_path
 
-# ── Configuration centralisee de l'animation (en pourcentages de total_ms) ───
-SPLASH_ANIMATION_CONFIG = {
-    "total_ms": 5000,
-    "logo_intro": (0.00, 0.25),  # 0% -> 25% : Apparition structure A logo & fond
-    "wave_dim": (0.15, 0.35),  # 15% -> 35% : Signal onde dormant (opacite 0.22)
-    "wave_sweep": (0.28, 0.60),  # 28% -> 60% : Balayage du faisceau ambre L->R
-    "wave_alive": (0.32, 0.65),  # 32% -> 65% : Eveil complet de l'onde (opacite 1.0)
-    "halo_pulse": (0.55, 0.70),  # 55% -> 70% : Impulsion halo ambre BoxShadow
-    "title_intro": (0.58, 0.78),  # 58% -> 78% : Apparition du titre "AIC"
-    "subtitle_intro": (0.68, 0.88),  # 68% -> 88% : Apparition du sous-titre
-    "fade_out": (0.88, 1.00),  # 88% -> 100% : Fondu vers l'UI principale
-}
-
-# ── Constantes de position de l'onde dans le SVG (viewBox 1024x1024) ---------
-_WAVE_SVG_X_MIN = 378.0  # bord gauche de l'onde (SVG coords)
-_WAVE_SVG_X_MAX = 652.0  # bord droit de l'onde
-_WAVE_SVG_Y_MIN = 558.0  # bord haut de l'onde
-_WAVE_SVG_Y_MAX = 628.0  # bord bas de l'onde
-_SVG_SIZE = 1024.0
-
-
-def _wave_rect(logo_size: int) -> tuple:
-    """Retourne (left, top, width, height) de la zone onde en pixels ecran."""
-    scale = logo_size / _SVG_SIZE
-    left = _WAVE_SVG_X_MIN * scale
-    top = _WAVE_SVG_Y_MIN * scale
-    w = (_WAVE_SVG_X_MAX - _WAVE_SVG_X_MIN) * scale
-    h = (_WAVE_SVG_Y_MAX - _WAVE_SVG_Y_MIN) * scale
-    return left, top, w, h
+logger = logging.getLogger("aic.splash")
 
 
 class SplashScreen(ft.Container):
     """
-    Composant Splash Screen premium avec animation SVG multi-couches.
-    Séquencement 100% relatif piloter par SPLASH_ANIMATION_CONFIG.
+    Splash Screen AIC V3.
+    Fondation OLD v1 (carte 110×110, halo pulsant, 2.3s)
+    + Sous-titre Cyan #30C4EF + Radial glow ambiant subtil.
     """
 
     def __init__(
@@ -65,168 +44,141 @@ class SplashScreen(ft.Container):
         page: ft.Page,
         on_complete: Optional[Callable[[], None]] = None,
     ):
+        logger.info("SPLASH: INIT")
         self.on_complete_callback = on_complete
 
-        # ── Calculs de timing adaptatifs ──────────────────────────────────────
-        self.total_ms = SPLASH_ANIMATION_CONFIG["total_ms"]
-
-        def _dur(pct_range: tuple) -> int:
-            return int((pct_range[1] - pct_range[0]) * self.total_ms)
-
-        cfg = SPLASH_ANIMATION_CONFIG
-
-        # ── Taille du logo (responsive) ───────────────────────────────────────
+        # Dimensions écran pour le glow ambiant
         w = (page.window.width or 900) if page.window else 900
         h = (page.window.height or 700) if page.window else 700
-        self.logo_size = int(max(300, min(560, min(w, h) * 0.65)))
-        S = self.logo_size
 
-        # ── Resolution des assets SVG ─────────────────────────────────────────
-        lf_path = get_asset_path("layer_letterform.svg")
-        wv_path = get_asset_path("layer_wave.svg")
-        icon_path = get_asset_path("icon.svg") or get_asset_path("icon.png")
+        # ── 1. Résolution du logo (icon.svg → icon.png → fallback icône) ─────
+        svg_path = get_asset_path("icon.svg") or get_asset_path("icon.png")
+        icon_src = str(svg_path) if svg_path and svg_path.exists() else None
 
-        def _svg_src(p):
-            return str(p) if p and p.exists() else None
-
-        lf_src = _svg_src(lf_path)
-        wv_src = _svg_src(wv_path)
-        icon_src = _svg_src(icon_path)
-
-        # ── Couche 1 : Letterform (#30C4EF – structure "A") ───────────────────
-        if lf_src:
-            self.letterform_img = ft.Image(
-                src=lf_src,
-                width=S,
-                height=S,
+        if icon_src:
+            logo_content = ft.Image(
+                src=icon_src,
+                width=64,
+                height=64,
                 fit=ft.BoxFit.CONTAIN,
             )
         else:
-            self.letterform_img = ft.Image(
-                src=icon_src or "",
-                width=S,
-                height=S,
-                fit=ft.BoxFit.CONTAIN,
+            logo_content = ft.Icon(
+                ft.Icons.GRAPHIC_EQ,
+                size=48,
+                color=ObsidianColors.PRIMARY,
             )
 
-        # ── Couche 2 : Wave / Onde IA (#FE8F40 et variantes) ─────────────────
-        if wv_src:
-            self.wave_img = ft.Image(
-                src=wv_src,
-                width=S,
-                height=S,
-                fit=ft.BoxFit.CONTAIN,
-                opacity=0.0,
-                animate_opacity=ft.Animation(_dur(cfg["wave_alive"]), ft.AnimationCurve.EASE_OUT_CUBIC),
-            )
-        else:
-            self.wave_img = ft.Container()
+        # ── 2. Barres égaliseur audio (#FE8F40 Ambre) ─────────────────────────
+        self.wave_bar1 = ft.Container(width=3, height=8, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.4)
+        self.wave_bar2 = ft.Container(width=3, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.7)
+        self.wave_bar3 = ft.Container(width=3, height=22, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=1.0)
+        self.wave_bar4 = ft.Container(width=3, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.7)
+        self.wave_bar5 = ft.Container(width=3, height=8, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.4)
 
-        # ── Couche 3 : Glow scanner (faisceau ambre L->R sur l'onde) ──────────
-        wave_left, wave_top, wave_w, wave_h = _wave_rect(S)
-        beam_w = int(wave_w * 0.32)
-        beam_h = int(wave_h * 2.6)
-        beam_top = wave_top - (beam_h - wave_h) / 2
-
-        self._scan_left_start = wave_left - beam_w * 0.2
-        self._scan_left_end = wave_left + wave_w - beam_w * 0.8
-
-        self.wave_glow = ft.Container(
-            width=beam_w,
-            height=beam_h,
-            gradient=ft.LinearGradient(
-                begin=ft.Alignment(-1, 0),
-                end=ft.Alignment(1, 0),
-                colors=[
-                    "transparent",
-                    "#BFF59E0B",
-                    "transparent",
-                ],
-                stops=[0.0, 0.5, 1.0],
-            ),
-            opacity=0.0,
-            left=self._scan_left_start,
-            top=beam_top,
-            animate_opacity=ft.Animation(180, ft.AnimationCurve.EASE_IN_OUT),
-            animate_position=ft.Animation(_dur(cfg["wave_sweep"]), ft.AnimationCurve.EASE_IN_OUT),
-        )
-
-        # ── Logo Stack ────────────────────────────────────────────────────────
-        self.logo_stack = ft.Stack(
+        self.wave_container = ft.Row(
             [
-                self.letterform_img,
-                self.wave_img,
-                self.wave_glow,
+                self.wave_bar1,
+                self.wave_bar2,
+                self.wave_bar3,
+                self.wave_bar4,
+                self.wave_bar5,
             ],
-            width=S,
-            height=S,
+            spacing=3,
+            alignment=ft.MainAxisAlignment.CENTER,
+            opacity=0.0,
+            animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
         )
 
-        # Conteneur logo global — animations d'entree
-        self.logo_container = ft.Container(
-            content=self.logo_stack,
-            width=S,
-            height=S,
+        # ── 3. Carte logo avec halo Ambre réactif (110×110) ───────────────────
+        self.logo_box = ft.Container(
+            content=ft.Stack(
+                [
+                    logo_content,
+                    ft.Container(
+                        content=self.wave_container,
+                        alignment=ft.Alignment(0, 0.55),
+                    ),
+                ],
+                alignment=ft.Alignment.CENTER,
+            ),
+            width=110,
+            height=110,
+            border_radius=Radii.LG,
+            bgcolor=ObsidianColors.SURFACE_DARK,
             alignment=ft.Alignment.CENTER,
-            scale=ft.Scale(scale=0.88),
+            scale=ft.Scale(scale=0.92),
             opacity=0.0,
-            offset=ft.Offset(x=0, y=0.03),
-            animate_opacity=ft.Animation(_dur(cfg["logo_intro"]), ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_scale=ft.Animation(_dur(cfg["logo_intro"]) + 100, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(_dur(cfg["logo_intro"]), ft.AnimationCurve.EASE_OUT_CUBIC),
+            offset=ft.Offset(x=0, y=0.04),
+            animate_opacity=ft.Animation(500, ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_scale=ft.Animation(600, ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_offset=ft.Animation(500, ft.AnimationCurve.EASE_OUT_CUBIC),
             shadow=None,
         )
 
-        # ── Titre "AIC" (Cinzel Decorative Bold) ───────────────────────────────
-        title_size = max(36, int(S * 0.095))
-        self.title_box = ft.Container(
-            content=ft.Text(
-                "AIC",
-                size=title_size,
-                color=ObsidianColors.TEXT_PRIMARY,
-                font_family="Cinzel Decorative Bold",
-            ),
-            opacity=0.0,
-            offset=ft.Offset(x=0, y=0.12),
-            animate_opacity=ft.Animation(_dur(cfg["title_intro"]), ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(_dur(cfg["title_intro"]), ft.AnimationCurve.EASE_OUT_CUBIC),
-        )
-
-        # ── Sous-titre (Cinzel Decorative Regular) ────────────────────────────
-        subtitle_size = max(11, int(S * 0.030))
-        self.subtitle_box = ft.Container(
-            content=ft.Text(
-                "Audio Intelligence Companion",
-                size=subtitle_size,
-                color=ObsidianColors.TEXT_MUTED,
-                font_family="Cinzel Decorative Regular",
-            ),
-            opacity=0.0,
-            offset=ft.Offset(x=0, y=0.10),
-            animate_opacity=ft.Animation(_dur(cfg["subtitle_intro"]), ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(_dur(cfg["subtitle_intro"]), ft.AnimationCurve.EASE_OUT_CUBIC),
-        )
-
-        # ── Degrade radial de fond ────────────────────────────────────────────
+        # ── 4. Glow ambiant de fond (Cyan 12% + Ambre 8%) — Élément NEW ───────
         self.bg_glow = ft.Container(
-            width=min(S * 1.6, w),
-            height=min(S * 1.6, h),
+            width=min(420, w),
+            height=min(420, h),
+            border_radius=9999,
+            bgcolor=ft.Colors.TRANSPARENT,
             gradient=ft.RadialGradient(
                 center=ft.Alignment(0, 0),
-                radius=0.5,
+                radius=0.50,
                 colors=[
-                    "#10F59E0B",
-                    "transparent",
+                    "rgba(48, 196, 239, 0.12)",  # Cyan IA
+                    "rgba(254, 143, 64, 0.08)",  # Ambre Audio
+                    "rgba(15, 17, 23, 0.0)",
                 ],
-                stops=[0.0, 1.0],
+                stops=[0.0, 0.45, 1.0],
             ),
             opacity=0.0,
-            animate_opacity=ft.Animation(_dur(cfg["logo_intro"]) + 300, ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_opacity=ft.Animation(600, ft.AnimationCurve.EASE_OUT_CUBIC),
         )
 
-        # ── Layout global ─────────────────────────────────────────────────────
-        gap_logo_text = max(12, int(S * 0.035))
+        # ── 5. Ligne séparatrice ──────────────────────────────────────────────
+        self.wave_reveal_line = ft.Container(
+            width=0,
+            height=2,
+            bgcolor=ObsidianColors.PRIMARY,
+            border_radius=1,
+            opacity=0.0,
+            animate_opacity=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
+        )
 
+        # ── 6. Titre "AIC" (Système Bold — Lisibilité) ────────────────────────
+        self.title_text = ft.Text(
+            "AIC",
+            size=38,
+            weight=ft.FontWeight.BOLD,
+            color=ObsidianColors.TEXT_PRIMARY,
+        )
+
+        self.title_box = ft.Container(
+            content=self.title_text,
+            opacity=0.0,
+            offset=ft.Offset(x=0, y=0.15),
+            animate_opacity=ft.Animation(450, ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_offset=ft.Animation(450, ft.AnimationCurve.EASE_OUT_CUBIC),
+        )
+
+        # ── 7. Sous-titre (Cyan Électrique #30C4EF — Élément NEW) ─────────────
+        self.subtitle_text = ft.Text(
+            "Audio Intelligence Companion",
+            size=13,
+            weight=ft.FontWeight.W_500,
+            color=ObsidianColors.ACCENT_CYAN,  # Cyan brand color
+        )
+
+        self.subtitle_box = ft.Container(
+            content=self.subtitle_text,
+            opacity=0.0,
+            offset=ft.Offset(x=0, y=0.10),
+            animate_opacity=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_offset=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
+        )
+
+        # ── 8. Layout global ──────────────────────────────────────────────────
         super().__init__(
             content=ft.Stack(
                 [
@@ -237,8 +189,10 @@ class SplashScreen(ft.Container):
                     ),
                     ft.Column(
                         [
-                            self.logo_container,
-                            ft.Container(height=gap_logo_text),
+                            self.logo_box,
+                            ft.Container(height=16),
+                            self.wave_reveal_line,
+                            ft.Container(height=4),
                             self.title_box,
                             ft.Container(height=4),
                             self.subtitle_box,
@@ -255,106 +209,92 @@ class SplashScreen(ft.Container):
             expand=True,
             bgcolor=ObsidianColors.BG_DARK,
             opacity=1.0,
-            animate_opacity=ft.Animation(_dur(cfg["fade_out"]), ft.AnimationCurve.EASE_IN_OUT),
+            animate_opacity=ft.Animation(400, ft.AnimationCurve.EASE_IN_OUT),
         )
+        logger.info("SPLASH: BUILD")
 
-    # ── Orchestration asynchrone donnee par SPLASH_ANIMATION_CONFIG ─────────
     async def start_animation_async(self) -> None:
         """
-        Sequence d'animation 100% relative en pourcentages de SPLASH_ANIMATION_CONFIG["total_ms"].
+        Séquence d'animation asynchrone V3 finale (2.3s total).
+        OLD v1 baseline + éveil simultané du glow ambiant.
         """
-        cfg = SPLASH_ANIMATION_CONFIG
-        t_current = 0.0
+        logger.info("SPLASH: ANIMATION START")
+        callback_called = False
+        try:
+            # Phase 1 : Apparition fond ambiant & Logo (t=0 → t=50ms)
+            await asyncio.sleep(0.05)
+            self.bg_glow.opacity = 1.0
+            self._safe_update(self.bg_glow)
+            self.logo_box.opacity = 1.0
+            self.logo_box.scale = ft.Scale(scale=1.0)
+            self.logo_box.offset = ft.Offset(x=0, y=0)
+            self._safe_update(self.logo_box)
 
-        def _sec_at(pct: float) -> float:
-            return (pct * self.total_ms) / 1000.0
+            # Phase 2 : Éveil de l'onde sonore (t=400ms)
+            await asyncio.sleep(0.35)
+            self.wave_container.opacity = 1.0
+            self._safe_update(self.wave_container)
 
-        async def _wait_until(target_pct: float) -> None:
-            nonlocal t_current
-            if target_pct > t_current:
-                await asyncio.sleep(_sec_at(target_pct) - _sec_at(t_current))
-                t_current = target_pct
+            # Phase 3 : Impulsion Halo Ambre & expansion barres (t=700ms)
+            await asyncio.sleep(0.30)
+            self.logo_box.shadow = ft.BoxShadow(
+                spread_radius=6,
+                blur_radius=28,
+                color="#40FE8F40",  # Halo ambre fort
+                offset=ft.Offset(0, 0),
+            )
+            self.wave_bar1.height = 14
+            self.wave_bar2.height = 24
+            self.wave_bar3.height = 32
+            self.wave_bar4.height = 24
+            self.wave_bar5.height = 14
+            self._safe_update(self.logo_box)
 
-        # Phase 1 : Apparition fond ambiant & structure logo A
-        await _wait_until(cfg["logo_intro"][0])
-        self.bg_glow.opacity = 1.0
-        self.logo_container.opacity = 1.0
-        self.logo_container.scale = ft.Scale(scale=1.0)
-        self.logo_container.offset = ft.Offset(x=0, y=0)
-        self._safe_update(self.bg_glow)
-        self._safe_update(self.logo_container)
+            # Phase 4 : Titre "AIC" (t=1000ms)
+            await asyncio.sleep(0.25)
+            self.title_box.opacity = 1.0
+            self.title_box.offset = ft.Offset(x=0, y=0)
+            self._safe_update(self.title_box)
 
-        # Phase 2 : Signal onde dormant
-        await _wait_until(cfg["wave_dim"][0])
-        self.wave_img.opacity = 0.22
-        self._safe_update(self.wave_img)
+            # Phase 4b : Atténuation douce du halo (t=1150ms)
+            await asyncio.sleep(0.15)
+            self.logo_box.shadow = ft.BoxShadow(
+                spread_radius=2,
+                blur_radius=14,
+                color="#1AFE8F40",  # Halo ambre atténué
+                offset=ft.Offset(0, 0),
+            )
+            self._safe_update(self.logo_box)
 
-        # Phase 3 : Balayage du faisceau ambre L->R
-        await _wait_until(cfg["wave_sweep"][0])
-        self.wave_glow.opacity = 0.90
-        self.wave_glow.left = self._scan_left_start
-        self._safe_update(self.wave_glow)
+            # Phase 5 : Sous-titre Cyan (t=1350ms)
+            await asyncio.sleep(0.20)
+            self.subtitle_box.opacity = 1.0
+            self.subtitle_box.offset = ft.Offset(x=0, y=0)
+            self._safe_update(self.subtitle_box)
 
-        await asyncio.sleep(0.03)
-        self.wave_glow.left = self._scan_left_end
-        self._safe_update(self.wave_glow)
+            # Phase 6 : Maintien & fondu de sortie (t=1900ms → t=2300ms)
+            await asyncio.sleep(0.60)
+            logger.info("SPLASH: ANIMATION COMPLETE")
+            self.opacity = 0.0
+            self._safe_update(self)
 
-        # Phase 4 : Eveil complet de l'onde
-        await _wait_until(cfg["wave_alive"][0])
-        self.wave_img.opacity = 1.0
-        self._safe_update(self.wave_img)
+            await asyncio.sleep(0.40)
 
-        # Phase 5 : Impulsion Halo ambre
-        await _wait_until(cfg["halo_pulse"][0])
-        self.logo_container.shadow = ft.BoxShadow(
-            spread_radius=8,
-            blur_radius=40,
-            color="#38F59E0B",
-            offset=ft.Offset(x=0, y=0),
-        )
-        self._safe_update(self.logo_container)
-
-        # Disparition du scanner
-        await _wait_until(cfg["wave_sweep"][1])
-        self.wave_glow.opacity = 0.0
-        self._safe_update(self.wave_glow)
-
-        # Attenuation douce du halo
-        await _wait_until(cfg["halo_pulse"][1])
-        self.logo_container.shadow = ft.BoxShadow(
-            spread_radius=2,
-            blur_radius=16,
-            color="#14F59E0B",
-            offset=ft.Offset(x=0, y=0),
-        )
-        self._safe_update(self.logo_container)
-
-        # Phase 6 : Titre "AIC"
-        await _wait_until(cfg["title_intro"][0])
-        self.title_box.opacity = 1.0
-        self.title_box.offset = ft.Offset(x=0, y=0)
-        self._safe_update(self.title_box)
-
-        # Phase 7 : Sous-titre
-        await _wait_until(cfg["subtitle_intro"][0])
-        self.subtitle_box.opacity = 1.0
-        self.subtitle_box.offset = ft.Offset(x=0, y=0)
-        self._safe_update(self.subtitle_box)
-
-        # Phase 8 : Fondu de sortie vers l'UI principale
-        await _wait_until(cfg["fade_out"][0])
-        self.opacity = 0.0
-        self._safe_update(self)
-
-        # Attente de la fin du fondu et nettoyage
-        await _wait_until(cfg["fade_out"][1])
-        await asyncio.sleep(0.05)
-
-        if self.on_complete_callback:
-            self.on_complete_callback()
+        except asyncio.CancelledError:
+            logger.info("SPLASH: ANIMATION CANCELLED")
+        except Exception as e:
+            logger.error(f"SPLASH: ANIMATION ERROR: {e}", exc_info=True)
+        finally:
+            if self.on_complete_callback and not callback_called:
+                callback_called = True
+                try:
+                    self.on_complete_callback()
+                except Exception as cb_err:
+                    logger.error(f"SPLASH: CALLBACK ERROR: {cb_err}", exc_info=True)
 
     def _safe_update(self, control: ft.Control) -> None:
         try:
-            control.update()
+            if control and self.page and control.page:
+                control.update()
         except Exception:
             pass
