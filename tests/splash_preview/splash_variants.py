@@ -1,38 +1,82 @@
 """
 tests/splash_preview/splash_variants.py
 ----------------------------------------
-Laboratoire de comparaison des variantes du Splash Screen AIC.
+Laboratoire de comparaison et de validation du Splash Screen AIC.
 
-Variantes :
-  - SplashProduction   (Production réelle `ui.components.splash_screen.SplashScreen`)
-  - SplashV3Current    (Variante A : Baseline compacte 110x110 px, 2.3s)
-  - SplashV3Immersive  (Variante B : Carte adaptative 130-165 px, equalizer max 45px, 2.3s)
-  - SplashV3Fullscreen (Variante C : Fullscreen maîtrisée sans carte, 2.8s)
+SOURCE DE VERITE : origin/main (SHA af092ec63b397a3edf43165e49627c4d6b282fa9)
+
+Architecture de reference :
+- Logo responsive : 65% de la plus petite dimension (clamp 300-560 px).
+- SVG divise en 2 couches animees independamment :
+    * layer_letterform.svg  -- structure "A" (3 paths Cyan #30C4EF)
+    * layer_wave.svg        -- onde sonore (70 paths Ambre #FE8F40)
+- Scanner ambiant ambre horizontal L->R (wave_glow).
+- Typographie de branding : Cinzel Decorative (embarquee dans assets/fonts/).
+- Timing centralise par pourcentage (SPLASH_ANIMATION_CONFIG).
+- Compatible Flet 0.86.4.
+
+NOTE WEB :
+En mode Flet Web (FastAPI), les chemins absolu Windows ne sont pas resolus
+par le navigateur. Les assets sont passes sous forme de CHEMINS RELATIFS
+servis directement par le serveur HTTP :
+    "layer_letterform.svg" -> http://localhost:8570/layer_letterform.svg
 """
 
 import asyncio
-import logging
 from typing import Callable, Optional
 
 import flet as ft
 
-from ui.components.splash_screen import SplashScreen
 from ui.design_system.colors import ObsidianColors
-from ui.design_system.spacing import Radii
 from utils.path_utils import get_asset_path
 
-logger = logging.getLogger("splash_preview")
+# ── Configuration de l'animation (identique a origin/main) ─────────────────
+SPLASH_ANIMATION_CONFIG = {
+    "total_ms": 5000,
+    "logo_intro": (0.00, 0.25),  # 0%  -> 25% : Apparition structure A logo & fond
+    "wave_dim": (0.15, 0.35),  # 15% -> 35% : Signal onde dormant (opacite 0.22)
+    "wave_sweep": (0.28, 0.60),  # 28% -> 60% : Balayage du faisceau ambre L->R
+    "wave_alive": (0.32, 0.65),  # 32% -> 65% : Eveil complet de l'onde (opacite 1.0)
+    "halo_pulse": (0.55, 0.70),  # 55% -> 70% : Impulsion halo ambre BoxShadow
+    "title_intro": (0.58, 0.78),  # 58% -> 78% : Apparition du titre "AIC"
+    "subtitle_intro": (0.68, 0.88),  # 68% -> 88% : Apparition du sous-titre
+    "fade_out": (0.88, 1.00),  # 88% -> 100% : Fondu vers l'UI principale
+}
+
+# ── Constantes de position de l'onde dans le SVG (viewBox 1024x1024) ────────
+_WAVE_SVG_X_MIN = 378.0
+_WAVE_SVG_X_MAX = 652.0
+_WAVE_SVG_Y_MIN = 558.0
+_WAVE_SVG_Y_MAX = 628.0
+_SVG_SIZE = 1024.0
 
 
-def _resolve_icon() -> Optional[str]:
-    p = get_asset_path("icon.svg") or get_asset_path("icon.png")
-    return str(p) if p and p.exists() else None
+def _wave_rect(logo_size: int) -> tuple:
+    """Retourne (left, top, width, height) de la zone onde en pixels ecran."""
+    scale = logo_size / _SVG_SIZE
+    left = _WAVE_SVG_X_MIN * scale
+    top = _WAVE_SVG_Y_MIN * scale
+    w = (_WAVE_SVG_X_MAX - _WAVE_SVG_X_MIN) * scale
+    h = (_WAVE_SVG_Y_MAX - _WAVE_SVG_Y_MIN) * scale
+    return left, top, w, h
 
 
-def _make_logo_image(icon_src: Optional[str], size: int = 64) -> ft.Control:
-    if icon_src:
-        return ft.Image(src=icon_src, width=size, height=size, fit=ft.BoxFit.CONTAIN)
-    return ft.Icon(ft.Icons.GRAPHIC_EQ, size=int(size * 0.75), color=ObsidianColors.PRIMARY)
+def _resolve_web(filename: str) -> str:
+    """
+    Resout l'asset pour Flet Web : retourne le nom relatif du fichier
+    si l'asset existe dans le dossier assets/ du projet.
+    En mode Web, Flet sert assets_dir comme racine HTTP, donc "layer_letterform.svg"
+    est accessible sous http://localhost:8570/layer_letterform.svg.
+    En mode Desktop, get_asset_path() retourne le chemin absolu.
+    """
+    p = get_asset_path(filename)
+    if p and p.exists():
+        return filename  # chemin relatif pour Flet Web
+    return filename  # fallback: meme nom relatif
+
+
+def _dur(pct_range: tuple, total_ms: int) -> int:
+    return int((pct_range[1] - pct_range[0]) * total_ms)
 
 
 def _safe_update(control: ft.Control) -> None:
@@ -44,223 +88,170 @@ def _safe_update(control: ft.Control) -> None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# VARIANTE PRODUCTION : Wrapper direct du composant réel
+# VARIANTE PRINCIPALE : SplashOriginMain
+# Reproduction fidele de origin/main avec les nouveaux logos transparents
+# et les chemins relatifs Flet Web.
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-class SplashProduction(SplashScreen):
-    """Production réelle (ui/components/splash_screen.py)."""
+class SplashOriginMain(ft.Container):
+    """
+    Reproduction fidele de origin/main:ui/components/splash_screen.py.
 
-    LABEL = "Production (V3 Réalisée)"
+    Seules differences par rapport a l'original :
+    - Chemins des assets SVG relatifs (au lieu d'absolus str(Path)) pour Flet Web.
+    - Polices declarees via page.fonts dans main.py.
+    - Les logos sont desormais transparents (fond noir retire).
 
+    Tout le reste est identique :
+    - Sizing : clamp(300, min(w,h)*0.65, 560) px.
+    - Timing : 5000 ms, 100% relatif via SPLASH_ANIMATION_CONFIG.
+    - Scanner horizontal L->R (wave_glow LinearGradient).
+    - Halo ambre BoxShadow pulsant.
+    - Cinzel Decorative Bold / Regular.
+    - Fond Obsidian BG_DARK (#0F1117).
+    """
 
-# ══════════════════════════════════════════════════════════════════════════════
-# VARIANTE A : SplashV3Current (Baseline compacte 110x110)
-# ══════════════════════════════════════════════════════════════════════════════
-
-
-class SplashV3Current(ft.Container):
-    """Variante A — Baseline compacte 110x110 px, 2.3s."""
-
-    LABEL = "Variante A — Baseline V3 (110px)"
+    LABEL = "★ Reference origin/main (nouveaux logos transparents)"
 
     def __init__(self, page: ft.Page, on_complete: Optional[Callable[[], None]] = None):
         self.on_complete_callback = on_complete
-        icon_src = _resolve_icon()
-        logo_content = _make_logo_image(icon_src, 64)
+        cfg = SPLASH_ANIMATION_CONFIG
+        self.total_ms = cfg["total_ms"]
 
-        self.bar1 = ft.Container(width=3, height=8, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.4)
-        self.bar2 = ft.Container(width=3, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.7)
-        self.bar3 = ft.Container(width=3, height=22, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=1.0)
-        self.bar4 = ft.Container(width=3, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.7)
-        self.bar5 = ft.Container(width=3, height=8, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.4)
+        def _d(k):
+            return _dur(cfg[k], self.total_ms)
 
-        self.wave_container = ft.Row(
-            [self.bar1, self.bar2, self.bar3, self.bar4, self.bar5],
-            spacing=3,
-            alignment=ft.MainAxisAlignment.CENTER,
-            opacity=0.0,
-            animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
-        )
-        self.logo_box = ft.Container(
-            content=ft.Stack(
-                [logo_content, ft.Container(content=self.wave_container, alignment=ft.Alignment(0, 0.55))],
-                alignment=ft.Alignment.CENTER,
-            ),
-            width=110,
-            height=110,
-            border_radius=Radii.LG,
-            bgcolor=ObsidianColors.SURFACE_DARK,
-            alignment=ft.Alignment.CENTER,
-            scale=ft.Scale(scale=0.92),
-            opacity=0.0,
-            offset=ft.Offset(x=0, y=0.04),
-            animate_opacity=ft.Animation(500, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_scale=ft.Animation(600, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(500, ft.AnimationCurve.EASE_OUT_CUBIC),
-        )
-        self.title_box = ft.Container(
-            content=ft.Text("AIC", size=38, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_PRIMARY),
-            opacity=0.0,
-            offset=ft.Offset(x=0, y=0.15),
-            animate_opacity=ft.Animation(450, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(450, ft.AnimationCurve.EASE_OUT_CUBIC),
-        )
-        self.subtitle_box = ft.Container(
-            content=ft.Text(
-                "Audio Intelligence Companion", size=13, weight=ft.FontWeight.W_500, color=ObsidianColors.PRIMARY
-            ),
-            opacity=0.0,
-            offset=ft.Offset(x=0, y=0.10),
-            animate_opacity=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
-        )
-        super().__init__(
-            content=ft.Column(
-                [self.logo_box, ft.Container(height=16), self.title_box, ft.Container(height=4), self.subtitle_box],
-                alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=0,
-            ),
-            alignment=ft.Alignment.CENTER,
-            expand=True,
-            bgcolor=ObsidianColors.BG_DARK,
-            opacity=1.0,
-            animate_opacity=ft.Animation(400, ft.AnimationCurve.EASE_IN_OUT),
-        )
-
-    async def start_animation_async(self) -> None:
-        cb_called = False
-        try:
-            await asyncio.sleep(0.05)
-            self.logo_box.opacity = 1.0
-            self.logo_box.scale = ft.Scale(1.0)
-            self.logo_box.offset = ft.Offset(0, 0)
-            _safe_update(self.logo_box)
-            await asyncio.sleep(0.35)
-            self.wave_container.opacity = 1.0
-            _safe_update(self.wave_container)
-            await asyncio.sleep(0.30)
-            self.logo_box.shadow = ft.BoxShadow(spread_radius=6, blur_radius=28, color="#40FE8F40")
-            self.bar1.height = 14
-            self.bar2.height = 24
-            self.bar3.height = 32
-            self.bar4.height = 24
-            self.bar5.height = 14
-            _safe_update(self.logo_box)
-            await asyncio.sleep(0.25)
-            self.title_box.opacity = 1.0
-            self.title_box.offset = ft.Offset(0, 0)
-            _safe_update(self.title_box)
-            await asyncio.sleep(0.15)
-            self.logo_box.shadow = ft.BoxShadow(spread_radius=2, blur_radius=14, color="#1AFE8F40")
-            _safe_update(self.logo_box)
-            await asyncio.sleep(0.20)
-            self.subtitle_box.opacity = 1.0
-            self.subtitle_box.offset = ft.Offset(0, 0)
-            _safe_update(self.subtitle_box)
-            await asyncio.sleep(0.60)
-            self.opacity = 0.0
-            _safe_update(self)
-            await asyncio.sleep(0.40)
-        except Exception:
-            pass
-        finally:
-            if self.on_complete_callback and not cb_called:
-                cb_called = True
-                self.on_complete_callback()
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# VARIANTE B : SplashV3Immersive (Carte adaptative 130-165px, amplitude 45px, 2.3s)
-# ══════════════════════════════════════════════════════════════════════════════
-
-
-class SplashV3Immersive(ft.Container):
-    """Variante B — V3 Immersive (carte adaptative 130-165px, amplitude 45px, 2.3s)."""
-
-    LABEL = "Variante B — V3 Immersive (140px adaptatif)"
-
-    def __init__(self, page: ft.Page, on_complete: Optional[Callable[[], None]] = None):
-        self.on_complete_callback = on_complete
-
+        # ── Taille du logo (identique a origin/main : 65% de min_dim, clamp 300-560) ──
         w = (page.window.width or 900) if page.window else 900
         h = (page.window.height or 700) if page.window else 700
-        card_size = int(max(130, min(165, min(w, h) * 0.22)))
-        icon_size = int(card_size * 0.58)
+        self.logo_size = int(max(300, min(560, min(w, h) * 0.65)))
+        S = self.logo_size
 
-        icon_src = _resolve_icon()
-        logo_content = _make_logo_image(icon_src, icon_size)
+        # ── Resolution des assets SVG (chemin relatif pour Flet Web) ────────────
+        lf_src = _resolve_web("layer_letterform.svg")
+        wv_src = _resolve_web("layer_wave.svg")
+        icon_src = _resolve_web("icon.svg")
 
-        self.bar1 = ft.Container(width=4, height=12, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.5)
-        self.bar2 = ft.Container(width=4, height=20, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.8)
-        self.bar3 = ft.Container(width=4, height=30, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=1.0)
-        self.bar4 = ft.Container(width=4, height=20, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.8)
-        self.bar5 = ft.Container(width=4, height=12, bgcolor=ObsidianColors.PRIMARY, border_radius=2, opacity=0.5)
-
-        self.wave_container = ft.Row(
-            [self.bar1, self.bar2, self.bar3, self.bar4, self.bar5],
-            spacing=4,
-            alignment=ft.MainAxisAlignment.CENTER,
-            opacity=0.0,
-            animate_opacity=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
+        # ── Couche 1 : Letterform (#30C4EF – structure "A") ─────────────────────
+        self.letterform_img = ft.Image(
+            src=lf_src if lf_src else icon_src,
+            width=S,
+            height=S,
+            fit=ft.BoxFit.CONTAIN,
         )
-        self.logo_box = ft.Container(
-            content=ft.Stack(
-                [logo_content, ft.Container(content=self.wave_container, alignment=ft.Alignment(0, 0.58))],
-                alignment=ft.Alignment.CENTER,
-            ),
-            width=card_size,
-            height=card_size,
-            border_radius=Radii.LG,
-            bgcolor=ObsidianColors.SURFACE_DARK,
-            alignment=ft.Alignment.CENTER,
-            scale=ft.Scale(scale=0.92),
+
+        # ── Couche 2 : Wave / Onde IA (#FE8F40) ─────────────────────────────────
+        self.wave_img = ft.Image(
+            src=wv_src if wv_src else "",
+            width=S,
+            height=S,
+            fit=ft.BoxFit.CONTAIN,
             opacity=0.0,
-            offset=ft.Offset(x=0, y=0.04),
-            animate_opacity=ft.Animation(500, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_scale=ft.Animation(600, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(500, ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_opacity=ft.Animation(_d("wave_alive"), ft.AnimationCurve.EASE_OUT_CUBIC),
         )
-        self.bg_glow = ft.Container(
-            width=min(460, w),
-            height=min(460, h),
-            border_radius=9999,
-            bgcolor=ft.Colors.TRANSPARENT,
-            gradient=ft.RadialGradient(
-                center=ft.Alignment(0, 0),
-                radius=0.50,
-                colors=["rgba(254, 143, 64, 0.12)", "rgba(48, 196, 239, 0.05)", "rgba(15, 17, 23, 0.0)"],
+
+        # ── Couche 3 : Scanner ambiant ambre horizontal L->R ────────────────────
+        wave_left, wave_top, wave_w, wave_h = _wave_rect(S)
+        beam_w = int(wave_w * 0.32)
+        beam_h = int(wave_h * 2.6)
+        beam_top = wave_top - (beam_h - wave_h) / 2
+
+        self._scan_left_start = wave_left - beam_w * 0.2
+        self._scan_left_end = wave_left + wave_w - beam_w * 0.8
+
+        self.wave_glow = ft.Container(
+            width=beam_w,
+            height=beam_h,
+            gradient=ft.LinearGradient(
+                begin=ft.Alignment(-1, 0),
+                end=ft.Alignment(1, 0),
+                colors=["transparent", "#BFF59E0B", "transparent"],
                 stops=[0.0, 0.5, 1.0],
             ),
             opacity=0.0,
-            animate_opacity=ft.Animation(600, ft.AnimationCurve.EASE_OUT_CUBIC),
+            left=self._scan_left_start,
+            top=beam_top,
+            animate_opacity=ft.Animation(180, ft.AnimationCurve.EASE_IN_OUT),
+            animate_position=ft.Animation(_d("wave_sweep"), ft.AnimationCurve.EASE_IN_OUT),
         )
-        title_size = int(card_size * 0.30)
-        self.title_box = ft.Container(
-            content=ft.Text("AIC", size=title_size, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_PRIMARY),
+
+        # ── Logo Stack (letterform + wave + scanner) ────────────────────────────
+        self.logo_stack = ft.Stack(
+            [self.letterform_img, self.wave_img, self.wave_glow],
+            width=S,
+            height=S,
+        )
+
+        self.logo_container = ft.Container(
+            content=self.logo_stack,
+            width=S,
+            height=S,
+            alignment=ft.Alignment.CENTER,
+            scale=ft.Scale(scale=0.88),
             opacity=0.0,
-            offset=ft.Offset(x=0, y=0.15),
-            animate_opacity=ft.Animation(450, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(450, ft.AnimationCurve.EASE_OUT_CUBIC),
+            offset=ft.Offset(x=0, y=0.03),
+            animate_opacity=ft.Animation(_d("logo_intro"), ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_scale=ft.Animation(_d("logo_intro") + 100, ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_offset=ft.Animation(_d("logo_intro"), ft.AnimationCurve.EASE_OUT_CUBIC),
+            shadow=None,
         )
+
+        # ── Titre "AIC" (Cinzel Decorative Bold) ────────────────────────────────
+        title_size = max(36, int(S * 0.095))
+        self.title_box = ft.Container(
+            content=ft.Text(
+                "AIC",
+                size=title_size,
+                color=ObsidianColors.TEXT_PRIMARY,
+                font_family="Cinzel Decorative Bold",
+            ),
+            opacity=0.0,
+            offset=ft.Offset(x=0, y=0.12),
+            animate_opacity=ft.Animation(_d("title_intro"), ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_offset=ft.Animation(_d("title_intro"), ft.AnimationCurve.EASE_OUT_CUBIC),
+        )
+
+        # ── Sous-titre (Cinzel Decorative Regular) ───────────────────────────────
+        subtitle_size = max(11, int(S * 0.030))
         self.subtitle_box = ft.Container(
             content=ft.Text(
-                "Audio Intelligence Companion", size=14, weight=ft.FontWeight.W_500, color=ObsidianColors.PRIMARY
+                "Audio Intelligence Companion",
+                size=subtitle_size,
+                color=ObsidianColors.TEXT_MUTED,
+                font_family="Cinzel Decorative Regular",
             ),
             opacity=0.0,
             offset=ft.Offset(x=0, y=0.10),
-            animate_opacity=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_opacity=ft.Animation(_d("subtitle_intro"), ft.AnimationCurve.EASE_OUT_CUBIC),
+            animate_offset=ft.Animation(_d("subtitle_intro"), ft.AnimationCurve.EASE_OUT_CUBIC),
         )
+
+        # ── Degrade radial de fond ───────────────────────────────────────────────
+        self.bg_glow = ft.Container(
+            width=min(S * 1.6, w),
+            height=min(S * 1.6, h),
+            gradient=ft.RadialGradient(
+                center=ft.Alignment(0, 0),
+                radius=0.5,
+                colors=["#10F59E0B", "transparent"],
+                stops=[0.0, 1.0],
+            ),
+            opacity=0.0,
+            animate_opacity=ft.Animation(_d("logo_intro") + 300, ft.AnimationCurve.EASE_OUT_CUBIC),
+        )
+
+        # ── Layout global ────────────────────────────────────────────────────────
+        gap_logo_text = max(12, int(S * 0.035))
+
         super().__init__(
             content=ft.Stack(
                 [
                     ft.Container(content=self.bg_glow, alignment=ft.Alignment.CENTER, expand=True),
                     ft.Column(
                         [
-                            self.logo_box,
-                            ft.Container(height=18),
+                            self.logo_container,
+                            ft.Container(height=gap_logo_text),
                             self.title_box,
                             ft.Container(height=4),
                             self.subtitle_box,
@@ -277,233 +268,173 @@ class SplashV3Immersive(ft.Container):
             expand=True,
             bgcolor=ObsidianColors.BG_DARK,
             opacity=1.0,
-            animate_opacity=ft.Animation(400, ft.AnimationCurve.EASE_IN_OUT),
+            animate_opacity=ft.Animation(_d("fade_out"), ft.AnimationCurve.EASE_IN_OUT),
         )
 
     async def start_animation_async(self) -> None:
-        cb_called = False
+        """
+        Sequence d'animation identique a origin/main, 100% relative
+        en pourcentages de SPLASH_ANIMATION_CONFIG["total_ms"].
+        """
+        cfg = SPLASH_ANIMATION_CONFIG
+        t_current = 0.0
+
+        def _sec_at(pct: float) -> float:
+            return (pct * self.total_ms) / 1000.0
+
+        async def _wait_until(target_pct: float) -> None:
+            nonlocal t_current
+            if target_pct > t_current:
+                await asyncio.sleep(_sec_at(target_pct) - _sec_at(t_current))
+                t_current = target_pct
+
         try:
-            await asyncio.sleep(0.05)
+            # Phase 1 : Apparition fond ambiant & structure logo A
+            await _wait_until(cfg["logo_intro"][0])
             self.bg_glow.opacity = 1.0
+            self.logo_container.opacity = 1.0
+            self.logo_container.scale = ft.Scale(scale=1.0)
+            self.logo_container.offset = ft.Offset(x=0, y=0)
             _safe_update(self.bg_glow)
-            self.logo_box.opacity = 1.0
-            self.logo_box.scale = ft.Scale(1.0)
-            self.logo_box.offset = ft.Offset(0, 0)
-            _safe_update(self.logo_box)
-            await asyncio.sleep(0.35)
-            self.wave_container.opacity = 1.0
-            _safe_update(self.wave_container)
-            await asyncio.sleep(0.30)
-            self.logo_box.shadow = ft.BoxShadow(spread_radius=8, blur_radius=34, color="#48FE8F40")
-            self.bar1.height = 18
-            self.bar2.height = 30
-            self.bar3.height = 45
-            self.bar4.height = 30
-            self.bar5.height = 18
-            _safe_update(self.logo_box)
-            await asyncio.sleep(0.25)
+            _safe_update(self.logo_container)
+
+            # Phase 2 : Signal onde dormant
+            await _wait_until(cfg["wave_dim"][0])
+            self.wave_img.opacity = 0.22
+            _safe_update(self.wave_img)
+
+            # Phase 3 : Balayage du faisceau ambre L->R
+            await _wait_until(cfg["wave_sweep"][0])
+            self.wave_glow.opacity = 0.90
+            self.wave_glow.left = self._scan_left_start
+            _safe_update(self.wave_glow)
+
+            await asyncio.sleep(0.03)
+            self.wave_glow.left = self._scan_left_end
+            _safe_update(self.wave_glow)
+
+            # Phase 4 : Eveil complet de l'onde
+            await _wait_until(cfg["wave_alive"][0])
+            self.wave_img.opacity = 1.0
+            _safe_update(self.wave_img)
+
+            # Phase 5 : Impulsion halo ambre
+            await _wait_until(cfg["halo_pulse"][0])
+            self.logo_container.shadow = ft.BoxShadow(
+                spread_radius=8,
+                blur_radius=40,
+                color="#38F59E0B",
+                offset=ft.Offset(x=0, y=0),
+            )
+            _safe_update(self.logo_container)
+
+            # Disparition du scanner
+            await _wait_until(cfg["wave_sweep"][1])
+            self.wave_glow.opacity = 0.0
+            _safe_update(self.wave_glow)
+
+            # Attenuation douce du halo
+            await _wait_until(cfg["halo_pulse"][1])
+            self.logo_container.shadow = ft.BoxShadow(
+                spread_radius=2,
+                blur_radius=16,
+                color="#14F59E0B",
+                offset=ft.Offset(x=0, y=0),
+            )
+            _safe_update(self.logo_container)
+
+            # Phase 6 : Titre "AIC"
+            await _wait_until(cfg["title_intro"][0])
             self.title_box.opacity = 1.0
-            self.title_box.offset = ft.Offset(0, 0)
+            self.title_box.offset = ft.Offset(x=0, y=0)
             _safe_update(self.title_box)
-            await asyncio.sleep(0.15)
-            self.logo_box.shadow = ft.BoxShadow(spread_radius=3, blur_radius=18, color="#20FE8F40")
-            _safe_update(self.logo_box)
-            await asyncio.sleep(0.20)
+
+            # Phase 7 : Sous-titre
+            await _wait_until(cfg["subtitle_intro"][0])
             self.subtitle_box.opacity = 1.0
-            self.subtitle_box.offset = ft.Offset(0, 0)
+            self.subtitle_box.offset = ft.Offset(x=0, y=0)
             _safe_update(self.subtitle_box)
-            await asyncio.sleep(0.60)
+
+            # Phase 8 : Fondu de sortie vers l'UI principale
+            await _wait_until(cfg["fade_out"][0])
             self.opacity = 0.0
             _safe_update(self)
-            await asyncio.sleep(0.40)
+
+            await _wait_until(cfg["fade_out"][1])
+            await asyncio.sleep(0.05)
+
         except Exception:
             pass
         finally:
-            if self.on_complete_callback and not cb_called:
-                cb_called = True
+            if self.on_complete_callback:
                 self.on_complete_callback()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# VARIANTE C : SplashV3Fullscreen (Fullscreen maîtrisée sans carte, 2.8s)
+# VARIANTE COMPARAISON : Production locale actuelle (ui/components/splash_screen.py)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-class SplashV3Fullscreen(ft.Container):
-    """Variante C — V3 Fullscreen maîtrisée (logo adaptatif 170-240px, 2.8s)."""
+class SplashProductionLocal(ft.Container):
+    """
+    Proxy vers la production locale ui/components/splash_screen.SplashScreen.
+    Permet de comparer la production locale avec la reference origin/main.
+    """
 
-    LABEL = "Variante C — V3 Fullscreen (200px open)"
+    LABEL = "Production locale (branch dev, HEAD)"
 
     def __init__(self, page: ft.Page, on_complete: Optional[Callable[[], None]] = None):
-        self.on_complete_callback = on_complete
+        from ui.components.splash_screen import SplashScreen
 
-        w = (page.window.width or 900) if page.window else 900
-        h = (page.window.height or 700) if page.window else 700
-        logo_size = int(max(170, min(240, min(w, h) * 0.30)))
-
-        icon_src = _resolve_icon()
-        logo_image = _make_logo_image(icon_src, logo_size)
-
-        self.bar1 = ft.Container(width=5, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=3, opacity=0.4)
-        self.bar2 = ft.Container(width=5, height=24, bgcolor=ObsidianColors.PRIMARY, border_radius=3, opacity=0.7)
-        self.bar3 = ft.Container(width=5, height=36, bgcolor=ObsidianColors.PRIMARY, border_radius=3, opacity=0.9)
-        self.bar4 = ft.Container(width=5, height=52, bgcolor=ObsidianColors.PRIMARY, border_radius=3, opacity=1.0)
-        self.bar5 = ft.Container(width=5, height=36, bgcolor=ObsidianColors.PRIMARY, border_radius=3, opacity=0.9)
-        self.bar6 = ft.Container(width=5, height=24, bgcolor=ObsidianColors.PRIMARY, border_radius=3, opacity=0.7)
-        self.bar7 = ft.Container(width=5, height=14, bgcolor=ObsidianColors.PRIMARY, border_radius=3, opacity=0.4)
-
-        self.wave_container = ft.Row(
-            [self.bar1, self.bar2, self.bar3, self.bar4, self.bar5, self.bar6, self.bar7],
-            spacing=6,
-            alignment=ft.MainAxisAlignment.CENTER,
-            opacity=0.0,
-            animate_opacity=ft.Animation(350, ft.AnimationCurve.EASE_IN_OUT),
-        )
-
-        self.logo_halo = ft.Container(
-            content=logo_image,
-            width=logo_size,
-            height=logo_size,
-            alignment=ft.Alignment.CENTER,
-            scale=ft.Scale(scale=0.90),
-            opacity=0.0,
-            offset=ft.Offset(x=0, y=0.03),
-            animate_opacity=ft.Animation(500, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_scale=ft.Animation(600, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(500, ft.AnimationCurve.EASE_OUT_CUBIC),
-        )
-
-        self.bg_glow = ft.Container(
-            width=min(600, w),
-            height=min(600, h),
-            border_radius=9999,
-            bgcolor=ft.Colors.TRANSPARENT,
-            gradient=ft.RadialGradient(
-                center=ft.Alignment(0, 0),
-                radius=0.50,
-                colors=["rgba(254, 143, 64, 0.16)", "rgba(48, 196, 239, 0.06)", "rgba(15, 17, 23, 0.0)"],
-                stops=[0.0, 0.45, 1.0],
-            ),
-            opacity=0.0,
-            animate_opacity=ft.Animation(700, ft.AnimationCurve.EASE_OUT_CUBIC),
-        )
-
-        title_size = int(max(44, logo_size * 0.25))
-        self.title_box = ft.Container(
-            content=ft.Text("AIC", size=title_size, weight=ft.FontWeight.BOLD, color=ObsidianColors.TEXT_PRIMARY),
-            opacity=0.0,
-            offset=ft.Offset(x=0, y=0.15),
-            animate_opacity=ft.Animation(450, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(450, ft.AnimationCurve.EASE_OUT_CUBIC),
-        )
-
-        subtitle_size = int(max(13, logo_size * 0.075))
-        self.subtitle_box = ft.Container(
-            content=ft.Text(
-                "AUDIO INTELLIGENCE COMPANION",
-                size=subtitle_size,
-                weight=ft.FontWeight.W_500,
-                color=ObsidianColors.PRIMARY,
-            ),
-            opacity=0.0,
-            offset=ft.Offset(x=0, y=0.10),
-            animate_opacity=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
-            animate_offset=ft.Animation(400, ft.AnimationCurve.EASE_OUT_CUBIC),
-        )
-
-        gap = int(logo_size * 0.10)
+        self._inner = SplashScreen(page=page, on_complete=on_complete)
         super().__init__(
-            content=ft.Stack(
-                [
-                    ft.Container(content=self.bg_glow, alignment=ft.Alignment.CENTER, expand=True),
-                    ft.Column(
-                        [
-                            self.logo_halo,
-                            ft.Container(height=gap),
-                            self.wave_container,
-                            ft.Container(height=gap),
-                            self.title_box,
-                            ft.Container(height=6),
-                            self.subtitle_box,
-                        ],
-                        alignment=ft.MainAxisAlignment.CENTER,
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=0,
-                    ),
-                ],
-                alignment=ft.Alignment.CENTER,
-                expand=True,
-            ),
-            alignment=ft.Alignment.CENTER,
+            content=self._inner,
             expand=True,
             bgcolor=ObsidianColors.BG_DARK,
-            opacity=1.0,
-            animate_opacity=ft.Animation(450, ft.AnimationCurve.EASE_IN_OUT),
         )
 
     async def start_animation_async(self) -> None:
-        cb_called = False
-        try:
-            await asyncio.sleep(0.08)
-            self.bg_glow.opacity = 1.0
-            _safe_update(self.bg_glow)
-            self.logo_halo.opacity = 1.0
-            self.logo_halo.scale = ft.Scale(1.0)
-            self.logo_halo.offset = ft.Offset(0, 0)
-            _safe_update(self.logo_halo)
-
-            await asyncio.sleep(0.40)
-            self.wave_container.opacity = 1.0
-            _safe_update(self.wave_container)
-
-            await asyncio.sleep(0.35)
-            self.bar1.height = 20
-            self.bar2.height = 36
-            self.bar3.height = 54
-            self.bar4.height = 68
-            self.bar5.height = 54
-            self.bar6.height = 36
-            self.bar7.height = 20
-            _safe_update(self.wave_container)
-
-            await asyncio.sleep(0.30)
-            self.title_box.opacity = 1.0
-            self.title_box.offset = ft.Offset(0, 0)
-            _safe_update(self.title_box)
-
-            await asyncio.sleep(0.25)
-            self.subtitle_box.opacity = 1.0
-            self.subtitle_box.offset = ft.Offset(0, 0)
-            _safe_update(self.subtitle_box)
-
-            await asyncio.sleep(0.70)
-            self.opacity = 0.0
-            _safe_update(self)
-            await asyncio.sleep(0.45)
-        except Exception:
-            pass
-        finally:
-            if self.on_complete_callback and not cb_called:
-                cb_called = True
-                self.on_complete_callback()
+        await self._inner.start_animation_async()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# REGISTRE des variantes pour le laboratoire de preview
+# REGISTRE DES VARIANTES
 # ══════════════════════════════════════════════════════════════════════════════
 
 VARIANTS = {
-    "production": SplashProduction,
-    "v3current": SplashV3Current,
-    "v3immersive": SplashV3Immersive,
-    "v3fullscreen": SplashV3Fullscreen,
+    "origin_main": SplashOriginMain,
+    "production": SplashProductionLocal,
 }
 
-VARIANT_ORDER = ["production", "v3current", "v3immersive", "v3fullscreen"]
+VARIANT_ORDER = ["origin_main", "production"]
 
 VARIANT_LABELS = {
-    "production": "Production (V3.2 Clean & Paramétré)",
-    "v3current": "A — Baseline V3 (110px)",
-    "v3immersive": "B — V3 Immersive (140px)",
-    "v3fullscreen": "C — V3 Fullscreen (200px open)",
+    "origin_main": SplashOriginMain.LABEL,
+    "production": SplashProductionLocal.LABEL,
 }
+
+# Pour la compatibilite avec les anciens tests
+SPLASH_ANIMATION_DURATION_MS = SPLASH_ANIMATION_CONFIG["total_ms"]
+
+
+def calculate_target_responsive_dimensions(viewport_w: float, viewport_h: float) -> dict:
+    """Calcule les dimensions du logo selon la formule origin/main."""
+    vw = max(320.0, float(viewport_w or 900.0))
+    vh = max(320.0, float(viewport_h or 700.0))
+    min_dim = min(vw, vh)
+    logo_size = int(max(300, min(560, min_dim * 0.65)))
+    title_size = max(36, int(logo_size * 0.095))
+    subtitle_size = max(11, int(logo_size * 0.030))
+    gap_logo_text = max(12, int(logo_size * 0.035))
+    bg_glow_size = int(min(logo_size * 1.6, min_dim))
+    return {
+        "logo_size": logo_size,
+        "title_size": title_size,
+        "subtitle_size": subtitle_size,
+        "gap_logo_text": gap_logo_text,
+        "bg_glow_size": bg_glow_size,
+    }
+
+
+# Alias pour les tests existants
+SplashV3Target = SplashOriginMain

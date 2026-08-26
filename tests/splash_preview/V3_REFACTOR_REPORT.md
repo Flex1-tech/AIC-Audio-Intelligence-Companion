@@ -1,7 +1,7 @@
 # Rapport Final Factuel — Nettoyage, Responsive & Paramétrage Splash V3
 
-> **Objectif** : Refactorisation propre, responsivité harmonieuse, paramétrage de la durée globale et couverture de tests unitaires complets **SANS aucune modification du design ni de l'animation validés**.  
-> **Source de vérité unique production** : `ui/components/splash_screen.py`  
+> **Objectif** : Refactorisation propre, responsivité harmonieuse, paramétrage de la durée globale et couverture de tests unitaires complets **SANS aucune modification du design ni de l'animation validés**.
+> **Source de vérité unique production** : `ui/components/splash_screen.py`
 > **Laboratoire Flet Web** : `tests/splash_preview/main.py` (port 8570)
 
 ---
