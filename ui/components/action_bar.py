@@ -85,14 +85,14 @@ class ActionBar(ft.Container):
                             ft.Container(
                                 width=1,
                                 height=20,
-                                bgcolor=ft.Colors.OUTLINE,  # = BORDER_DARK via ColorScheme
+                                bgcolor=ft.Colors.OUTLINE,
                             ),
                             ft.Row(
                                 [
                                     ft.Text(
                                         "Balance MMR :",
                                         size=12,
-                                        color=ObsidianColors.TEXT_MUTED,  # 3rd-level hierarchy — explicit
+                                        color=ft.Colors.ON_SURFACE_VARIANT,
                                     ),
                                     self.lambda_slider,
                                     self.lambda_text,

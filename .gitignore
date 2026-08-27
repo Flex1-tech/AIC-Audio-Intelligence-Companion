@@ -31,7 +31,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
+scratch/
 # ── Données locales (non versionnées) ────────────────────────────────────────
 MusicRecommenderDB/
 playlist.m3u8

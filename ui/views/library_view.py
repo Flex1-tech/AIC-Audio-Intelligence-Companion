@@ -60,7 +60,7 @@ class LibraryView(ft.Container):
         self._loader_text = ft.Text(
             "Analyse en cours…",
             size=12,
-            color=ObsidianColors.TEXT_MUTED,
+            color=ft.Colors.ON_SURFACE_VARIANT,
         )
         self._loader_ring = ft.ProgressRing(
             width=20,
@@ -88,12 +88,11 @@ class LibraryView(ft.Container):
                         "Bibliothèque Musicale AIC",
                         size=15,
                         weight=ft.FontWeight.BOLD,
-                        # no explicit color — inherits on_surface
                     ),
                     ft.Text(
                         r"Sélectionnez des fichiers audio ou scannez un dossier (D:\Musique, E:\FLAC…)",
                         size=12,
-                        color=ObsidianColors.TEXT_MUTED,  # 3rd-level hierarchy — explicit
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                         text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Container(height=4),
@@ -109,16 +108,15 @@ class LibraryView(ft.Container):
             ),
             padding=Spacing.LG,
             border_radius=Radii.LG,
-            bgcolor=ft.Colors.SURFACE_CONTAINER,  # = SURFACE_DARK via ColorScheme
-            border=ft.Border.all(1, ft.Colors.OUTLINE),  # = BORDER_DARK via ColorScheme
+            bgcolor=ft.Colors.SURFACE_CONTAINER,
+            border=ft.Border.all(1, ft.Colors.OUTLINE),
         )
 
         # ── Barre de Recherche et Filtres ────────────────────────────────────
         self.search_entry = ft.TextField(
             hint_text="Rechercher par nom de fichier...",
             prefix_icon=ft.Icons.SEARCH,
-            # no explicit border_color — inherits outline from theme
-            focused_border_color=ObsidianColors.PRIMARY,  # brand focus indicator — explicit
+            focused_border_color=ObsidianColors.PRIMARY,
             text_size=13,
             height=40,
             content_padding=10,
@@ -130,6 +128,7 @@ class LibraryView(ft.Container):
             label=ft.Text("Likés uniquement", size=12),
             leading=ft.Icon(ft.Icons.FAVORITE, size=14, color=ObsidianColors.HEART_RED),
             selected=app_state.session.filter_liked_only,
+            selected_color=ObsidianColors.PRIMARY_GLOW,
             on_select=self._handle_filter_toggle,
         )
 
@@ -147,18 +146,18 @@ class LibraryView(ft.Container):
                     ft.Icon(
                         ft.Icons.MUSIC_OFF_OUTLINED,
                         size=48,
-                        color=ObsidianColors.TEXT_DISABLED,  # disabled state — explicit
+                        color=ObsidianColors.TEXT_DISABLED,
                     ),
                     ft.Text(
                         "Aucun morceau dans la bibliothèque",
                         size=16,
                         weight=ft.FontWeight.W_600,
-                        color=ft.Colors.ON_SURFACE_VARIANT,  # secondary text — via ColorScheme
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                     ft.Text(
                         "Importez des fichiers ou scannez un dossier pour alimenter l'IA.",
                         size=13,
-                        color=ObsidianColors.TEXT_MUTED,  # 3rd-level hierarchy — explicit
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,

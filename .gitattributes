@@ -1,0 +1,8 @@
+# Normalisation des fins de ligne multiplateforme AIC (Windows, Linux, macOS)
+* text=auto eol=lf
+*.py text eol=lf
+*.svg text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf

@@ -20,7 +20,7 @@ class HeaderBar(ft.Container):
     def __init__(self, on_theme_toggle=None):
         self.on_theme_toggle = on_theme_toggle
 
-        # Badges d'état IA — colours are intentional brand/semantic choices
+        # Badges d'état IA — M3 adaptive containers + Cyan (#30C4EF) for Tech/DB
         self.onnx_badge = ft.Container(
             content=ft.Row(
                 [
@@ -29,7 +29,7 @@ class HeaderBar(ft.Container):
                         "Musicnn ONNX",
                         size=12,
                         weight=ft.FontWeight.W_500,
-                        color=ObsidianColors.TEXT_PRIMARY,  # explicit light text for dark SUCCESS_BG
+                        color=ft.Colors.ON_TERTIARY_CONTAINER,
                     ),
                 ],
                 spacing=6,
@@ -37,20 +37,20 @@ class HeaderBar(ft.Container):
             ),
             padding=ft.Padding.symmetric(horizontal=10, vertical=4),
             border_radius=Radii.FULL,
-            bgcolor=ObsidianColors.SUCCESS_BG,  # brand badge bg — explicit
+            bgcolor=ft.Colors.TERTIARY_CONTAINER,
         )
 
         self.db_text = ft.Text(
             "LanceDB Active",
             size=12,
             weight=ft.FontWeight.W_500,
-            color=ObsidianColors.TEXT_PRIMARY,  # explicit light text for dark PRIMARY_GLOW bg
+            color=ft.Colors.ON_SECONDARY_CONTAINER,
         )
 
         self.db_badge = ft.Container(
             content=ft.Row(
                 [
-                    ft.Icon(ft.Icons.STORAGE, size=14, color=ObsidianColors.PRIMARY),
+                    ft.Icon(ft.Icons.STORAGE, size=14, color=ObsidianColors.ACCENT_CYAN),
                     self.db_text,
                 ],
                 spacing=6,
@@ -58,7 +58,7 @@ class HeaderBar(ft.Container):
             ),
             padding=ft.Padding.symmetric(horizontal=10, vertical=4),
             border_radius=Radii.FULL,
-            bgcolor=ObsidianColors.PRIMARY_GLOW,  # brand badge bg — explicit
+            bgcolor=ft.Colors.SECONDARY_CONTAINER,
         )
 
         super().__init__(
@@ -71,7 +71,7 @@ class HeaderBar(ft.Container):
                                 content=ft.Icon(
                                     ft.Icons.GRAPHIC_EQ,
                                     size=22,
-                                    color=ObsidianColors.PRIMARY,
+                                    color=ObsidianColors.ACCENT_CYAN,  # Brand Cyan for AI structure logo
                                 ),
                                 padding=8,
                                 border_radius=Radii.SM,
@@ -83,13 +83,12 @@ class HeaderBar(ft.Container):
                                         "AIC",
                                         size=16,
                                         font_family="Cinzel Decorative Bold",
-                                        # no explicit color — inherits on_surface
                                     ),
                                     ft.Text(
                                         "Audio Intelligence Companion",
                                         size=11,
                                         font_family="Cinzel Decorative Regular",
-                                        color=ObsidianColors.TEXT_MUTED,  # 3rd-level hierarchy — explicit
+                                        color=ft.Colors.ON_SURFACE_VARIANT,
                                     ),
                                 ],
                                 spacing=0,

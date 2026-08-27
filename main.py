@@ -65,12 +65,18 @@ def main(page: ft.Page) -> None:
     """Initialise la page Flet, les services et les événements UI."""
     try:
         page.title = "AIC — Audio Intelligence Companion"
+        page.bgcolor = ObsidianColors.BG_DARK  # Dark background during splash
         page.theme_mode = ft.ThemeMode.DARK
 
-        page.fonts = {
-            "Cinzel Decorative Bold": "fonts/CinzelDecorative-Bold.ttf",
-            "Cinzel Decorative Regular": "fonts/CinzelDecorative-Regular.ttf",
-        }
+        font_bold = get_asset_path("fonts/CinzelDecorative-Bold.ttf")
+        font_regular = get_asset_path("fonts/CinzelDecorative-Regular.ttf")
+        fonts_dict = {}
+        if font_bold and font_bold.exists():
+            fonts_dict["Cinzel Decorative Bold"] = str(font_bold)
+        if font_regular and font_regular.exists():
+            fonts_dict["Cinzel Decorative Regular"] = str(font_regular)
+        if fonts_dict:
+            page.fonts = fonts_dict
 
         icon_path = get_asset_path("icon.ico") or get_asset_path("icon.png")
         if icon_path and icon_path.exists():
@@ -79,7 +85,6 @@ def main(page: ft.Page) -> None:
             except Exception as e:
                 logger.warning(f"Impossible de définir l'icône de fenêtre : {e}")
 
-        page.update()
         page.theme = get_light_theme()
         page.dark_theme = get_dark_theme()
         page.window.width = app_state.session.window_width
@@ -204,7 +209,14 @@ def main(page: ft.Page) -> None:
             _show_toast("Bibliothèque réinitialisée.")
 
         def handle_theme_toggle(_e) -> None:
-            page.theme_mode = ft.ThemeMode.LIGHT if page.theme_mode == ft.ThemeMode.DARK else ft.ThemeMode.DARK
+            current_mode = page.theme_mode
+            if current_mode == ft.ThemeMode.DARK:
+                new_mode = ft.ThemeMode.LIGHT
+            else:
+                new_mode = ft.ThemeMode.DARK
+            page.theme_mode = new_mode
+            page.bgcolor = ft.Colors.SURFACE
+            app_state.session.theme_mode = "light" if new_mode == ft.ThemeMode.LIGHT else "dark"
             page.update()
 
         async def handle_pick_export_folder() -> None:
@@ -312,10 +324,13 @@ def main(page: ft.Page) -> None:
             on_pick_export_folder=handle_pick_export_folder,
         )
 
+        splash_active = True
+
         def on_state_change() -> None:
             try:
-                layout.update_all()
-                page.update()
+                if not splash_active:
+                    layout.update_all()
+                    page.update()
             except Exception:
                 pass
 
@@ -323,12 +338,20 @@ def main(page: ft.Page) -> None:
 
         # ── Intégration du Splash Screen & Main Layout ────────────────────────
         def finish_splash() -> None:
+            nonlocal splash_active
+            logger.info("SPLASH: FINISH")
             try:
+                splash_active = False
                 if splash_screen in root_stack.controls:
                     root_stack.controls.remove(splash_screen)
-                    root_stack.update()
-            except Exception:
-                pass
+                    logger.info("SPLASH: REMOVED")
+                page.theme_mode = ft.ThemeMode.SYSTEM
+                page.bgcolor = ft.Colors.SURFACE
+                root_stack.update()
+                layout.update_all()
+                page.update()
+            except Exception as e:
+                logger.error(f"Erreur lors du retrait du Splash Screen : {e}", exc_info=True)
 
         splash_screen = SplashScreen(page=page, on_complete=finish_splash)
 
@@ -341,13 +364,20 @@ def main(page: ft.Page) -> None:
         )
 
         page.add(root_stack)
+        logger.info("SPLASH: ATTACHED")
 
         async def run_splash_task() -> None:
             try:
+                try:
+                    if page.window:
+                        await page.window.to_front()
+                except Exception as focus_err:
+                    logger.debug(f"window.to_front() non disponible sur cette plateforme : {focus_err}")
                 await splash_screen.start_animation_async()
             except Exception as splash_err:
                 write_crash_log(type(splash_err), splash_err, splash_err.__traceback__, origin="SPLASH_ANIMATION_ERROR")
                 logger.error(f"Erreur animation Splash Screen : {splash_err}", exc_info=True)
+                finish_splash()
 
         page.run_task(run_splash_task)
 

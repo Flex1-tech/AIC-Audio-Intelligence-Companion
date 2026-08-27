@@ -53,7 +53,7 @@ class SettingsView(ft.Container):
                     ft.Text(
                         "Configurez les dossiers de sortie, les intégrations externes et les paramètres applicatifs.",
                         size=13,
-                        color=ObsidianColors.TEXT_MUTED,
+                        color=ft.Colors.ON_SURFACE_VARIANT,
                     ),
                     ft.Container(height=15),
                     # Export Folder Setting Card
@@ -68,7 +68,7 @@ class SettingsView(ft.Container):
                                 ft.Text(
                                     "Emplacement où seront enregistrées vos playlists .m3u8 générées par l'IA.",
                                     size=12,
-                                    color=ObsidianColors.TEXT_MUTED,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
                                 ft.Container(height=6),
                                 ft.Row(
@@ -99,7 +99,7 @@ class SettingsView(ft.Container):
                                 ft.Text(
                                     "Chemin d'accès personnalisé vers l'exécutable VLC sur votre ordinateur.",
                                     size=12,
-                                    color=ObsidianColors.TEXT_MUTED,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
                                 ft.Container(height=6),
                                 ft.Row(
@@ -123,12 +123,12 @@ class SettingsView(ft.Container):
                                 ft.Text(
                                     "À propos d'AIC (Audio Intelligence Companion)",
                                     size=14,
-                                    font_family="Cinzel Decorative Regular",
+                                    weight=ft.FontWeight.W_600,
                                 ),
                                 ft.Text(
                                     "Version 2.0 • Propulsé par Flet, ONNX Runtime, LanceDB et BLAKE3.",
                                     size=12,
-                                    color=ObsidianColors.TEXT_MUTED,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
                                 ),
                                 ft.Text(
                                     "Mode de fonctionnement : 100% Local & Souverain.",

@@ -5,21 +5,9 @@ Laboratoire de comparaison et de validation du Splash Screen AIC.
 
 SOURCE DE VERITE : origin/main (SHA af092ec63b397a3edf43165e49627c4d6b282fa9)
 
-Architecture de reference :
-- Logo responsive : 65% de la plus petite dimension (clamp 300-560 px).
-- SVG divise en 2 couches animees independamment :
-    * layer_letterform.svg  -- structure "A" (3 paths Cyan #30C4EF)
-    * layer_wave.svg        -- onde sonore (70 paths Ambre #FE8F40)
-- Scanner ambiant ambre horizontal L->R (wave_glow).
-- Typographie de branding : Cinzel Decorative (embarquee dans assets/fonts/).
-- Timing centralise par pourcentage (SPLASH_ANIMATION_CONFIG).
-- Compatible Flet 0.86.4.
-
-NOTE WEB :
-En mode Flet Web (FastAPI), les chemins absolu Windows ne sont pas resolus
-par le navigateur. Les assets sont passes sous forme de CHEMINS RELATIFS
-servis directement par le serveur HTTP :
-    "layer_letterform.svg" -> http://localhost:8570/layer_letterform.svg
+Variantes disponibles :
+1. SplashOriginMain : Référence origin/main (Scanner ambre).
+2. SplashProductionLocal : Proxy vers la production actuelle ui/components/splash_screen.py.
 """
 
 import asyncio
@@ -62,17 +50,10 @@ def _wave_rect(logo_size: int) -> tuple:
 
 
 def _resolve_web(filename: str) -> str:
-    """
-    Resout l'asset pour Flet Web : retourne le nom relatif du fichier
-    si l'asset existe dans le dossier assets/ du projet.
-    En mode Web, Flet sert assets_dir comme racine HTTP, donc "layer_letterform.svg"
-    est accessible sous http://localhost:8570/layer_letterform.svg.
-    En mode Desktop, get_asset_path() retourne le chemin absolu.
-    """
     p = get_asset_path(filename)
     if p and p.exists():
-        return filename  # chemin relatif pour Flet Web
-    return filename  # fallback: meme nom relatif
+        return filename
+    return filename
 
 
 def _dur(pct_range: tuple, total_ms: int) -> int:
@@ -88,31 +69,16 @@ def _safe_update(control: ft.Control) -> None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# VARIANTE PRINCIPALE : SplashOriginMain
-# Reproduction fidele de origin/main avec les nouveaux logos transparents
-# et les chemins relatifs Flet Web.
+# VARIANTE 1 : SplashOriginMain (Scanner Ambre Original)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
 class SplashOriginMain(ft.Container):
     """
     Reproduction fidele de origin/main:ui/components/splash_screen.py.
-
-    Seules differences par rapport a l'original :
-    - Chemins des assets SVG relatifs (au lieu d'absolus str(Path)) pour Flet Web.
-    - Polices declarees via page.fonts dans main.py.
-    - Les logos sont desormais transparents (fond noir retire).
-
-    Tout le reste est identique :
-    - Sizing : clamp(300, min(w,h)*0.65, 560) px.
-    - Timing : 5000 ms, 100% relatif via SPLASH_ANIMATION_CONFIG.
-    - Scanner horizontal L->R (wave_glow LinearGradient).
-    - Halo ambre BoxShadow pulsant.
-    - Cinzel Decorative Bold / Regular.
-    - Fond Obsidian BG_DARK (#0F1117).
     """
 
-    LABEL = "★ Reference origin/main (nouveaux logos transparents)"
+    LABEL = "★ Reference origin/main (Scanner Ambre)"
 
     def __init__(self, page: ft.Page, on_complete: Optional[Callable[[], None]] = None):
         self.on_complete_callback = on_complete
@@ -122,18 +88,15 @@ class SplashOriginMain(ft.Container):
         def _d(k):
             return _dur(cfg[k], self.total_ms)
 
-        # ── Taille du logo (identique a origin/main : 65% de min_dim, clamp 300-560) ──
         w = (page.window.width or 900) if page.window else 900
         h = (page.window.height or 700) if page.window else 700
         self.logo_size = int(max(300, min(560, min(w, h) * 0.65)))
         S = self.logo_size
 
-        # ── Resolution des assets SVG (chemin relatif pour Flet Web) ────────────
         lf_src = _resolve_web("layer_letterform.svg")
         wv_src = _resolve_web("layer_wave.svg")
         icon_src = _resolve_web("icon.svg")
 
-        # ── Couche 1 : Letterform (#30C4EF – structure "A") ─────────────────────
         self.letterform_img = ft.Image(
             src=lf_src if lf_src else icon_src,
             width=S,
@@ -141,7 +104,6 @@ class SplashOriginMain(ft.Container):
             fit=ft.BoxFit.CONTAIN,
         )
 
-        # ── Couche 2 : Wave / Onde IA (#FE8F40) ─────────────────────────────────
         self.wave_img = ft.Image(
             src=wv_src if wv_src else "",
             width=S,
@@ -151,7 +113,6 @@ class SplashOriginMain(ft.Container):
             animate_opacity=ft.Animation(_d("wave_alive"), ft.AnimationCurve.EASE_OUT_CUBIC),
         )
 
-        # ── Couche 3 : Scanner ambiant ambre horizontal L->R ────────────────────
         wave_left, wave_top, wave_w, wave_h = _wave_rect(S)
         beam_w = int(wave_w * 0.32)
         beam_h = int(wave_h * 2.6)
@@ -176,7 +137,6 @@ class SplashOriginMain(ft.Container):
             animate_position=ft.Animation(_d("wave_sweep"), ft.AnimationCurve.EASE_IN_OUT),
         )
 
-        # ── Logo Stack (letterform + wave + scanner) ────────────────────────────
         self.logo_stack = ft.Stack(
             [self.letterform_img, self.wave_img, self.wave_glow],
             width=S,
@@ -197,7 +157,6 @@ class SplashOriginMain(ft.Container):
             shadow=None,
         )
 
-        # ── Titre "AIC" (Cinzel Decorative Bold) ────────────────────────────────
         title_size = max(36, int(S * 0.095))
         self.title_box = ft.Container(
             content=ft.Text(
@@ -212,7 +171,6 @@ class SplashOriginMain(ft.Container):
             animate_offset=ft.Animation(_d("title_intro"), ft.AnimationCurve.EASE_OUT_CUBIC),
         )
 
-        # ── Sous-titre (Cinzel Decorative Regular) ───────────────────────────────
         subtitle_size = max(11, int(S * 0.030))
         self.subtitle_box = ft.Container(
             content=ft.Text(
@@ -227,7 +185,6 @@ class SplashOriginMain(ft.Container):
             animate_offset=ft.Animation(_d("subtitle_intro"), ft.AnimationCurve.EASE_OUT_CUBIC),
         )
 
-        # ── Degrade radial de fond ───────────────────────────────────────────────
         self.bg_glow = ft.Container(
             width=min(S * 1.6, w),
             height=min(S * 1.6, h),
@@ -241,7 +198,6 @@ class SplashOriginMain(ft.Container):
             animate_opacity=ft.Animation(_d("logo_intro") + 300, ft.AnimationCurve.EASE_OUT_CUBIC),
         )
 
-        # ── Layout global ────────────────────────────────────────────────────────
         gap_logo_text = max(12, int(S * 0.035))
 
         super().__init__(
@@ -272,10 +228,6 @@ class SplashOriginMain(ft.Container):
         )
 
     async def start_animation_async(self) -> None:
-        """
-        Sequence d'animation identique a origin/main, 100% relative
-        en pourcentages de SPLASH_ANIMATION_CONFIG["total_ms"].
-        """
         cfg = SPLASH_ANIMATION_CONFIG
         t_current = 0.0
 
@@ -289,7 +241,6 @@ class SplashOriginMain(ft.Container):
                 t_current = target_pct
 
         try:
-            # Phase 1 : Apparition fond ambiant & structure logo A
             await _wait_until(cfg["logo_intro"][0])
             self.bg_glow.opacity = 1.0
             self.logo_container.opacity = 1.0
@@ -298,12 +249,10 @@ class SplashOriginMain(ft.Container):
             _safe_update(self.bg_glow)
             _safe_update(self.logo_container)
 
-            # Phase 2 : Signal onde dormant
             await _wait_until(cfg["wave_dim"][0])
             self.wave_img.opacity = 0.22
             _safe_update(self.wave_img)
 
-            # Phase 3 : Balayage du faisceau ambre L->R
             await _wait_until(cfg["wave_sweep"][0])
             self.wave_glow.opacity = 0.90
             self.wave_glow.left = self._scan_left_start
@@ -313,12 +262,10 @@ class SplashOriginMain(ft.Container):
             self.wave_glow.left = self._scan_left_end
             _safe_update(self.wave_glow)
 
-            # Phase 4 : Eveil complet de l'onde
             await _wait_until(cfg["wave_alive"][0])
             self.wave_img.opacity = 1.0
             _safe_update(self.wave_img)
 
-            # Phase 5 : Impulsion halo ambre
             await _wait_until(cfg["halo_pulse"][0])
             self.logo_container.shadow = ft.BoxShadow(
                 spread_radius=8,
@@ -328,12 +275,10 @@ class SplashOriginMain(ft.Container):
             )
             _safe_update(self.logo_container)
 
-            # Disparition du scanner
             await _wait_until(cfg["wave_sweep"][1])
             self.wave_glow.opacity = 0.0
             _safe_update(self.wave_glow)
 
-            # Attenuation douce du halo
             await _wait_until(cfg["halo_pulse"][1])
             self.logo_container.shadow = ft.BoxShadow(
                 spread_radius=2,
@@ -343,19 +288,16 @@ class SplashOriginMain(ft.Container):
             )
             _safe_update(self.logo_container)
 
-            # Phase 6 : Titre "AIC"
             await _wait_until(cfg["title_intro"][0])
             self.title_box.opacity = 1.0
             self.title_box.offset = ft.Offset(x=0, y=0)
             _safe_update(self.title_box)
 
-            # Phase 7 : Sous-titre
             await _wait_until(cfg["subtitle_intro"][0])
             self.subtitle_box.opacity = 1.0
             self.subtitle_box.offset = ft.Offset(x=0, y=0)
             _safe_update(self.subtitle_box)
 
-            # Phase 8 : Fondu de sortie vers l'UI principale
             await _wait_until(cfg["fade_out"][0])
             self.opacity = 0.0
             _safe_update(self)
@@ -371,14 +313,13 @@ class SplashOriginMain(ft.Container):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# VARIANTE COMPARAISON : Production locale actuelle (ui/components/splash_screen.py)
+# VARIANTE 2 : Production locale (ui/components/splash_screen.SplashScreen)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
 class SplashProductionLocal(ft.Container):
     """
     Proxy vers la production locale ui/components/splash_screen.SplashScreen.
-    Permet de comparer la production locale avec la reference origin/main.
     """
 
     LABEL = "Production locale (branch dev, HEAD)"
@@ -413,12 +354,10 @@ VARIANT_LABELS = {
     "production": SplashProductionLocal.LABEL,
 }
 
-# Pour la compatibilite avec les anciens tests
 SPLASH_ANIMATION_DURATION_MS = SPLASH_ANIMATION_CONFIG["total_ms"]
 
 
 def calculate_target_responsive_dimensions(viewport_w: float, viewport_h: float) -> dict:
-    """Calcule les dimensions du logo selon la formule origin/main."""
     vw = max(320.0, float(viewport_w or 900.0))
     vh = max(320.0, float(viewport_h or 700.0))
     min_dim = min(vw, vh)
@@ -436,5 +375,4 @@ def calculate_target_responsive_dimensions(viewport_w: float, viewport_h: float)
     }
 
 
-# Alias pour les tests existants
 SplashV3Target = SplashOriginMain
