@@ -1,31 +1,21 @@
 ---
 # ═══════════════════════════════════════════════════════════════════════════════
-#  AIC — Desktop Builds (Windows · Linux · macOS)
+#  AIC — Desktop Builds & Distribution Pipeline (Windows · Linux · macOS)
 #  Référence Flet 0.86 : https://docs.flet.dev/publish
 # ═══════════════════════════════════════════════════════════════════════════════
 #
 #  DÉCLENCHEURS
-#  ┌─ push sur main            → build complet des 3 plateformes
-#  ├─ push d'un tag v*         → build + GitHub Release automatique
+#  ┌─ push sur main            → CI build complet des 3 plateformes
+#  ├─ push d'un tag v*         → CI build + Packaging natif + GitHub Release
 #  └─ workflow_dispatch        → déclenchement manuel
 #
-#  GESTIONNAIRE DE PAQUETS
-#  uv (astral-sh/setup-uv@v6) — source de vérité : pyproject.toml + uv.lock
-#  • `uv sync`         installe les dépendances de production verrouillées
-#  • `uv run flet ...` exécute flet dans l'environnement géré par uv
-#  Avantage : builds reproductibles garantis par uv.lock committé dans le repo.
-#
-#  ADAPTATIONS PAR RAPPORT AU TEMPLATE
-#  1. Seules les plateformes desktop (Windows, Linux, macOS) sont conservées.
-#     AIC est une app audio locale — mobile/web ne sont pas pertinents.
-#  2. `uv sync` remplace `pip install -r requirements.txt`.
-#  3. `uv run flet build` préfixe toutes les commandes flet.
-#  4. `actions/upload-artifact@v4` (v5 n'existe pas en stable).
-#  5. `macos-latest` (ARM/M1) + `--arch arm64` pour compatibilité onnxruntime.
-#  6. Timeout de 45 min par job pour éviter les runners bloqués.
+#  PACKAGES PUBLIÉS SUR TAG v*
+#  • Windows : AIC-Setup-vX.Y.Z.exe (Inno Setup) + AIC-Portable-vX.Y.Z.zip
+#  • Linux   : AIC-vX.Y.Z.AppImage (appimagetool)
+#  • macOS   : AIC-vX.Y.Z.dmg (create-dmg, Apple Silicon arm64)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-name: "AIC — Desktop Builds"
+name: "AIC — Desktop Builds & Distribution"
 
 on:
   push:
@@ -36,9 +26,9 @@ on:
   workflow_dispatch:
 
 env:
-  PYTHONUTF8: 1              # Encodage UTF-8 forcé
-  FLET_CLI_NO_RICH_OUTPUT: 1 # Logs bruts sans ANSI dans la CI
-  UV_PYTHON: "3.12"          # Version Python gérée par uv
+  PYTHONUTF8: 1
+  FLET_CLI_NO_RICH_OUTPUT: 1
+  UV_PYTHON: "3.12"
 
 jobs:
   build:
@@ -71,14 +61,10 @@ jobs:
     steps:
 
       # ── 1. Checkout ──────────────────────────────────────────────────────────
-      - name: "Checkout"
+      - name: "Checkout repository"
         uses: actions/checkout@v4
 
-      # ── 2. uv ────────────────────────────────────────────────────────────────
-      # setup-uv gère son propre cache (~/.cache/uv) via enable-cache.
-      # cache-dependency-glob : clé invalidée si uv.lock OU pyproject.toml change.
-      # Si uv.lock n'existe pas encore (premier push), uv résout depuis pyproject.toml
-      # et le workflow lock-update.yml doit être lancé pour le générer et le committer.
+      # ── 2. Setup uv ────────────────────────────────────────────────────────
       - name: "Setup uv"
         uses: astral-sh/setup-uv@v6
         with:
@@ -88,7 +74,6 @@ jobs:
             pyproject.toml
 
       # ── 3. Dépendances système Linux ─────────────────────────────────────────
-      # GTK3 + GStreamer + Clang/Ninja requis par Flutter sur ubuntu-22.04.
       - name: "Linux system dependencies"
         if: matrix.needs_linux_deps
         run: |
@@ -117,8 +102,6 @@ jobs:
         shell: bash
 
       # ── 4. Sync dépendances ───────────────────────────────────────────────────
-      # `uv sync` lit pyproject.toml + uv.lock et installe exactement les versions
-      # verrouillées. Le groupe "dev" inclut flet[build] (CLI Flutter/Dart).
       - name: "uv sync (with dev group)"
         run: uv sync --group dev
         shell: bash
@@ -128,7 +111,25 @@ jobs:
         run: uv run flet --version
         shell: bash
 
-      # ── 6. Pre-Build Native & Hidden Resources Audit ─────────────────────
+      # ── 6. Vérification de cohérence de version (Tag vs pyproject.toml) ──────
+      - name: "Validate version consistency (Release Tag vs pyproject.toml)"
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          PYPROJECT_VERSION=$(grep -E '^version[[:space:]]*=' pyproject.toml | head -n1 | sed -E 's/version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/')
+
+          echo "=== VERSION CONSISTENCY CHECK ==="
+          echo "Git Tag Version:       ${TAG_VERSION}"
+          echo "pyproject.toml Version: ${PYPROJECT_VERSION}"
+
+          if [ "${TAG_VERSION}" != "${PYPROJECT_VERSION}" ]; then
+            echo "::error::VERSION MISMATCH DETECTED! Tag version (v${TAG_VERSION}) does not match pyproject.toml version (${PYPROJECT_VERSION})."
+            exit 1
+          fi
+          echo "SUCCESS: Version consistency check passed (v${TAG_VERSION})."
+
+      # ── 7. Pre-Build Native & Hidden Resources Audit (Windows) ─────────────
       - name: "Pre-Build Native & Hidden Resources Audit"
         if: matrix.platform == 'windows'
         shell: pwsh
@@ -148,8 +149,9 @@ jobs:
             Write-Host "  - $($d.FullName)"
           }
 
-      # ── 7. Build ─────────────────────────────────────────────────────────────
+      # ── 8. Build ─────────────────────────────────────────────────────────────
       - name: "flet build ${{ matrix.platform }}"
+        id: flet_build
         run: |
           uv run flet build ${{ matrix.platform }} \
             ${{ matrix.extra_args }} \
@@ -161,7 +163,7 @@ jobs:
         env:
           FLET_APP_NAME: "AIC"
 
-      # ── 8. Embedded Bundle Hidden Native Resources Injection & Audit ─────
+      # ── 9. Embedded Bundle Hidden Native Resources Injection & Audit (Windows) ──
       - name: "Embedded Bundle Hidden Native Resources Injection & Audit"
         if: matrix.platform == 'windows'
         shell: pwsh
@@ -176,7 +178,6 @@ jobs:
 
           Write-Host "=== POST-BUILD DYNAMIC EMBEDDED RUNTIME SEARCH ==="
 
-          # Locate ALL site-packages directories under build\windows dynamically
           $target_site_packages = Get-ChildItem -Path $build_folder -Recurse -Directory -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -eq "site-packages" } |
             Select-Object -ExpandProperty FullName -Unique
@@ -233,7 +234,6 @@ jobs:
             exit 1
           }
 
-          # Audit executable presence explicitly
           $exe = "build\windows\AIC.exe"
           if (!(Test-Path $exe)) {
             $exe_candidates = @("build\windows\AIC.exe", "build\windows\x64\runner\Release\AIC.exe")
@@ -247,7 +247,6 @@ jobs:
           }
           Write-Host "Executable verified: $exe = FOUND"
 
-          # Audit native binaries (.dll & .pyd)
           $missing = @()
           $venv_dlls = Get-ChildItem -Path ".venv\Lib\site-packages" -Recurse -Include "*.dll", "*.pyd"
           foreach ($f in $venv_dlls) {
@@ -268,22 +267,282 @@ jobs:
             Write-Host "SUCCESS: Packaging Integrity Audit PASSED. All native binaries are present in embedded runtime bundle."
           }
 
-      # ── 7. Upload artifact ───────────────────────────────────────────────────
-      # Nom : aic-<platform>-<sha court> pour traçabilité.
-      # Rétention 30 jours (économie vs défaut 90 jours GitHub).
-      - name: "Upload ${{ matrix.platform }} artifact"
+      # ── 10. Startup Test & Crash Log Capture (Windows) ─────────────────────
+      - name: "Run AIC.exe startup test & capture logs"
+        if: matrix.platform == 'windows'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $exe = "build\windows\AIC.exe"
+          if (!(Test-Path $exe)) {
+            $exe = "build\windows\x64\runner\Release\AIC.exe"
+          }
+          if (!(Test-Path $exe)) {
+            Write-Host "::error::AIC.exe was not found in build\windows\AIC.exe"
+            exit 1
+          }
+          Write-Host "Launching $exe for startup diagnostic test (12s)..."
+          $proc = Start-Process -FilePath $exe -PassThru -RedirectStandardOutput stdout.txt -RedirectStandardError stderr.txt -NoNewWindow
+          Start-Sleep -Seconds 12
+          if (!$proc.HasExited) {
+            $proc.Kill()
+            Write-Host "Process running normally (killed after 12 seconds startup window — success)."
+          } else {
+            Write-Host "Process exited with code $($proc.ExitCode)"
+          }
+
+          if (Test-Path stdout.txt) { Write-Host "=== STDOUT ==="; Get-Content stdout.txt }
+          if (Test-Path stderr.txt) { Write-Host "=== STDERR ==="; Get-Content stderr.txt }
+
+          $appdata = $env:APPDATA
+          $trace_candidates = @(
+            "$appdata\AIC\logs\aic_boot_trace.log",
+            "$env:USERPROFILE\aic_boot_trace.log",
+            "aic_boot_trace.log",
+            "build\windows\aic_boot_trace.log"
+          )
+          foreach ($f in $trace_candidates) {
+            if (Test-Path $f) {
+              Write-Host "=== aic_boot_trace.log ($f) ==="
+              Get-Content $f
+            }
+          }
+
+          $crash_candidates = @(
+            "$appdata\AIC\logs\aic_crash.log",
+            "$appdata\AIC\aic_crash.log",
+            "$env:USERPROFILE\aic_crash.log",
+            "aic_crash.log",
+            "build\windows\aic_crash.log"
+          )
+          foreach ($f in $crash_candidates) {
+            if (Test-Path $f) {
+              Write-Host "=== aic_crash.log ($f) ==="
+              Get-Content $f
+            }
+          }
+
+      # ── 11. Bundle Size Measurement & Breakdown Audit ──────────────────────
+      - name: "Bundle Size Measurement & Consumer Breakdown"
+        shell: bash
+        run: |
+          echo "=== BUNDLE SIZE ANALYSIS (${{ matrix.platform }}) ==="
+          BUILD_DIR="${{ matrix.artifact_path }}"
+          if [ -d "$BUILD_DIR" ]; then
+            TOTAL_SIZE=$(du -sh "$BUILD_DIR" | cut -f1)
+            echo "Total Bundle Size: $TOTAL_SIZE"
+            echo "--- Top 15 Largest Items ---"
+            du -ah "$BUILD_DIR" | sort -rh | head -n 15
+          else
+            echo "Build directory $BUILD_DIR not found for size analysis."
+          fi
+
+      # ── 12. Packaging Windows (Inno Setup Installer + Portable ZIP) ────────
+      - name: "Package Windows (Inno Setup + Portable ZIP)"
+        if: matrix.platform == 'windows' && startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $TAG = "${env:GITHUB_REF}".Replace("refs/tags/", "")
+          $VERSION_CLEAN = $TAG.TrimStart('v')
+
+          Write-Host "=== WINDOWS PACKAGING (Tag: $TAG, Version: $VERSION_CLEAN) ==="
+          New-Item -ItemType Directory -Path "dist_pkg" -Force | Out-Null
+
+          # 1. Inno Setup Compilation
+          Write-Host "Compiling Inno Setup Script (installer\AIC.iss)..."
+          iscc "/DMyAppVersion=$VERSION_CLEAN" installer\AIC.iss
+
+          $iss_output = "installer\Output\AIC-Setup-$VERSION_CLEAN.exe"
+          if (!(Test-Path $iss_output)) {
+            Write-Host "::error::Inno Setup compilation failed! $iss_output not generated."
+            exit 1
+          }
+
+          $installer_dest = "dist_pkg\AIC-Setup-$TAG.exe"
+          Move-Item -Path $iss_output -Destination $installer_dest -Force
+          Write-Host "Installer created successfully: $installer_dest ($( (Get-Item $installer_dest).Length / 1MB ) MB)"
+
+          # 2. Portable ZIP Creation
+          $zip_dest = "dist_pkg\AIC-Portable-$TAG.zip"
+          Write-Host "Creating Portable ZIP: $zip_dest..."
+          Compress-Archive -Path "build\windows\*" -DestinationPath $zip_dest -CompressionLevel Optimal -Force
+          Write-Host "Portable ZIP created successfully: $zip_dest ($( (Get-Item $zip_dest).Length / 1MB ) MB)"
+
+      # ── 13. Packaging Linux (AppImage) ──────────────────────────────────────
+      - name: "Package Linux (AppImage)"
+        if: matrix.platform == 'linux' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION_CLEAN="${TAG#v}"
+
+          echo "=== LINUX PACKAGING (Tag: ${TAG}, Version: ${VERSION_CLEAN}) ==="
+          mkdir -p dist_pkg
+
+          # Locate bundle directory
+          BUNDLE_DIR=""
+          for candidate in "build/linux/x64/release/bundle" "build/linux/bundle" "build/linux"; do
+            if [ -f "${candidate}/AIC" ]; then
+              BUNDLE_DIR="${candidate}"
+              break
+            fi
+          done
+
+          if [ -z "${BUNDLE_DIR}" ]; then
+            echo "::error::Could not locate executable AIC inside build/linux/!"
+            exit 1
+          fi
+          echo "Located Linux bundle at: ${BUNDLE_DIR}"
+
+          # Construct AppDir
+          rm -rf AppDir
+          mkdir -p AppDir/usr/bin AppDir/usr/lib AppDir/usr/share
+
+          # Copy bundle contents into AppDir/usr/
+          cp -r ${BUNDLE_DIR}/* AppDir/usr/bin/
+
+          # Create desktop file
+          cat <<EOF > AppDir/AIC.desktop
+          [Desktop Entry]
+          Type=Application
+          Name=AIC
+          Comment=AIC — Audio Intelligence Companion
+          Exec=AIC
+          Icon=AIC
+          Categories=AudioVideo;Audio;
+          Terminal=false
+          EOF
+
+          # Copy icon
+          if [ -f "assets/icon.png" ]; then
+            cp assets/icon.png AppDir/AIC.png
+          else
+            echo "::warning::assets/icon.png missing, using placeholder icon."
+            touch AppDir/AIC.png
+          fi
+
+          # AppRun launcher script
+          cat <<'EOF' > AppDir/AppRun
+          #!/bin/bash
+          HERE="$(dirname "$(readlink -f "${0}")")"
+          export PATH="${HERE}/usr/bin:${PATH}"
+          export LD_LIBRARY_PATH="${HERE}/usr/bin:${HERE}/usr/bin/lib:${LD_LIBRARY_PATH}"
+          exec "${HERE}/usr/bin/AIC" "$@"
+          EOF
+          chmod +x AppDir/AppRun
+
+          # Download appimagetool
+          curl -sLO https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+
+          # Build AppImage (ARCH=x86_64)
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage AppDir "dist_pkg/AIC-${TAG}.AppImage"
+          chmod +x "dist_pkg/AIC-${TAG}.AppImage"
+
+          if [ ! -f "dist_pkg/AIC-${TAG}.AppImage" ]; then
+            echo "::error::AppImage generation failed!"
+            exit 1
+          fi
+          echo "AppImage created successfully: dist_pkg/AIC-${TAG}.AppImage ($(du -h "dist_pkg/AIC-${TAG}.AppImage" | cut -f1))"
+
+      # ── 14. Packaging macOS (DMG) ───────────────────────────────────────────
+      - name: "Package macOS (DMG)"
+        if: matrix.platform == 'macos' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION_CLEAN="${TAG#v}"
+
+          echo "=== MACOS PACKAGING (Tag: ${TAG}, Version: ${VERSION_CLEAN}) ==="
+          mkdir -p dist_pkg
+
+          # Locate AIC.app
+          APP_PATH=""
+          for candidate in "build/macos/Build/Products/Release/AIC.app" "build/macos/bundle/AIC.app" "build/macos/AIC.app"; do
+            if [ -d "${candidate}" ]; then
+              APP_PATH="${candidate}"
+              break
+            fi
+          done
+
+          if [ -z "${APP_PATH}" ]; then
+            echo "::error::Could not locate AIC.app inside build/macos/!"
+            exit 1
+          fi
+          echo "Located AIC.app at: ${APP_PATH}"
+
+          # Install create-dmg tool
+          brew install create-dmg
+
+          APP_DIR=$(dirname "${APP_PATH}")
+          APP_NAME=$(basename "${APP_PATH}")
+
+          create-dmg \
+            --volname "AIC — Audio Intelligence Companion" \
+            --window-pos 200 120 \
+            --window-size 660 400 \
+            --icon-size 120 \
+            --icon "${APP_NAME}" 165 185 \
+            --app-drop-link 495 185 \
+            "dist_pkg/AIC-${TAG}.dmg" \
+            "${APP_PATH}"
+
+          if [ ! -f "dist_pkg/AIC-${TAG}.dmg" ]; then
+            echo "::error::DMG generation failed!"
+            exit 1
+          fi
+          echo "DMG created successfully: dist_pkg/AIC-${TAG}.dmg ($(du -h "dist_pkg/AIC-${TAG}.dmg" | cut -f1))"
+
+      # ── 15. Package Size & Compression Breakdown ──────────────────────────
+      - name: "Package Size & Compression Measurement"
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          echo "=== FINAL PACKAGE SIZE & COMPRESSION REPORT (${{ matrix.platform }}) ==="
+          if [ -d "dist_pkg" ]; then
+            ls -lh dist_pkg/
+          fi
+
+      # ── 16. Upload Raw Build Artifacts (CI inspection) ────────────────────
+      - name: "Upload ${{ matrix.platform }} raw build artifact"
         uses: actions/upload-artifact@v4
         with:
           name: "aic-${{ matrix.platform }}-${{ github.sha }}"
           path: ${{ matrix.artifact_path }}
-          include-hidden-files: true  # Préserve les répertoires masqués comme sklearn/.libs (purgés par défaut)
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
+
+      # ── 17. Upload Final Packages Artifact (For Release job) ───────────────
+      - name: "Upload ${{ matrix.platform }} packages artifact"
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: "aic-${{ matrix.platform }}-packages-${{ github.sha }}"
+          path: dist_pkg/
+          if-no-files-found: error
+          retention-days: 7
+
+      # ── 18. Upload Crash Logs (Windows) ────────────────────────────────────
+      - name: "Upload crash logs artifact"
+        if: always() && matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "crash-logs-${{ github.sha }}"
+          path: |
+            aic_boot_trace.log
+            aic_crash.log
+            stdout.txt
+            stderr.txt
+            build/windows/aic_boot_trace.log
+            build/windows/aic_crash.log
+          if-no-files-found: ignore
+          retention-days: 7
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Job Release — uniquement sur push d'un tag v*
   # Dépend du job build (matrice windows + linux + macos).
-  # Télécharge les 3 artifacts, puis crée une GitHub Release avec les binaires.
+  # Télécharge les 4 packages finaux et publie la GitHub Release officielle.
   # ─────────────────────────────────────────────────────────────────────────────
   release:
     name: "GitHub Release"
@@ -295,45 +554,68 @@ jobs:
 
     steps:
 
-      # ── 1. Téléchargement de tous les artifacts du workflow courant ───────────
-      # Le pattern "aic-*" cible les 3 artifacts : aic-windows-*, aic-linux-*, aic-macos-*
-      # Chaque artifact est extrait dans dist/<nom-artifact>/ pour éviter les conflits.
-      - name: "Download all build artifacts"
+      # ── 1. Checkout repository (Accès à RELEASE_NOTES_v2.1.0.md) ───────────
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      # ── 2. Téléchargement des packages compilés ────────────────────────────
+      - name: "Download all package artifacts"
         uses: actions/download-artifact@v4
         with:
-          pattern: "aic-*"
-          path: dist/
-          merge-multiple: false
+          pattern: "aic-*-packages-*"
+          path: release_dist/
+          merge-multiple: true
 
-      # ── 2. Archivage avec noms stables orientés utilisateur ─────────────────
-      # Chaque sous-dossier dist/aic-<platform>-<sha>/ est compressé en un .zip
-      # dont le nom est construit à partir du tag Git, de la plateforme et de
-      # l'architecture réelle produite par le build.
-      # Résultat attendu dans dist/ :
-      #   AIC-<tag>-Windows-x64.zip
-      #   AIC-<tag>-Linux-x64.zip
-      #   AIC-<tag>-macOS-arm64.zip
-      - name: "Archive each platform build"
+      # ── 3. Audit des packages avant publication ───────────────────────────
+      - name: "Audit Release Packages"
         run: |
-          TAG="${{ github.ref_name }}"
-          for dir in dist/aic-*/; do
-            name=$(basename "$dir")
-            case "$name" in
-              aic-windows-*) archive="AIC-${TAG}-Windows-x64.zip" ;;
-              aic-linux-*)   archive="AIC-${TAG}-Linux-x64.zip" ;;
-              aic-macos-*)   archive="AIC-${TAG}-macOS-arm64.zip" ;;
-              *)             archive="${name}.zip" ;;
-            esac
-            zip -r "dist/${archive}" "$dir"
-          done
-        shell: bash
+          echo "=== RELEASE PACKAGES AUDIT ==="
+          ls -lh release_dist/
 
-      # ── 3. GitHub Release ────────────────────────────────────────────────────
-      # softprops/action-gh-release@v2 crée la Release pour le tag courant.
-      # generate_release_notes: true génère automatiquement les notes depuis les commits.
-      # files: attache uniquement les .zip nommés AIC-<tag>-<platform>-<arch>.zip.
-      - name: "Create GitHub Release"
+          TAG="${GITHUB_REF#refs/tags/}"
+
+          EXPECTED_FILES=(
+            "release_dist/AIC-Setup-${TAG}.exe"
+            "release_dist/AIC-Portable-${TAG}.zip"
+            "release_dist/AIC-${TAG}.AppImage"
+            "release_dist/AIC-${TAG}.dmg"
+          )
+
+          MISSING=0
+          for f in "${EXPECTED_FILES[@]}"; do
+            if [ -f "$f" ]; then
+              echo "FOUND: $f ($(du -h "$f" | cut -f1))"
+            else
+              echo "::error::MISSING REQUIRED PACKAGE: $f"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+
+          if [ $MISSING -gt 0 ]; then
+            echo "::error::RELEASE CANCELLED: $MISSING package(s) missing from artifact downloads!"
+            exit 1
+          fi
+
+          RELEASE_NOTES_FILE="RELEASE_NOTES_${TAG}.md"
+          if [ ! -f "${RELEASE_NOTES_FILE}" ]; then
+            echo "::warning::${RELEASE_NOTES_FILE} not found! Falling back to RELEASE_NOTES_v2.1.0.md"
+            RELEASE_NOTES_FILE="RELEASE_NOTES_v2.1.0.md"
+          fi
+
+          if [ ! -f "${RELEASE_NOTES_FILE}" ]; then
+            echo "::error::Release notes file missing!"
+            exit 1
+          fi
+
+          echo "Release Notes file selected: ${RELEASE_NOTES_FILE}"
+
+      # ── 4. Publication de la GitHub Release ───────────────────────────────
+      - name: "Publish GitHub Release"
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
-          files: dist/AIC-*.zip
+          body_path: RELEASE_NOTES_v2.1.0.md
+          files: |
+            release_dist/AIC-Setup-*.exe
+            release_dist/AIC-Portable-*.zip
+            release_dist/AIC-*.AppImage
+            release_dist/AIC-*.dmg

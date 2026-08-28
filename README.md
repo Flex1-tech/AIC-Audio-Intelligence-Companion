@@ -26,69 +26,62 @@ L'application est développée en **Python** avec **Flet** et ne nécessite aucu
 
 ## Downloads
 
-Les versions compilées pour **Windows**, **Linux** et **macOS** sont disponibles dans les GitHub Releases.
+Les versions officielles pour **Windows**, **Linux** et **macOS** sont disponibles dans les GitHub Releases.
 
-**Latest release**
+| Plateforme | Formats disponibles |
+|---|---|
+| Windows (x64) | Installateur (`AIC-Setup-vX.Y.Z.exe`) · Portable ZIP (`AIC-Portable-vX.Y.Z.zip`) |
+| Linux (x64) | AppImage (`AIC-vX.Y.Z.AppImage`) |
+| macOS (Apple Silicon) | DMG (`AIC-vX.Y.Z.dmg`) |
 
-https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest
-
-**All releases**
-
-https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases
+**Dernière release** : https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest
 
 ---
 
-## Lancer l'application depuis les binaires téléchargés
+## Installer AIC
 
-Les binaires publiés sont prêts à être exécutés et ne nécessitent pas l'installation de Python.
+### Windows — Installateur (recommandé)
 
-| Plateforme | Archive | Exécutable |
-|----------------------|------------------------------|------------|
-| Windows (x64) | `AIC-<version>-Windows-x64.zip` | `AIC.exe` |
-| Linux (x64) | `AIC-<version>-Linux-x64.zip` | `AIC` |
-| macOS (Apple Silicon) | `AIC-<version>-macOS-arm64.zip` | `AIC.app` |
-
-Téléchargez l'archive correspondant à votre plateforme depuis la [dernière Release](https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest).
-
-### Windows
-
-1. Télécharger l'archive `AIC-<version>-Windows-x64.zip` depuis la page [Releases](https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest).
-2. Extraire l'archive ZIP.
-3. Ouvrir le dossier extrait.
-4. Double-cliquer sur `AIC.exe`.
+1. Télécharger `AIC-Setup-vX.Y.Z.exe` depuis les [Releases](https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest).
+2. Exécuter l'installateur et suivre les étapes.
+3. AIC est installé dans `Program Files` avec un raccourci Menu Démarrer.
+4. Une entrée de désinstallation est créée dans les Paramètres Windows.
 
 > [!NOTE]
-> **Windows Defender / SmartScreen** : Il est normal qu'un avertissement apparaisse pour une application distribuée sans certificat de signature. Pour continuer, cliquez sur **Informations complémentaires** puis sur **Exécuter quand même**.
-> Lors du premier lancement, Windows ou votre antivirus peut analyser l'application. Attendez simplement que cette analyse soit terminée.
+> **Windows SmartScreen** : l'application n'est pas encore signée avec un certificat commercial. Cliquez sur **Informations complémentaires** puis **Exécuter quand même** si un avertissement apparaît.
 
-### Linux
+### Windows — Version Portable
 
-1. Télécharger l'archive `AIC-<version>-Linux-x64.zip` depuis la page [Releases](https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest).
-2. Extraire l'archive.
-3. Si nécessaire, attribuer les permissions d'exécution :
+1. Télécharger `AIC-Portable-vX.Y.Z.zip`.
+2. Extraire dans le répertoire de votre choix.
+3. Double-cliquer sur `AIC.exe`.
+
+La version portable ne modifie pas le système. Elle peut être exécutée depuis une clé USB ou tout répertoire sans installation.
+
+### Linux — AppImage
+
+1. Télécharger `AIC-vX.Y.Z.AppImage`.
+2. Rendre le fichier exécutable :
    ```bash
-   chmod +x AIC
+   chmod +x AIC-vX.Y.Z.AppImage
    ```
-4. Lancer l'application :
+3. Lancer :
    ```bash
-   ./AIC
+   ./AIC-vX.Y.Z.AppImage
    ```
-   *(Un double-clic sur le binaire `AIC` fonctionne également selon votre environnement de bureau).*
 
 > [!NOTE]
-> Les binaires Linux ont été construits sur Ubuntu 22.04 et requièrent GTK 3 (`libgtk-3-0`) ainsi que `mpv` pour la lecture audio. Ces paquets sont généralement disponibles dans les gestionnaires de paquets des distributions courantes.
+> L'AppImage est autonome. Elle ne nécessite pas d'installation. Elle peut être exécutée depuis n'importe quel répertoire.
 
-### macOS
+### macOS — DMG
 
 > [!IMPORTANT]
-> Les binaires macOS sont générés exclusivement pour l'architecture **Apple Silicon (arm64)**. Ils ne sont pas compatibles avec les Mac à processeur Intel.
+> AIC macOS est compilé exclusivement pour **Apple Silicon (arm64)**. Non compatible Mac Intel.
 
-1. Télécharger l'archive `AIC-<version>-macOS-arm64.zip` depuis la page [Releases](https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases/latest).
-2. Extraire l'archive.
-3. L'application n'étant pas signée avec un certificat Apple, ouvrez-la via :
-   - **Clic droit** (ou `Control` + clic) sur `AIC.app`
-   - Sélectionner **Ouvrir**
-   - Confirmer l'ouverture dans la fenêtre d'avertissement Gatekeeper.
+1. Télécharger `AIC-vX.Y.Z.dmg`.
+2. Ouvrir le fichier DMG.
+3. Glisser `AIC.app` dans le dossier **Applications**.
+4. L'application n'étant pas notarisée, ouvrir via **clic droit → Ouvrir** au premier lancement.
 
 
 ---
@@ -204,24 +197,46 @@ python main.py
 
 ## Building
 
-Le projet utilise **Flet Build** pour générer des exécutables natifs.
+Le projet utilise **Flet Build** et **uv** pour générer des exécutables natifs.
 
-Exemple :
+### Prérequis
 
 ```bash
-flet build windows
+uv sync --group dev
 ```
 
-ou
+### Build local
 
 ```bash
-flet build linux
+# Windows
+uv run flet build windows --python-version 3.12 --yes
+
+# Linux (sur Linux uniquement)
+uv run flet build linux --python-version 3.12 --yes
+
+# macOS (sur macOS uniquement, arm64)
+uv run flet build macos --arch arm64 --python-version 3.12 --yes
 ```
 
-ou
+Le bundle est généré dans `build/<plateforme>/`.
 
-```bash
-flet build macos
+> [!IMPORTANT]
+> Les builds de production sont exclusivement réalisés via GitHub Actions. Ne pas générer d'exécutables localement pour la distribution.
+
+### Packaging local (Windows uniquement)
+
+Pour générer l'installateur Inno Setup localement :
+
+```powershell
+# Installer Inno Setup : https://jrsoftware.org/isdl.php
+iscc /DMyAppVersion="2.1.0" installer\AIC.iss
+# Résultat : installer\Output\AIC-Setup-2.1.0.exe
+```
+
+Pour générer le ZIP portable :
+
+```powershell
+Compress-Archive -Path build\windows\* -DestinationPath AIC-Portable-v2.1.0.zip
 ```
 
 ---
@@ -266,40 +281,71 @@ Lorsque vous effectuez un commit, les hooks pre-commit s'exécutent automatiquem
 
 Le dépôt utilise GitHub Actions pour automatiser les différentes tâches.
 
-| Workflow      | Description                          |
-| ------------- | ------------------------------------ |
-| CI            | Vérification du code et des tests    |
-| Desktop Build | Compilation Windows, Linux et macOS  |
-| Release       | Publication automatique des versions |
-| Lock Update   | Synchronisation du fichier `uv.lock` |
+| Workflow | Déclencheur | Description |
+|---|---|---|
+| `ci-lint.yml` | Push `.py` sur `main`/`dev` | Lint Flake8 + Import check + pytest |
+| `build-desktop.yml` | Push `main`, tag `v*`, `workflow_dispatch` | Build Windows + Linux + macOS, packaging, GitHub Release |
+| `lock-update.yml` | Push `pyproject.toml` sur `main` | Synchronisation du `uv.lock` |
 
 ---
 
 ## Releases
 
-Les versions officielles sont publiées automatiquement à partir d'un tag Git.
+Les versions officielles sont publiées automatiquement lors du push d'un tag Git `v*`.
 
-Créer une nouvelle version :
+### Convention de versionnement
 
-```bash
-git checkout main
-git pull origin main
-
-git tag v2.0.1
-git push origin v2.0.1
+```
+pyproject.toml  → source de vérité de la version du projet
+Tag Git v*      → déclencheur de la release officielle
 ```
 
-Lorsqu'un tag `v*` est poussé :
+Les deux doivent être cohérents. Le pipeline vérifie cette cohérence avant de publier.
 
-1. Les builds Windows, Linux et macOS sont exécutés.
-2. Les exécutables sont générés.
-3. Une GitHub Release est créée automatiquement.
-4. Les notes de version sont générées automatiquement.
-5. Les exécutables sont attachés à la Release.
+### Procédure de release
 
-Les binaires sont ensuite disponibles dans :
+```bash
+# 1. Mettre à jour la version dans pyproject.toml
+#    version = "X.Y.Z"
 
-https://github.com/Flex1-tech/AIC-Audio-Intelligence-Companion/releases
+# 2. Committer et pousser sur main
+git checkout main
+git pull origin main
+git add pyproject.toml
+git commit -m "chore: bump version to vX.Y.Z"
+git push origin main
+
+# 3. Créer et pousser le tag
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+Lorsqu'un tag `vX.Y.Z` est poussé, le pipeline :
+
+1. Vérifie la cohérence tag ↔ `pyproject.toml`.
+2. Construit les binaires Windows, Linux et macOS.
+3. Génère l'installateur Inno Setup et le ZIP portable (Windows).
+4. Génère l'AppImage (Linux).
+5. Génère le DMG (macOS).
+6. Crée une GitHub Release avec les 4 packages.
+7. Utilise `RELEASE_NOTES_vX.Y.Z.md` comme corps de la Release.
+
+### Packages publiés
+
+| Plateforme | Fichier |
+|---|---|
+| Windows installer | `AIC-Setup-vX.Y.Z.exe` |
+| Windows portable | `AIC-Portable-vX.Y.Z.zip` |
+| Linux | `AIC-vX.Y.Z.AppImage` |
+| macOS | `AIC-vX.Y.Z.dmg` |
+
+### Release Notes
+
+Les notes de chaque release sont documentées dans un fichier `RELEASE_NOTES_vX.Y.Z.md` à la racine du dépôt.
+
+* **[Release Notes v2.1.0](./RELEASE_NOTES_v2.1.0.md)**
+
+Ce fichier est utilisé tel quel comme corps de la GitHub Release. Il ne doit pas être modifié après publication.
 
 ---
 
