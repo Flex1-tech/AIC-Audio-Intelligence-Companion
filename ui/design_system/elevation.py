@@ -5,7 +5,6 @@ Design Tokens - Élévation et Ombres (BoxShadow) pour AIC.
 """
 
 import flet as ft
-from ui.design_system.colors import ObsidianColors
 
 
 class Elevation:
