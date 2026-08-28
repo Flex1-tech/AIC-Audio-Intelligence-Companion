@@ -332,7 +332,7 @@ jobs:
             TOTAL_SIZE=$(du -sh "$BUILD_DIR" | cut -f1)
             echo "Total Bundle Size: $TOTAL_SIZE"
             echo "--- Top 15 Largest Items ---"
-            du -ah "$BUILD_DIR" | sort -rh | head -n 15
+            (du -ah "$BUILD_DIR" | sort -rh | { head -n 15; cat >/dev/null; }) || true
           else
             echo "Build directory $BUILD_DIR not found for size analysis."
           fi
