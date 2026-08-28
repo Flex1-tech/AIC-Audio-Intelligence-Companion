@@ -20,6 +20,28 @@ test.py
 convert.py
 temp.py
 
+# ── Environnements virtuels ───────────────────────────────────────────────────
+.venv/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+
+# ── Python cache ─────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+scratch/
+# ── Données locales (non versionnées) ────────────────────────────────────────
+MusicRecommenderDB/
+playlist.m3u8
+
+# ── Scripts temporaires ───────────────────────────────────────────────────────
+eval.py
+test.py
+convert.py
+temp.py
+
 # ── Artefacts de build Flet/Flutter ──────────────────────────────────────────
 build/
 .flutter/
@@ -28,3 +50,11 @@ build/
 
 # ── uv.lock est intentionnellement versionné (builds CI reproductibles) ───────
 # Ne pas ajouter uv.lock ici.
+
+# ── Logs & Artefacts de diagnostic temporaires ────────────────────────────────
+log
+*.log
+aic_boot_trace.log
+aic_crash.log
+aic-windows-dev-*/
+crash-logs-*/

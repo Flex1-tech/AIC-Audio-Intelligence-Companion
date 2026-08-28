@@ -47,7 +47,7 @@ class ActionBar(ft.Container):
             content="Réinitialiser",
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=Radii.SM),
-                # no explicit color or side — inherits on_surface / outline from theme
+                mouse_cursor=ft.MouseCursor.CLICK,
             ),
             on_click=self._handle_reset,
         )
@@ -69,6 +69,7 @@ class ActionBar(ft.Container):
                 bgcolor=ObsidianColors.PRIMARY,  # brand action — explicit
                 padding=ft.Padding.symmetric(horizontal=20, vertical=12),
                 shape=ft.RoundedRectangleBorder(radius=Radii.SM),
+                mouse_cursor=ft.MouseCursor.FORBIDDEN,
             ),
             disabled=True,
             on_click=self._handle_start,
@@ -84,14 +85,14 @@ class ActionBar(ft.Container):
                             ft.Container(
                                 width=1,
                                 height=20,
-                                bgcolor=ft.Colors.OUTLINE,  # = BORDER_DARK via ColorScheme
+                                bgcolor=ft.Colors.OUTLINE,
                             ),
                             ft.Row(
                                 [
                                     ft.Text(
                                         "Balance MMR :",
                                         size=12,
-                                        color=ObsidianColors.TEXT_MUTED,  # 3rd-level hierarchy — explicit
+                                        color=ft.Colors.ON_SURFACE_VARIANT,
                                     ),
                                     self.lambda_slider,
                                     self.lambda_text,
@@ -159,6 +160,10 @@ class ActionBar(ft.Container):
         self.start_button.disabled = not ready or processing
         self.lambda_slider.disabled = processing
         self.reset_button.disabled = processing
+
+        cursor = ft.MouseCursor.WAIT if processing else (ft.MouseCursor.CLICK if ready else ft.MouseCursor.FORBIDDEN)
+        self.start_button.style.mouse_cursor = cursor
+        self.reset_button.style.mouse_cursor = ft.MouseCursor.WAIT if processing else ft.MouseCursor.CLICK
         try:
             self.update()
         except RuntimeError:

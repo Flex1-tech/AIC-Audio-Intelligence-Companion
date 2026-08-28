@@ -1,47 +1,63 @@
-"""Design tokens — Obsidian Horizon colour palette for AIC."""
+"""
+Design tokens — AIC / Obsidian Horizon official color palette.
+Source de vérité unique dérivée de l'identité visuelle officielle du logo AIC.
+
+Identité graphique AIC :
+- Brand Primary (Audio Resonance / Onde) : #FE8F40 (Orange Solaire / Ambre chaud)
+- Brand Accent (Intelligence IA / Structure) : #30C4EF (Cyan Électrique / Bleu Tech)
+- Deep Space Surfaces (Studio Offline)      : #0F1117 / #161922 / #1E2330
+"""
 
 
 class ObsidianColors:
-    # Backgrounds & surfaces
-    BG_DARK = "#0F1117"  # Main app background
-    SURFACE_DARK = "#161922"  # Card / container surface
-    SURFACE_ELEVATED = "#1E2330"  # Elevated dialogs, badges
-    SURFACE_HOVER = "#242A3A"  # Component hover state
+    # ── Backgrounds & surfaces (Obsidian Dark Space) ──────────────────────────
+    BG_DARK = "#0F1117"  # Fond principal de l'application
+    SURFACE_DARK = "#161922"  # Surface des cartes et conteneurs
+    SURFACE_ELEVATED = "#1E2330"  # Dialogs, popovers, badges élevés
+    SURFACE_HOVER = "#242A3A"  # État survolé (hover) des items
 
-    # Borders & dividers
-    BORDER_DARK = "#2A3042"  # Subtle borders and dividers
+    # ── Bordures & séparateurs ────────────────────────────────────────────────
+    BORDER_DARK = "#2A3042"  # Lignes de séparation et bordures subtiles
 
-    # Brand accent
-    PRIMARY = "#F59E0B"  # Warm amber – primary action / brand
-    PRIMARY_HOVER = "#D97706"  # Darker amber – hover on primary elements
-    PRIMARY_LIGHT = "#FBBF24"  # Lighter amber – subtle highlights
-    PRIMARY_GLOW = "#3D2B10"  # Subdued amber background (badge glow)
+    # ── Identité de marque AIC — Primary Accent (Audio / Onde : #FE8F40) ──────
+    PRIMARY = "#FE8F40"  # Ambre Audio Solaire — Action principale / Onde
+    PRIMARY_HOVER = "#E57A2C"  # Survol ambre
+    PRIMARY_LIGHT = "#FFB27D"  # Surbrillance claire ambre
+    PRIMARY_GLOW = "#3E2412"  # Fond de badge ambre
 
-    # Semantic feedback
-    SUCCESS = "#10B981"  # Emerald green – ready / validated
-    SUCCESS_BG = "#064E3B"  # Success badge background
-    INFO = "#3B82F6"  # Electric blue – informational state
-    WARNING = PRIMARY  # No distinct warning state in UI – aliases PRIMARY (amber)
-    WARNING_BG = PRIMARY_GLOW  # Warning badge background – aliases PRIMARY_GLOW
-    ERROR = "#EF4444"  # Crimson red – error / destructive
-    ERROR_BG = "#B91C1C"  # Dark crimson red – error toast background (7.55:1 AAA on TEXT_WHITE)
+    # ── Identité de marque AIC — Secondary Accent (IA / Cyan : #30C4EF) ────────
+    ACCENT_CYAN = "#30C4EF"  # Cyan Électrique IA — Métriques / Intelligence
+    ACCENT_CYAN_HOVER = "#1EB2DD"  # Survol cyan
+    ACCENT_CYAN_LIGHT = "#8FE2F7"  # Surbrillance cyan
+    ACCENT_CYAN_GLOW = "#0B2F3B"  # Fond de badge cyan
 
-    # Typography
-    TEXT_PRIMARY = "#F9FAFB"  # Warm white – headings, body text
-    TEXT_SECONDARY = "#9CA3AF"  # Slate grey – subtitles
-    TEXT_MUTED = "#6B7280"  # Steel grey – metadata, hints
-    TEXT_DISABLED = "#4B5563"  # Disabled state
-    TEXT_ON_PRIMARY = "#0F1117"  # Text on a primary-coloured surface (8.79:1 on PRIMARY)
-    TEXT_WHITE = "#FFFFFF"  # Pure white – error toast text on ERROR bg (3.8:1)
+    # Alias rétrocompatible & sémantique
+    SECONDARY = ACCENT_CYAN
 
-    # Decorative icon colour
-    HEART_RED = "#F43F5E"  # Liked-track heart icon
+    # ── Retours sémantiques ───────────────────────────────────────────────────
+    SUCCESS = "#10B981"  # Émeraude — prêt / validé
+    SUCCESS_BG = "#064E3B"  # Fond de badge success
+    INFO = ACCENT_CYAN  # Cyan électrique — notifications d'information
+    WARNING = PRIMARY  # Ambre solaire — alerte
+    WARNING_BG = PRIMARY_GLOW  # Fond d'alerte ambre
+    ERROR = "#EF4444"  # Rouge éco-système — erreur / destructif
+    ERROR_BG = "#B91C1C"  # Fond de toast d'erreur
 
-    # Material Design 3 semantic role aliases
-    # These mirror ft.ColorScheme fields used in theme.py for readability and forward compatibility.
-    ON_PRIMARY = BG_DARK  # M3 on_primary: text / icon on PRIMARY surface
-    ON_SURFACE = TEXT_PRIMARY  # M3 on_surface: text / icon on any surface
-    ON_ERROR = TEXT_PRIMARY  # M3 on_error: text / icon on ERROR surface
-    OUTLINE = BORDER_DARK  # M3 outline: decorative border / divider
-    SURFACE_CONTAINER = SURFACE_DARK  # M3 surface_container
-    SURFACE_CONTAINER_HIGH = SURFACE_ELEVATED  # M3 surface_container_high
+    # ── Typographie ───────────────────────────────────────────────────────────
+    TEXT_PRIMARY = "#F9FAFB"  # Blanc chaud à fort contraste
+    TEXT_SECONDARY = "#9CA3AF"  # Gris ardoise (sous-titres)
+    TEXT_MUTED = "#6B7280"  # Gris acier (métadonnées)
+    TEXT_DISABLED = "#4B5563"  # État désactivé
+    TEXT_ON_PRIMARY = "#0F1117"  # Texte sombre sur fond ambre (8.79:1)
+    TEXT_WHITE = "#FFFFFF"  # Blanc pur (toasts et contrastes élevés)
+
+    # ── Éléments décoratifs ───────────────────────────────────────────────────
+    HEART_RED = "#F43F5E"  # Icône de morceau liké
+
+    # ── Aliases Material Design 3 (Mapping Theme Flet) ────────────────────────
+    ON_PRIMARY = BG_DARK
+    ON_SURFACE = TEXT_PRIMARY
+    ON_ERROR = TEXT_PRIMARY
+    OUTLINE = BORDER_DARK
+    SURFACE_CONTAINER = SURFACE_DARK
+    SURFACE_CONTAINER_HIGH = SURFACE_ELEVATED

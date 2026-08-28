@@ -1,0 +1,310 @@
+---
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AIC — Dev Build (Windows) — WORKFLOW TEMPORAIRE DE DIAGNOSTIC
+#
+#  OBJECTIF : détecter la cause du crash "fenêtre blanche puis fermeture"
+#             en obtenant les logs aic_crash.log et aic.log produits par
+#             le handler ultra-précoce injecté dans main.py.
+#
+#  DÉCLENCHEURS : push sur la branche dev (tout commit)
+#  PLATEFORMES  : Windows uniquement (priorité diagnostic build desktop)
+#
+#  CE WORKFLOW EST TEMPORAIRE — à supprimer une fois le build stable.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: "[DEV] Build Windows — Diagnostic"
+
+on:
+  push:
+    branches:
+      - dev
+
+env:
+  PYTHONUTF8: "1"
+  FLET_CLI_NO_RICH_OUTPUT: "1"
+  UV_PYTHON: "3.12"
+
+jobs:
+  build-windows-dev:
+    name: "Build Windows (dev)"
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      # ── 2. Setup uv ────────────────────────────────────────────────────────
+      - name: "Setup uv"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
+
+      # ── 3. Sync dépendances (avec groupe dev = flet[build] + Flutter CLI) ──
+      - name: "uv sync (dev group)"
+        run: uv sync --group dev
+        shell: bash
+
+      # ── 4. Vérification flet CLI ───────────────────────────────────────────
+      - name: "flet --version"
+        run: uv run flet --version
+        shell: bash
+
+      # ── 5. Pre-Build Native & Hidden Resources Audit ─────────────────────
+      - name: "Pre-Build Native & Hidden Resources Audit"
+        shell: pwsh
+        run: |
+          $sp_root = (Get-Item ".venv\Lib\site-packages").FullName
+          Write-Host "=== PRE-BUILD AUDIT ==="
+          Write-Host "Site-packages path: $sp_root"
+
+          $vcomp = Join-Path $sp_root "sklearn\.libs\vcomp140.dll"
+          $msvcp = Join-Path $sp_root "sklearn\.libs\msvcp140.dll"
+          Write-Host "sklearn\.libs\vcomp140.dll = $(if (Test-Path $vcomp) {'FOUND'} else {'MISSING'})"
+          Write-Host "sklearn\.libs\msvcp140.dll = $(if (Test-Path $msvcp) {'FOUND'} else {'MISSING'})"
+
+          $hidden_dirs = Get-ChildItem -Path $sp_root -Recurse -Directory | Where-Object { $_.Name -like ".*libs*" }
+          Write-Host "Found $($hidden_dirs.Count) hidden native directories in .venv:"
+          foreach ($d in $hidden_dirs) {
+            Write-Host "  - $($d.FullName)"
+          }
+
+      # ── 6. Build Windows ───────────────────────────────────────────────────
+      - name: "flet build windows"
+        id: build
+        continue-on-error: true
+        run: |
+          uv run flet build windows \
+            --python-version 3.12 \
+            --yes \
+            --verbose \
+            --no-rich-output
+        shell: bash
+        env:
+          FLET_APP_NAME: "AIC"
+
+      # ── 7. Embedded Bundle Hidden Native Resources Injection & Audit ─────
+      - name: "Embedded Bundle Hidden Native Resources Injection & Audit"
+        if: steps.build.outcome == 'success'
+        shell: pwsh
+        run: |
+          $sp_root = (Get-Item ".venv\Lib\site-packages").FullName
+          $build_folder = "build\windows"
+
+          if (!(Test-Path $build_folder)) {
+            Write-Host "::error::Build folder $build_folder not found!"
+            exit 1
+          }
+
+          Write-Host "=== POST-BUILD DYNAMIC EMBEDDED RUNTIME SEARCH ==="
+
+          # Locate ALL site-packages directories under build\windows dynamically
+          $target_site_packages = Get-ChildItem -Path $build_folder -Recurse -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -eq "site-packages" } |
+            Select-Object -ExpandProperty FullName -Unique
+
+          if ($null -eq $target_site_packages -or $target_site_packages.Count -eq 0) {
+            Write-Host "::error::No site-packages directories found under $build_folder!"
+            exit 1
+          }
+
+          Write-Host "Identified $($target_site_packages.Count) embedded site-packages runtime target(s):"
+          foreach ($t in $target_site_packages) {
+            Write-Host "  -> $t"
+          }
+
+          $hidden_dirs = Get-ChildItem -Path $sp_root -Recurse -Directory | Where-Object { $_.Name -like ".*libs*" }
+          $injected_count = 0
+          $copied_dlls = 0
+
+          foreach ($hd in $hidden_dirs) {
+            $rel_path = $hd.FullName.Substring($sp_root.Length).TrimStart('\', '/')
+            foreach ($tsp in $target_site_packages) {
+              $dest = Join-Path $tsp $rel_path
+              if (!(Test-Path $dest)) {
+                New-Item -ItemType Directory -Path $dest -Force | Out-Null
+              }
+              Copy-Item -Path "$($hd.FullName)\*" -Destination $dest -Recurse -Force
+              $dll_files = Get-ChildItem -Path $hd.FullName -Recurse -File
+              $copied_dlls += $dll_files.Count
+              Write-Host "Injected $($hd.Name) ($($dll_files.Count) files) -> $dest"
+              $injected_count++
+            }
+          }
+
+          Write-Host "=== FINAL EMBEDDED BUNDLE INTEGRITY AUDIT ==="
+          $failed_targets = 0
+          foreach ($tsp in $target_site_packages) {
+            $vcomp_target = Join-Path $tsp "sklearn\.libs\vcomp140.dll"
+            $msvcp_target = Join-Path $tsp "sklearn\.libs\msvcp140.dll"
+
+            $vcomp_status = if (Test-Path $vcomp_target) { 'FOUND' } else { 'MISSING' }
+            $msvcp_status = if (Test-Path $msvcp_target) { 'FOUND' } else { 'MISSING' }
+
+            Write-Host "Target [$tsp]:"
+            Write-Host "  sklearn\.libs\vcomp140.dll = $vcomp_status"
+            Write-Host "  sklearn\.libs\msvcp140.dll = $msvcp_status"
+
+            if ($vcomp_status -ne 'FOUND' -or $msvcp_status -ne 'FOUND') {
+              $failed_targets++
+            }
+          }
+
+          if ($failed_targets -gt 0) {
+            Write-Host "::error::CRITICAL NATIVE RESOURCE VERIFICATION FAILED! Missing required DLLs in $failed_targets target(s)."
+            exit 1
+          }
+
+          # Audit executable presence explicitly
+          $exe = "build\windows\AIC.exe"
+          if (!(Test-Path $exe)) {
+            $exe_candidates = @("build\windows\AIC.exe", "build\windows\x64\runner\Release\AIC.exe")
+            foreach ($cand in $exe_candidates) {
+              if (Test-Path $cand) { $exe = $cand; break }
+            }
+          }
+          if (!(Test-Path $exe)) {
+            Write-Host "::error::EXECUTABLE AIC.exe MISSING! Expected at build\windows\AIC.exe"
+            exit 1
+          }
+          Write-Host "Executable verified: $exe = FOUND"
+
+          Write-Host "=== BUNDLE ASSETS STRUCTURE INSPECTION ==="
+          $assets_dir = Get-ChildItem -Path $build_folder -Recurse -Directory -Filter "assets" -ErrorAction SilentlyContinue
+          if ($assets_dir) {
+            foreach ($ad in $assets_dir) {
+              Write-Host "Found assets directory: $($ad.FullName)"
+              Get-ChildItem -Path $ad.FullName -Recurse -File | ForEach-Object {
+                Write-Host "  ASSET: $($_.FullName.Substring($ad.FullName.Length)) ($($_.Length) bytes)"
+              }
+            }
+          } else {
+            Write-Host "::warning::No 'assets' directory found anywhere inside $build_folder!"
+          }
+
+
+          # Audit native binaries (.dll & .pyd)
+          $missing = @()
+          $venv_dlls = Get-ChildItem -Path ".venv\Lib\site-packages" -Recurse -Include "*.dll", "*.pyd"
+          foreach ($f in $venv_dlls) {
+            $name = $f.Name
+            $found = Get-ChildItem -Path $build_folder -Recurse -Filter $name -ErrorAction SilentlyContinue
+            if (!$found) {
+              $missing += "DLL/PYD: $name (from $($f.FullName))"
+            }
+          }
+
+          if ($missing.Count -gt 0) {
+            Write-Host "::error::PACKAGING INTEGRITY AUDIT FAILED! Missing $($missing.Count) native resources in build folder."
+            foreach ($m in $missing) {
+              Write-Host "  MISSING: $m"
+            }
+            exit 1
+          } else {
+            Write-Host "SUCCESS: Packaging Integrity Audit PASSED. All native binaries are present in embedded runtime bundle."
+          }
+
+      # ── 8. Lancement de AIC.exe pour capturer les logs de diagnostic ────────
+      - name: "Run AIC.exe and capture crash log"
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $exe = "build\windows\AIC.exe"
+          if (!(Test-Path $exe)) {
+            $exe = "build\windows\x64\runner\Release\AIC.exe"
+          }
+          if (!(Test-Path $exe)) {
+            Write-Host "::error::AIC.exe was not found in build\windows\AIC.exe"
+            exit 1
+          }
+          Write-Host "Launching $exe ..."
+          $proc = Start-Process -FilePath $exe -PassThru -RedirectStandardOutput stdout.txt -RedirectStandardError stderr.txt -NoNewWindow
+          Start-Sleep -Seconds 12
+          if (!$proc.HasExited) {
+            $proc.Kill()
+            Write-Host "Process killed after 12 seconds (no crash — good sign)."
+          } else {
+            Write-Host "Process exited with code $($proc.ExitCode)"
+          }
+
+      # ── 9. Affichage stdout/stderr dans les logs CI ───────────────────────
+      - name: "Show stdout / stderr from AIC.exe run"
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          if (Test-Path stdout.txt) { Write-Host "=== STDOUT ==="; Get-Content stdout.txt }
+          if (Test-Path stderr.txt) { Write-Host "=== STDERR ==="; Get-Content stderr.txt }
+
+      # ── 8. Affichage de aic_boot_trace.log et aic_crash.log ────────────────
+      - name: "Show boot trace and crash log"
+        if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $appdata = $env:APPDATA
+          $trace_candidates = @(
+            "$appdata\AIC\logs\aic_boot_trace.log",
+            "$env:USERPROFILE\aic_boot_trace.log",
+            "aic_boot_trace.log",
+            "build\windows\aic_boot_trace.log"
+          )
+          foreach ($f in $trace_candidates) {
+            if (Test-Path $f) {
+              Write-Host "=== aic_boot_trace.log ($f) ==="
+              Get-Content $f
+            }
+          }
+          $crash_candidates = @(
+            "$appdata\AIC\logs\aic_crash.log",
+            "$appdata\AIC\aic_crash.log",
+            "$env:USERPROFILE\aic_crash.log",
+            "aic_crash.log",
+            "build\windows\aic_crash.log"
+          )
+          foreach ($f in $crash_candidates) {
+            if (Test-Path $f) {
+              Write-Host "=== aic_crash.log ($f) ==="
+              Get-Content $f
+            }
+          }
+
+      # ── 9. Upload artifacts ────────────────────────────────────────────────
+      - name: "Upload build artifact"
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: "aic-windows-dev-${{ github.sha }}"
+          path: build/windows
+          include-hidden-files: true  # Préserve les répertoires masqués comme sklearn/.libs (purgés par défaut)
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: "Upload crash logs"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "crash-logs-${{ github.sha }}"
+          path: |
+            aic_boot_trace.log
+            aic_crash.log
+            stdout.txt
+            stderr.txt
+            build/windows/aic_boot_trace.log
+            build/windows/aic_crash.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # ── 10. Fail le job si le build a échoué ──────────────────────────────
+      - name: "Fail if build failed"
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "flet build windows failed — check logs above."
+          exit 1
+        shell: bash

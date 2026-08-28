@@ -11,7 +11,7 @@ version         = "2.0.0"
 description     = "AIC — Moteur de recommandation musicale 100% local propulsé par ONNX, LanceDB et Flet."
 readme          = "README.md"
 license         = { text = "MIT" }
-requires-python = ">=3.10"
+requires-python = ">=3.12, <3.13"
 
 # ── Dépendances de production ────────────────────────────────────────────────
 # Embarquées dans l'exécutable final par `flet build`.
@@ -54,12 +54,19 @@ line-length = 120
 managed = true
 
 [tool.flet]
-build_number = 1
-product      = "AIC — Audio Intelligence Companion"
-company      = "AIC Project"
+build_number   = 1
+product        = "AIC — Audio Intelligence Companion"
+company        = "Flex1 Tech"
+copyright      = "Copyright © 2026 Flex1 Tech"
+org            = "tech.flex1"
+python_version = "3.12"
+artifact       = "AIC"
 
 [tool.flet.app]
 path = "."
 
 [tool.flet.build]
 icon = "assets/icon.png"
+
+[tool.flet.cleanup]
+packages = false

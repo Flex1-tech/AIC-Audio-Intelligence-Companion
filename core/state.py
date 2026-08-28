@@ -1,8 +1,12 @@
-from typing import Callable, List, Dict, Any, Optional
+import logging
+import time
+from typing import Any, Callable, Dict, List, Optional
+
+from domain.history import ActionLog
 from domain.library import MusicLibrary
 from domain.session import SessionState
-from domain.history import ActionLog
-import time
+
+logger = logging.getLogger("aic.state")
 
 
 class AppState:
@@ -40,7 +44,7 @@ class AppState:
             try:
                 listener()
             except Exception as e:
-                print(f"[AppState] Erreur notification listener: {e}")
+                logger.warning(f"Erreur notification listener: {e}")
 
     def log_action(
         self,

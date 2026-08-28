@@ -3,19 +3,20 @@ ui/components/splash_screen.py
 ------------------------------
 Splash Screen premium v2 — AIC / Obsidian Horizon Design System.
 
-Architecture :
-- Logo responsive : 65 % de la plus petite dimension de la fenetre (clamped 300-560 px).
-- SVG divise en 2 couches animees independamment :
+Architecture (Fidèle à origin/main SHA af092ec63b397a3edf43165e49627c4d6b282fa9) :
+- Logo responsive : 65 % de la plus petite dimension de la fenêtre (clamped 300-560 px).
+- SVG divisé en 2 couches animées indépendamment :
     * layer_letterform.svg -- structure "A" (3 paths #30C4EF)
     * layer_wave.svg       -- onde sonore (70 paths #FE8F40 et variantes)
-- Effet "IA qui s'eveille" : un faisceau radial ambre parcourt la zone de l'onde (L->R).
-- Typographie de branding : Cinzel Decorative (embarquee dans assets/fonts/).
-- Timing centralise par pourcentage (SPLASH_ANIMATION_CONFIG) : modification instantanee
+- Effet "IA qui s'éveille" : un faisceau radial ambre parcourt la zone de l'onde (L->R).
+- Typographie de branding : Cinzel Decorative (embarquée dans assets/fonts/).
+- Timing centralisé par pourcentage (SPLASH_ANIMATION_CONFIG) : modification instantanée
   de la vitesse globale en changeant uniquement ``total_ms``.
 - Compatible Flet 0.86.4 (ft.Scale / ft.Offset / ft.BoxFit / ft.AnimationCurve).
 """
 
 import asyncio
+import logging
 from typing import Callable, Optional
 
 import flet as ft
@@ -23,20 +24,26 @@ import flet as ft
 from ui.design_system.colors import ObsidianColors
 from utils.path_utils import get_asset_path
 
-# ── Configuration centralisee de l'animation (en pourcentages de total_ms) ───
+logger = logging.getLogger("aic.splash")
+
+# ── Configuration centralisée de l'animation (en pourcentages de total_ms) ───
 SPLASH_ANIMATION_CONFIG = {
     "total_ms": 5000,
     "logo_intro": (0.00, 0.25),  # 0% -> 25% : Apparition structure A logo & fond
-    "wave_dim": (0.15, 0.35),  # 15% -> 35% : Signal onde dormant (opacite 0.22)
+    "wave_dim": (0.15, 0.35),  # 15% -> 35% : Signal onde dormant (opacité 0.22)
     "wave_sweep": (0.28, 0.60),  # 28% -> 60% : Balayage du faisceau ambre L->R
-    "wave_alive": (0.32, 0.65),  # 32% -> 65% : Eveil complet de l'onde (opacite 1.0)
+    "wave_alive": (0.32, 0.65),  # 32% -> 65% : Éveil complet de l'onde (opacité 1.0)
     "halo_pulse": (0.55, 0.70),  # 55% -> 70% : Impulsion halo ambre BoxShadow
     "title_intro": (0.58, 0.78),  # 58% -> 78% : Apparition du titre "AIC"
     "subtitle_intro": (0.68, 0.88),  # 68% -> 88% : Apparition du sous-titre
     "fade_out": (0.88, 1.00),  # 88% -> 100% : Fondu vers l'UI principale
 }
 
-# ── Constantes de position de l'onde dans le SVG (viewBox 1024x1024) ---------
+SPLASH_ANIMATION_DURATION_MS: int = SPLASH_ANIMATION_CONFIG["total_ms"]
+CARD_MIN_SIZE: int = 300
+CARD_MAX_SIZE: int = 560
+
+# ── Constantes de position de l'onde dans le SVG (viewBox 1024x1024) ----------
 _WAVE_SVG_X_MIN = 378.0  # bord gauche de l'onde (SVG coords)
 _WAVE_SVG_X_MAX = 652.0  # bord droit de l'onde
 _WAVE_SVG_Y_MIN = 558.0  # bord haut de l'onde
@@ -45,7 +52,7 @@ _SVG_SIZE = 1024.0
 
 
 def _wave_rect(logo_size: int) -> tuple:
-    """Retourne (left, top, width, height) de la zone onde en pixels ecran."""
+    """Retourne (left, top, width, height) de la zone onde en pixels écran."""
     scale = logo_size / _SVG_SIZE
     left = _WAVE_SVG_X_MIN * scale
     top = _WAVE_SVG_Y_MIN * scale
@@ -54,10 +61,29 @@ def _wave_rect(logo_size: int) -> tuple:
     return left, top, w, h
 
 
+def calculate_responsive_dimensions(viewport_w: float, viewport_h: float) -> dict:
+    """Calcule la taille responsive du logo et de la carte."""
+    vw = max(320.0, float(viewport_w or 900.0))
+    vh = max(320.0, float(viewport_h or 700.0))
+    logo_size = int(max(CARD_MIN_SIZE, min(CARD_MAX_SIZE, min(vw, vh) * 0.65)))
+    return {
+        "card_size": logo_size,
+        "logo_size": logo_size,
+    }
+
+
+def _resolve_asset_src(filename: str) -> str:
+    p = get_asset_path(filename)
+    if p and p.exists():
+        return str(p.resolve())
+    return filename
+
+
 class SplashScreen(ft.Container):
     """
     Composant Splash Screen premium avec animation SVG multi-couches.
-    Séquencement 100% relatif piloter par SPLASH_ANIMATION_CONFIG.
+    Séquencement 100% relatif piloté par SPLASH_ANIMATION_CONFIG.
+    Référence : origin/main (SHA af092ec63b397a3edf43165e49627c4d6b282fa9).
     """
 
     def __init__(
@@ -75,41 +101,26 @@ class SplashScreen(ft.Container):
 
         cfg = SPLASH_ANIMATION_CONFIG
 
-        # ── Taille du logo (responsive) ───────────────────────────────────────
+        # ── Taille du logo (responsive 65%, clamp 300-560) ────────────────────
         w = (page.window.width or 900) if page.window else 900
         h = (page.window.height or 700) if page.window else 700
-        self.logo_size = int(max(300, min(560, min(w, h) * 0.65)))
+        self.logo_size = int(max(CARD_MIN_SIZE, min(CARD_MAX_SIZE, min(w, h) * 0.65)))
         S = self.logo_size
 
-        # ── Resolution des assets SVG ─────────────────────────────────────────
-        lf_path = get_asset_path("layer_letterform.svg")
-        wv_path = get_asset_path("layer_wave.svg")
-        icon_path = get_asset_path("icon.svg") or get_asset_path("icon.png")
-
-        def _svg_src(p):
-            return str(p) if p and p.exists() else None
-
-        lf_src = _svg_src(lf_path)
-        wv_src = _svg_src(wv_path)
-        icon_src = _svg_src(icon_path)
+        # ── Résolution des assets SVG ─────────────────────────────────────────
+        lf_src = _resolve_asset_src("layer_letterform.svg")
+        wv_src = _resolve_asset_src("layer_wave.svg")
+        icon_src = _resolve_asset_src("icon.svg")
 
         # ── Couche 1 : Letterform (#30C4EF – structure "A") ───────────────────
-        if lf_src:
-            self.letterform_img = ft.Image(
-                src=lf_src,
-                width=S,
-                height=S,
-                fit=ft.BoxFit.CONTAIN,
-            )
-        else:
-            self.letterform_img = ft.Image(
-                src=icon_src or "",
-                width=S,
-                height=S,
-                fit=ft.BoxFit.CONTAIN,
-            )
+        self.letterform_img = ft.Image(
+            src=lf_src if lf_src else icon_src,
+            width=S,
+            height=S,
+            fit=ft.BoxFit.CONTAIN,
+        )
 
-        # ── Couche 2 : Wave / Onde IA (#FE8F40 et variantes) ─────────────────
+        # ── Couche 2 : Wave / Onde IA (#FE8F40 et variantes) ───────────────────
         if wv_src:
             self.wave_img = ft.Image(
                 src=wv_src,
@@ -122,7 +133,7 @@ class SplashScreen(ft.Container):
         else:
             self.wave_img = ft.Container()
 
-        # ── Couche 3 : Glow scanner (faisceau ambre L->R sur l'onde) ──────────
+        # ── Couche 3 : Glow scanner (faisceau ambre L->R sur l'onde) ────────────
         wave_left, wave_top, wave_w, wave_h = _wave_rect(S)
         beam_w = int(wave_w * 0.32)
         beam_h = int(wave_h * 2.6)
@@ -162,7 +173,7 @@ class SplashScreen(ft.Container):
             height=S,
         )
 
-        # Conteneur logo global — animations d'entree
+        # Conteneur logo global — animations d'entrée
         self.logo_container = ft.Container(
             content=self.logo_stack,
             width=S,
@@ -207,7 +218,7 @@ class SplashScreen(ft.Container):
             animate_offset=ft.Animation(_dur(cfg["subtitle_intro"]), ft.AnimationCurve.EASE_OUT_CUBIC),
         )
 
-        # ── Degrade radial de fond ────────────────────────────────────────────
+        # ── Dégradé radial de fond ────────────────────────────────────────────
         self.bg_glow = ft.Container(
             width=min(S * 1.6, w),
             height=min(S * 1.6, h),
@@ -258,11 +269,12 @@ class SplashScreen(ft.Container):
             animate_opacity=ft.Animation(_dur(cfg["fade_out"]), ft.AnimationCurve.EASE_IN_OUT),
         )
 
-    # ── Orchestration asynchrone donnee par SPLASH_ANIMATION_CONFIG ─────────
+    # ── Orchestration asynchrone donnée par SPLASH_ANIMATION_CONFIG ─────────
     async def start_animation_async(self) -> None:
         """
-        Sequence d'animation 100% relative en pourcentages de SPLASH_ANIMATION_CONFIG["total_ms"].
+        Séquence d'animation 100% relative en pourcentages de SPLASH_ANIMATION_CONFIG["total_ms"].
         """
+        logger.info(f"SPLASH: ANIMATION START (total_ms={self.total_ms})")
         cfg = SPLASH_ANIMATION_CONFIG
         t_current = 0.0
 
@@ -275,86 +287,94 @@ class SplashScreen(ft.Container):
                 await asyncio.sleep(_sec_at(target_pct) - _sec_at(t_current))
                 t_current = target_pct
 
-        # Phase 1 : Apparition fond ambiant & structure logo A
-        await _wait_until(cfg["logo_intro"][0])
-        self.bg_glow.opacity = 1.0
-        self.logo_container.opacity = 1.0
-        self.logo_container.scale = ft.Scale(scale=1.0)
-        self.logo_container.offset = ft.Offset(x=0, y=0)
-        self._safe_update(self.bg_glow)
-        self._safe_update(self.logo_container)
+        try:
+            # Phase 1 : Apparition fond ambiant & structure logo A
+            await _wait_until(cfg["logo_intro"][0])
+            self.bg_glow.opacity = 1.0
+            self.logo_container.opacity = 1.0
+            self.logo_container.scale = ft.Scale(scale=1.0)
+            self.logo_container.offset = ft.Offset(x=0, y=0)
+            self._safe_update(self.bg_glow)
+            self._safe_update(self.logo_container)
 
-        # Phase 2 : Signal onde dormant
-        await _wait_until(cfg["wave_dim"][0])
-        self.wave_img.opacity = 0.22
-        self._safe_update(self.wave_img)
+            # Phase 2 : Signal onde dormant
+            await _wait_until(cfg["wave_dim"][0])
+            self.wave_img.opacity = 0.22
+            self._safe_update(self.wave_img)
 
-        # Phase 3 : Balayage du faisceau ambre L->R
-        await _wait_until(cfg["wave_sweep"][0])
-        self.wave_glow.opacity = 0.90
-        self.wave_glow.left = self._scan_left_start
-        self._safe_update(self.wave_glow)
+            # Phase 3 : Balayage du faisceau ambre L->R
+            await _wait_until(cfg["wave_sweep"][0])
+            self.wave_glow.opacity = 0.90
+            self.wave_glow.left = self._scan_left_start
+            self._safe_update(self.wave_glow)
 
-        await asyncio.sleep(0.03)
-        self.wave_glow.left = self._scan_left_end
-        self._safe_update(self.wave_glow)
+            await asyncio.sleep(0.03)
+            self.wave_glow.left = self._scan_left_end
+            self._safe_update(self.wave_glow)
 
-        # Phase 4 : Eveil complet de l'onde
-        await _wait_until(cfg["wave_alive"][0])
-        self.wave_img.opacity = 1.0
-        self._safe_update(self.wave_img)
+            # Phase 4 : Éveil complet de l'onde
+            await _wait_until(cfg["wave_alive"][0])
+            self.wave_img.opacity = 1.0
+            self._safe_update(self.wave_img)
 
-        # Phase 5 : Impulsion Halo ambre
-        await _wait_until(cfg["halo_pulse"][0])
-        self.logo_container.shadow = ft.BoxShadow(
-            spread_radius=8,
-            blur_radius=40,
-            color="#38F59E0B",
-            offset=ft.Offset(x=0, y=0),
-        )
-        self._safe_update(self.logo_container)
+            # Phase 5 : Impulsion Halo ambre
+            await _wait_until(cfg["halo_pulse"][0])
+            self.logo_container.shadow = ft.BoxShadow(
+                spread_radius=8,
+                blur_radius=40,
+                color="#38F59E0B",
+                offset=ft.Offset(x=0, y=0),
+            )
+            self._safe_update(self.logo_container)
 
-        # Disparition du scanner
-        await _wait_until(cfg["wave_sweep"][1])
-        self.wave_glow.opacity = 0.0
-        self._safe_update(self.wave_glow)
+            # Disparition du scanner
+            await _wait_until(cfg["wave_sweep"][1])
+            self.wave_glow.opacity = 0.0
+            self._safe_update(self.wave_glow)
 
-        # Attenuation douce du halo
-        await _wait_until(cfg["halo_pulse"][1])
-        self.logo_container.shadow = ft.BoxShadow(
-            spread_radius=2,
-            blur_radius=16,
-            color="#14F59E0B",
-            offset=ft.Offset(x=0, y=0),
-        )
-        self._safe_update(self.logo_container)
+            # Atténuation douce du halo
+            await _wait_until(cfg["halo_pulse"][1])
+            self.logo_container.shadow = ft.BoxShadow(
+                spread_radius=2,
+                blur_radius=16,
+                color="#14F59E0B",
+                offset=ft.Offset(x=0, y=0),
+            )
+            self._safe_update(self.logo_container)
 
-        # Phase 6 : Titre "AIC"
-        await _wait_until(cfg["title_intro"][0])
-        self.title_box.opacity = 1.0
-        self.title_box.offset = ft.Offset(x=0, y=0)
-        self._safe_update(self.title_box)
+            # Phase 6 : Titre "AIC"
+            await _wait_until(cfg["title_intro"][0])
+            self.title_box.opacity = 1.0
+            self.title_box.offset = ft.Offset(x=0, y=0)
+            self._safe_update(self.title_box)
 
-        # Phase 7 : Sous-titre
-        await _wait_until(cfg["subtitle_intro"][0])
-        self.subtitle_box.opacity = 1.0
-        self.subtitle_box.offset = ft.Offset(x=0, y=0)
-        self._safe_update(self.subtitle_box)
+            # Phase 7 : Sous-titre
+            await _wait_until(cfg["subtitle_intro"][0])
+            self.subtitle_box.opacity = 1.0
+            self.subtitle_box.offset = ft.Offset(x=0, y=0)
+            self._safe_update(self.subtitle_box)
 
-        # Phase 8 : Fondu de sortie vers l'UI principale
-        await _wait_until(cfg["fade_out"][0])
-        self.opacity = 0.0
-        self._safe_update(self)
+            # Phase 8 : Fondu de sortie vers l'UI principale
+            await _wait_until(cfg["fade_out"][0])
+            self.opacity = 0.0
+            self._safe_update(self)
 
-        # Attente de la fin du fondu et nettoyage
-        await _wait_until(cfg["fade_out"][1])
-        await asyncio.sleep(0.05)
+            # Attente de la fin du fondu et nettoyage
+            await _wait_until(cfg["fade_out"][1])
+            await asyncio.sleep(0.05)
+            logger.info("SPLASH: ANIMATION COMPLETE")
 
-        if self.on_complete_callback:
-            self.on_complete_callback()
+        except asyncio.CancelledError:
+            logger.info("SPLASH: ANIMATION CANCELLED")
+        except Exception as err:
+            logger.error(f"SPLASH: ANIMATION ERROR: {err}", exc_info=True)
+        finally:
+            if self.on_complete_callback:
+                self.on_complete_callback()
 
     def _safe_update(self, control: ft.Control) -> None:
         try:
-            control.update()
+            if control and control.page:
+                control.update()
         except Exception:
             pass

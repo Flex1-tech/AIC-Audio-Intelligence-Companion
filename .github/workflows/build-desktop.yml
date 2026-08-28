@@ -38,7 +38,7 @@ on:
 env:
   PYTHONUTF8: 1              # Encodage UTF-8 forcé
   FLET_CLI_NO_RICH_OUTPUT: 1 # Logs bruts sans ANSI dans la CI
-  UV_PYTHON: "3.11"          # Version Python gérée par uv
+  UV_PYTHON: "3.12"          # Version Python gérée par uv
 
 jobs:
   build:
@@ -128,19 +128,145 @@ jobs:
         run: uv run flet --version
         shell: bash
 
-      # ── 6. Build ─────────────────────────────────────────────────────────────
-      # `uv run flet build <platform>` exécute flet dans l'env uv.
-      # Flutter SDK est téléchargé automatiquement par flet[build] au premier run.
+      # ── 6. Pre-Build Native & Hidden Resources Audit ─────────────────────
+      - name: "Pre-Build Native & Hidden Resources Audit"
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $sp_root = (Get-Item ".venv\Lib\site-packages").FullName
+          Write-Host "=== PRE-BUILD AUDIT ==="
+          Write-Host "Site-packages path: $sp_root"
+
+          $vcomp = Join-Path $sp_root "sklearn\.libs\vcomp140.dll"
+          $msvcp = Join-Path $sp_root "sklearn\.libs\msvcp140.dll"
+          Write-Host "sklearn\.libs\vcomp140.dll = $(if (Test-Path $vcomp) {'FOUND'} else {'MISSING'})"
+          Write-Host "sklearn\.libs\msvcp140.dll = $(if (Test-Path $msvcp) {'FOUND'} else {'MISSING'})"
+
+          $hidden_dirs = Get-ChildItem -Path $sp_root -Recurse -Directory | Where-Object { $_.Name -like ".*libs*" }
+          Write-Host "Found $($hidden_dirs.Count) hidden native directories in .venv:"
+          foreach ($d in $hidden_dirs) {
+            Write-Host "  - $($d.FullName)"
+          }
+
+      # ── 7. Build ─────────────────────────────────────────────────────────────
       - name: "flet build ${{ matrix.platform }}"
         run: |
           uv run flet build ${{ matrix.platform }} \
             ${{ matrix.extra_args }} \
+            --python-version 3.12 \
             --yes \
             --verbose \
             --no-rich-output
         shell: bash
         env:
           FLET_APP_NAME: "AIC"
+
+      # ── 8. Embedded Bundle Hidden Native Resources Injection & Audit ─────
+      - name: "Embedded Bundle Hidden Native Resources Injection & Audit"
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $sp_root = (Get-Item ".venv\Lib\site-packages").FullName
+          $build_folder = "build\windows"
+
+          if (!(Test-Path $build_folder)) {
+            Write-Host "::error::Build folder $build_folder not found!"
+            exit 1
+          }
+
+          Write-Host "=== POST-BUILD DYNAMIC EMBEDDED RUNTIME SEARCH ==="
+
+          # Locate ALL site-packages directories under build\windows dynamically
+          $target_site_packages = Get-ChildItem -Path $build_folder -Recurse -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -eq "site-packages" } |
+            Select-Object -ExpandProperty FullName -Unique
+
+          if ($null -eq $target_site_packages -or $target_site_packages.Count -eq 0) {
+            Write-Host "::error::No site-packages directories found under $build_folder!"
+            exit 1
+          }
+
+          Write-Host "Identified $($target_site_packages.Count) embedded site-packages runtime target(s):"
+          foreach ($t in $target_site_packages) {
+            Write-Host "  -> $t"
+          }
+
+          $hidden_dirs = Get-ChildItem -Path $sp_root -Recurse -Directory | Where-Object { $_.Name -like ".*libs*" }
+          $injected_count = 0
+          $copied_dlls = 0
+
+          foreach ($hd in $hidden_dirs) {
+            $rel_path = $hd.FullName.Substring($sp_root.Length).TrimStart('\', '/')
+            foreach ($tsp in $target_site_packages) {
+              $dest = Join-Path $tsp $rel_path
+              if (!(Test-Path $dest)) {
+                New-Item -ItemType Directory -Path $dest -Force | Out-Null
+              }
+              Copy-Item -Path "$($hd.FullName)\*" -Destination $dest -Recurse -Force
+              $dll_files = Get-ChildItem -Path $hd.FullName -Recurse -File
+              $copied_dlls += $dll_files.Count
+              Write-Host "Injected $($hd.Name) ($($dll_files.Count) files) -> $dest"
+              $injected_count++
+            }
+          }
+
+          Write-Host "=== FINAL EMBEDDED BUNDLE INTEGRITY AUDIT ==="
+          $failed_targets = 0
+          foreach ($tsp in $target_site_packages) {
+            $vcomp_target = Join-Path $tsp "sklearn\.libs\vcomp140.dll"
+            $msvcp_target = Join-Path $tsp "sklearn\.libs\msvcp140.dll"
+
+            $vcomp_status = if (Test-Path $vcomp_target) { 'FOUND' } else { 'MISSING' }
+            $msvcp_status = if (Test-Path $msvcp_target) { 'FOUND' } else { 'MISSING' }
+
+            Write-Host "Target [$tsp]:"
+            Write-Host "  sklearn\.libs\vcomp140.dll = $vcomp_status"
+            Write-Host "  sklearn\.libs\msvcp140.dll = $msvcp_status"
+
+            if ($vcomp_status -ne 'FOUND' -or $msvcp_status -ne 'FOUND') {
+              $failed_targets++
+            }
+          }
+
+          if ($failed_targets -gt 0) {
+            Write-Host "::error::CRITICAL NATIVE RESOURCE VERIFICATION FAILED! Missing required DLLs in $failed_targets target(s)."
+            exit 1
+          }
+
+          # Audit executable presence explicitly
+          $exe = "build\windows\AIC.exe"
+          if (!(Test-Path $exe)) {
+            $exe_candidates = @("build\windows\AIC.exe", "build\windows\x64\runner\Release\AIC.exe")
+            foreach ($cand in $exe_candidates) {
+              if (Test-Path $cand) { $exe = $cand; break }
+            }
+          }
+          if (!(Test-Path $exe)) {
+            Write-Host "::error::EXECUTABLE AIC.exe MISSING! Expected at build\windows\AIC.exe"
+            exit 1
+          }
+          Write-Host "Executable verified: $exe = FOUND"
+
+          # Audit native binaries (.dll & .pyd)
+          $missing = @()
+          $venv_dlls = Get-ChildItem -Path ".venv\Lib\site-packages" -Recurse -Include "*.dll", "*.pyd"
+          foreach ($f in $venv_dlls) {
+            $name = $f.Name
+            $found = Get-ChildItem -Path $build_folder -Recurse -Filter $name -ErrorAction SilentlyContinue
+            if (!$found) {
+              $missing += "DLL/PYD: $name (from $($f.FullName))"
+            }
+          }
+
+          if ($missing.Count -gt 0) {
+            Write-Host "::error::PACKAGING INTEGRITY AUDIT FAILED! Missing $($missing.Count) native resources in build folder."
+            foreach ($m in $missing) {
+              Write-Host "  MISSING: $m"
+            }
+            exit 1
+          } else {
+            Write-Host "SUCCESS: Packaging Integrity Audit PASSED. All native binaries are present in embedded runtime bundle."
+          }
 
       # ── 7. Upload artifact ───────────────────────────────────────────────────
       # Nom : aic-<platform>-<sha court> pour traçabilité.
@@ -150,6 +276,7 @@ jobs:
         with:
           name: "aic-${{ matrix.platform }}-${{ github.sha }}"
           path: ${{ matrix.artifact_path }}
+          include-hidden-files: true  # Préserve les répertoires masqués comme sklearn/.libs (purgés par défaut)
           if-no-files-found: error
           retention-days: 30
 

@@ -17,7 +17,7 @@ class TrackItem(ft.Container):
         # Heart Icon Button
         self.like_button = ft.IconButton(
             icon=ft.Icons.FAVORITE if track.is_liked else ft.Icons.FAVORITE_BORDER,
-            icon_color=(ObsidianColors.HEART_RED if track.is_liked else ObsidianColors.TEXT_MUTED),
+            icon_color=(ObsidianColors.HEART_RED if track.is_liked else ft.Colors.ON_SURFACE_VARIANT),
             icon_size=20,
             tooltip="Liker ce morceau" if not track.is_liked else "Morceau liké",
             on_click=self._handle_like,
@@ -29,11 +29,11 @@ class TrackItem(ft.Container):
                 track.audio_format or "AUDIO",
                 size=10,
                 weight=ft.FontWeight.BOLD,
-                color=ft.Colors.ON_SURFACE_VARIANT,  # secondary text — via ColorScheme
+                color=ft.Colors.ON_SURFACE_VARIANT,
             ),
             padding=ft.Padding.symmetric(horizontal=6, vertical=2),
             border_radius=Radii.SM,
-            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,  # = SURFACE_ELEVATED via ColorScheme
+            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGH,
         )
 
         # Hash Badge
@@ -42,7 +42,7 @@ class TrackItem(ft.Container):
                 track.short_hash,
                 size=10,
                 font_family="monospace",
-                color=ObsidianColors.TEXT_MUTED,
+                color=ft.Colors.ON_SURFACE_VARIANT,
             ),
             padding=ft.Padding.symmetric(horizontal=6, vertical=2),
             border_radius=Radii.SM,
@@ -66,7 +66,6 @@ class TrackItem(ft.Container):
                                         track.file_name,
                                         size=14,
                                         weight=ft.FontWeight.W_500,
-                                        # no explicit color — inherits on_surface
                                         overflow=ft.TextOverflow.ELLIPSIS,
                                         max_lines=1,
                                     ),
@@ -76,7 +75,7 @@ class TrackItem(ft.Container):
                                             ft.Text(
                                                 track.formatted_size,
                                                 size=11,
-                                                color=ObsidianColors.TEXT_MUTED,
+                                                color=ft.Colors.ON_SURFACE_VARIANT,
                                             ),
                                             hash_badge,
                                         ],
@@ -96,7 +95,7 @@ class TrackItem(ft.Container):
                             self.like_button,
                             ft.IconButton(
                                 icon=ft.Icons.DELETE_OUTLINED,
-                                icon_color=ObsidianColors.TEXT_MUTED,
+                                icon_color=ft.Colors.ON_SURFACE_VARIANT,
                                 icon_size=18,
                                 tooltip="Retirer de la liste",
                                 on_click=self._handle_delete,
@@ -115,12 +114,13 @@ class TrackItem(ft.Container):
                 1,
                 (ObsidianColors.PRIMARY if track.is_liked else ft.Colors.OUTLINE),
             ),
+            on_click=self._handle_like,
         )
 
-    def _handle_like(self, e):
+    def _handle_like(self, e=None):
         if self.on_like:
             self.on_like(self.track.file_path)
 
-    def _handle_delete(self, e):
+    def _handle_delete(self, e=None):
         if self.on_delete:
             self.on_delete(self.track.file_path)

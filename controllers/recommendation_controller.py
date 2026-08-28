@@ -32,14 +32,14 @@ class RecommendationController:
         def _worker():
             try:
                 playlist_paths = self.playlist_service.generate_recommendations(lambda_mmr=app_state.session.lambda_mmr)
-                self.playlist_service.export_m3u8(playlist_paths)
+                export_res = self.playlist_service.export_m3u8(playlist_paths)
 
                 app_state.is_processing = False
                 app_state.processing_status_message = "Prêt"
                 app_state.notify()
 
                 if on_success:
-                    on_success(playlist_paths)
+                    on_success(export_res)
 
             except Exception as e:
                 app_state.is_processing = False

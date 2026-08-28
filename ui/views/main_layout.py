@@ -23,6 +23,7 @@ class MainLayout(ft.Column):
         on_start_recommendation=None,
         on_reset=None,
         on_theme_toggle=None,
+        on_pick_export_folder=None,
     ):
         self.header_bar = HeaderBar(on_theme_toggle=on_theme_toggle)
         self.sidebar = Sidebar(selected_index=0, on_change=self._on_navigation_change)
@@ -35,7 +36,7 @@ class MainLayout(ft.Column):
             on_search=on_search,
         )
         self.metrics_view = AIMetricsView()
-        self.settings_view = SettingsView()
+        self.settings_view = SettingsView(on_pick_export_folder=on_pick_export_folder)
 
         # Workspace switcher Container
         self.workspace_container = ft.Container(
