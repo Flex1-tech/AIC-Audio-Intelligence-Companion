@@ -19,6 +19,7 @@
 name: "AIC — CI (Lint & Tests)"
 
 on:
+  # Validation sur commit/push (branches) — path-filtered pour économiser les minutes CI
   push:
     branches: [main, dev]
     paths:
@@ -26,6 +27,17 @@ on:
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/ci-lint.yml"
+  # Validation sur Pull Request — même path filter
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "**.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci-lint.yml"
+  # Appelé par build-desktop.yml lors du push d'un tag (validation avant release)
+  workflow_call:
+  # Déclenchement manuel depuis l'onglet Actions
   workflow_dispatch:
 
 env:

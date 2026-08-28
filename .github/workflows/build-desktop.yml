@@ -5,9 +5,14 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 #
 #  DÉCLENCHEURS
-#  ┌─ push sur main            → CI build complet des 3 plateformes
-#  ├─ push d'un tag v*         → CI build + Packaging natif + GitHub Release
-#  └─ workflow_dispatch        → déclenchement manuel
+#  ┌─ push d'un tag v*         → Build complet + Packaging natif + GitHub Release
+#  └─ workflow_dispatch        → déclenchement manuel (test/diagnostic)
+#
+#  ⚠️  AUCUN COMMIT ni PULL REQUEST ne déclenche ce workflow.
+#  ⚠️  La Release GitHub n'est publiée QUE lors du push d'un tag v*.
+#
+#  CI / VALIDATION DU CODE
+#  → Voir .github/workflows/ci-lint.yml (Lint + Tests, déclenché sur push/PR)
 #
 #  PACKAGES PUBLIÉS SUR TAG v*
 #  • Windows : AIC-Setup-vX.Y.Z.exe (Inno Setup) + AIC-Portable-vX.Y.Z.zip
@@ -19,8 +24,6 @@ name: "AIC — Desktop Builds & Distribution"
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -31,10 +34,21 @@ env:
   UV_PYTHON: "3.12"
 
 jobs:
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job Validate — appelle ci-lint.yml (Lint + Tests) avant tout build ou release
+  # Garantit la qualité du code quelle que soit l'origine du déclenchement.
+  # ─────────────────────────────────────────────────────────────────────────────
+  validate:
+    name: "CI Validation (Lint & Tests)"
+    uses: ./.github/workflows/ci-lint.yml
+
   build:
     name: "Build · ${{ matrix.platform }}"
     runs-on: ${{ matrix.runner }}
+    needs: [validate]
     timeout-minutes: 45
+
 
     strategy:
       fail-fast: false
