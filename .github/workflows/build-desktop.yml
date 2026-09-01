@@ -568,7 +568,7 @@ jobs:
 
     steps:
 
-      # ── 1. Checkout repository (Accès à RELEASE_NOTES_v2.1.0.md) ───────────
+      # ── 1. Checkout repository (Accès aux fichiers de release notes) ──────
       - name: "Checkout repository"
         uses: actions/checkout@v4
 
@@ -612,22 +612,18 @@ jobs:
 
           RELEASE_NOTES_FILE="RELEASE_NOTES_${TAG}.md"
           if [ ! -f "${RELEASE_NOTES_FILE}" ]; then
-            echo "::warning::${RELEASE_NOTES_FILE} not found! Falling back to RELEASE_NOTES_v2.1.0.md"
-            RELEASE_NOTES_FILE="RELEASE_NOTES_v2.1.0.md"
-          fi
-
-          if [ ! -f "${RELEASE_NOTES_FILE}" ]; then
-            echo "::error::Release notes file missing!"
+            echo "::error::CRITICAL: Release notes file '${RELEASE_NOTES_FILE}' not found! A dedicated release notes file matching the tag is strictly required (no silent fallback)."
             exit 1
           fi
 
-          echo "Release Notes file selected: ${RELEASE_NOTES_FILE}"
+          echo "SUCCESS: Release notes file verified: ${RELEASE_NOTES_FILE}"
+          echo "RELEASE_NOTES_PATH=${RELEASE_NOTES_FILE}" >> "$GITHUB_ENV"
 
       # ── 4. Publication de la GitHub Release ───────────────────────────────
       - name: "Publish GitHub Release"
         uses: softprops/action-gh-release@v2
         with:
-          body_path: RELEASE_NOTES_v2.1.0.md
+          body_path: ${{ env.RELEASE_NOTES_PATH }}
           files: |
             release_dist/AIC-Setup-*.exe
             release_dist/AIC-Portable-*.zip
