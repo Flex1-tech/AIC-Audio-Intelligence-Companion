@@ -11,6 +11,11 @@ from ui.design_system.spacing import Radii, Spacing
 logger = logging.getLogger("aic.ui.result_dialog")
 
 
+async def _await_coroutine(coro: Any) -> Any:
+    """Helper coroutine function pour exécuter et awaiter une coroutine déjà instanciée via page.run_task."""
+    return await coro
+
+
 class ResultDialog(ft.AlertDialog):
     """
     Modal de découverte post-recommandation Obsidian Horizon.
@@ -522,35 +527,69 @@ class ResultDialog(ft.AlertDialog):
         self._export_path_text.tooltip = file_path or folder_path
         self._set_default_btn.visible = not is_default
 
-        try:
-            if self.page:
-                self.page.update()
-        except RuntimeError:
-            pass  # Contrôle non encore attaché à la page (ex: tests unitaires)
+        page = self._get_page()
+        if page:
+            page.update()
 
     def mark_as_default(self) -> None:
         """Indique que l'emplacement actuel a été enregistré comme dossier par défaut."""
         self._is_current_default = True
         self._export_status_text.value = "Exportée dans (dossier par défaut) :"
         self._set_default_btn.visible = False
+        page = self._get_page()
+        if page:
+            page.update()
+
+    def _get_page(self) -> Optional[Any]:
+        """Retourne la page Flet si le contrôle y est attaché, sinon None sans lever RuntimeError."""
         try:
-            if self.page:
-                self.page.update()
+            return self.page
         except RuntimeError:
-            pass  # Contrôle non encore attaché à la page
+            return None
 
     # ── Dispatching asynchrone sécurisé des callbacks ─────────────────────────
     def _safe_dispatch(self, callback: Optional[Callable[..., Any]], *args, **kwargs) -> None:
-        """Exécute un callback de manière sécurisée en gérant les coroutines via page.run_task."""
+        """Exécute un callback de manière sécurisée en respectant l'API Flet 0.86.4.
+
+        Règle Flet 0.86.4 :
+          page.run_task(handler, *args, **kwargs) exige que `handler` soit une coroutine
+          function (inspect.iscoroutinefunction(handler) is True). On ne peut PAS lui
+          passer directement une coroutine déjà créée ni une lambda synchrone.
+
+        Stratégie :
+          1. Si callback est async def (inspect.iscoroutinefunction) :
+             On passe directement la fonction à page.run_task(callback, *args, **kwargs).
+             Flet appellera la fonction et awaitera la coroutine sur son event loop sans TypeError.
+          2. Si callback est synchrone (ou wrapper / lambda synchrone) :
+             On appelle le callback : res = callback(*args, **kwargs).
+             Si res est une coroutine (inspect.iscoroutine(res)) :
+               On passe la coroutine à page.run_task(_await_coroutine, res).
+               Comme `_await_coroutine` est une vraie coroutine function (async def),
+               Flet l'accepte et await la coroutine sans aucune TypeError ni RuntimeWarning.
+               Si la page Flet n'est pas disponible, on ferme la coroutine (res.close())
+               pour garantir qu'aucun RuntimeWarning 'never awaited' n'est émis.
+        """
         if not callback:
             return
         try:
-            res = callback(*args, **kwargs)
-            if inspect.iscoroutine(res):
-                if self.page:
-                    self.page.run_task(lambda coro=res: coro)
+            page = self._get_page()
+            if inspect.iscoroutinefunction(callback):
+                if page:
+                    page.run_task(callback, *args, **kwargs)
                 else:
-                    logger.warning("Impossible d'exécuter la coroutine : page Flet introuvable.")
+                    logger.warning(
+                        "Impossible de dispatcher la coroutine : page Flet non disponible."
+                    )
+            else:
+                res = callback(*args, **kwargs)
+                if inspect.iscoroutine(res):
+                    if page:
+                        page.run_task(_await_coroutine, res)
+                    else:
+                        logger.warning(
+                            "Impossible d'attendre la coroutine : page Flet non disponible."
+                        )
+                        res.close()
         except Exception as err:
             logger.error(f"Erreur callback ResultDialog : {err}", exc_info=True)
 

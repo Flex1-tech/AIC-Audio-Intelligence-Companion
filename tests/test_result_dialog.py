@@ -16,7 +16,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
 
 
 # ── Fixtures de base ──────────────────────────────────────────────────────────
@@ -162,10 +162,10 @@ class TestPlaylistExportService:
 # ── Tests ResultDialog : Absence de RuntimeWarning ────────────────────────────
 
 class TestResultDialogCallbackSafety:
-    """Vérifie que les callbacks sync et async ne produisent pas de RuntimeWarning."""
+    """Vérifie que les callbacks sync et async ne produisent pas de RuntimeWarning ni de TypeError."""
 
-    def test_sync_callback_not_awaited(self):
-        """Un callback synchrone doit être appelé sans RuntimeWarning."""
+    def test_sync_callback_executed_directly(self):
+        """Un callback synchrone doit être exécuté directement sans appeler run_task ni lever RuntimeWarning."""
         from ui.components.result_dialog import ResultDialog
         import warnings
 
@@ -179,38 +179,22 @@ class TestResultDialogCallbackSafety:
             file_name="test.m3u8",
             on_close=sync_callback,
         )
-        # ft.Control.page est une propriété read-only → on injecte via object.__setattr__
         mock_page = MagicMock()
-        mock_page.run_task = MagicMock()
-        object.__setattr__(dialog, "_ResultDialog__mock_page", mock_page)
-        # Patch _safe_dispatch directement pour contourner la dépendance à self.page
-        original_dispatch = dialog._safe_dispatch
-
-        def patched_dispatch(callback, *args, **kwargs):
-            import inspect as _inspect
-            if not callback:
-                return
-            res = callback(*args, **kwargs)
-            if _inspect.iscoroutine(res):
-                mock_page.run_task(lambda coro=res: coro)
-
-        dialog._safe_dispatch = patched_dispatch
-
-        with warnings.catch_warnings(record=True) as warning_list:
-            warnings.simplefilter("always")
-            dialog._handle_close()
+        with patch.object(ResultDialog, "page", new_callable=PropertyMock, return_value=mock_page):
+            with warnings.catch_warnings(record=True) as warning_list:
+                warnings.simplefilter("always")
+                dialog._handle_close()
 
         runtime_warnings = [w for w in warning_list if issubclass(w.category, RuntimeWarning)]
         assert not runtime_warnings, f"RuntimeWarning inattendu : {runtime_warnings}"
         assert called, "Le callback synchrone n'a pas été appelé."
+        assert not mock_page.run_task.called, "run_task ne doit pas être appelé pour un callback synchrone."
 
-    def test_async_callback_dispatched_via_run_task(self):
-        """Un callback asynchrone doit être dispatché via page.run_task et non pas ignoré."""
+    def test_native_async_callback_passed_as_coroutine_function(self):
+        """Un callback `async def` doit être transmis directement à page.run_task en tant que coroutine function."""
         from ui.components.result_dialog import ResultDialog
         import inspect
         import warnings
-
-        run_task_called = []
 
         async def async_callback():
             pass
@@ -220,26 +204,79 @@ class TestResultDialogCallbackSafety:
             file_name="test.m3u8",
             on_export_to=async_callback,
         )
-
-        # Patch _safe_dispatch pour capturer l'appel à run_task sans dépendance à self.page
-        def patched_dispatch(callback, *args, **kwargs):
-            if not callback:
-                return
-            res = callback(*args, **kwargs)
-            if inspect.iscoroutine(res):
-                run_task_called.append(True)
-                # Consommer la coroutine proprement pour éviter le RuntimeWarning
-                res.close()
-
-        dialog._safe_dispatch = patched_dispatch
-
-        with warnings.catch_warnings(record=True) as warning_list:
-            warnings.simplefilter("always")
-            dialog._handle_export_to()
+        mock_page = MagicMock()
+        with patch.object(ResultDialog, "page", new_callable=PropertyMock, return_value=mock_page):
+            with warnings.catch_warnings(record=True) as warning_list:
+                warnings.simplefilter("always")
+                dialog._handle_export_to()
 
         runtime_warnings = [w for w in warning_list if issubclass(w.category, RuntimeWarning)]
         assert not runtime_warnings, f"RuntimeWarning inattendu : {runtime_warnings}"
-        assert run_task_called, "La coroutine async n'a pas été détectée et transmise à run_task."
+        assert mock_page.run_task.called, "page.run_task doit être appelé pour un callback async."
+
+        # Règle stricte Flet 0.86.4 : le handler transmis DOIT être une coroutine function
+        handler = mock_page.run_task.call_args[0][0]
+        assert inspect.iscoroutinefunction(handler), (
+            f"Flet 0.86.4 requiert inspect.iscoroutinefunction(handler) == True, reçu {handler}"
+        )
+        assert handler is async_callback, "Le callback async natif doit être transmis directement."
+
+    def test_wrapper_returning_coroutine_passed_safely(self):
+        """Un wrapper/lambda synchrone retournant une coroutine doit être géré via _await_coroutine."""
+        from ui.components.result_dialog import ResultDialog
+        import inspect
+        import warnings
+
+        async def inner_async():
+            pass
+
+        wrapper_callback = lambda: inner_async()
+
+        dialog = ResultDialog(
+            count=5,
+            file_name="test.m3u8",
+            on_regenerate=wrapper_callback,
+        )
+        mock_page = MagicMock()
+        with patch.object(ResultDialog, "page", new_callable=PropertyMock, return_value=mock_page):
+            with warnings.catch_warnings(record=True) as warning_list:
+                warnings.simplefilter("always")
+                dialog._handle_regenerate()
+
+        runtime_warnings = [w for w in warning_list if issubclass(w.category, RuntimeWarning)]
+        assert not runtime_warnings, f"RuntimeWarning inattendu : {runtime_warnings}"
+        assert mock_page.run_task.called, "page.run_task doit être appelé."
+
+        handler = mock_page.run_task.call_args[0][0]
+        coro_arg = mock_page.run_task.call_args[0][1]
+        assert inspect.iscoroutinefunction(handler), (
+            f"Le handler Flet doit être une coroutine function, reçu {handler}"
+        )
+        assert inspect.iscoroutine(coro_arg), "La coroutine retournée doit être passée en argument."
+        coro_arg.close()  # Nettoyage propre
+
+    def test_detached_control_closes_coroutine_without_warning(self):
+        """Lorsque le contrôle n'est pas encore attaché à une page, les coroutines doivent être fermées proprement."""
+        from ui.components.result_dialog import ResultDialog
+        import warnings
+
+        async def inner_async():
+            pass
+
+        wrapper_callback = lambda: inner_async()
+
+        dialog = ResultDialog(
+            count=5,
+            file_name="test.m3u8",
+            on_regenerate=wrapper_callback,
+        )
+        # dialog non attaché : dialog.page lève RuntimeError
+        with warnings.catch_warnings(record=True) as warning_list:
+            warnings.simplefilter("always")
+            dialog._handle_regenerate()
+
+        runtime_warnings = [w for w in warning_list if issubclass(w.category, RuntimeWarning)]
+        assert not runtime_warnings, f"RuntimeWarning inattendu : {runtime_warnings}"
 
     def test_update_export_location_updates_display(self):
         """update_export_location doit mettre à jour les textes réactifs du modal."""
