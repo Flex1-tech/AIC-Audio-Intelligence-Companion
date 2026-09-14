@@ -32,7 +32,9 @@ class RecommendationController:
         def _worker():
             try:
                 playlist_paths = self.playlist_service.generate_recommendations(lambda_mmr=app_state.session.lambda_mmr)
-                export_res = self.playlist_service.export_m3u8(playlist_paths)
+                # Export automatique vers le dossier par défaut de la session.
+                # persist_as_default=True : mémorise le dossier d'export utilisé comme préférence persistante.
+                export_res = self.playlist_service.export_m3u8(playlist_paths, persist_as_default=True)
 
                 app_state.is_processing = False
                 app_state.processing_status_message = "Prêt"
@@ -54,3 +56,21 @@ class RecommendationController:
 
     def launch_vlc(self) -> tuple[bool, str]:
         return self.playlist_service.launch_vlc(app_state.session.last_generated_playlist_path)
+
+    def export_playlist(
+        self,
+        playlist_paths: List[str],
+        custom_folder: str = None,
+        persist_as_default: bool = False,
+    ):
+        """Exporte la playlist vers une destination donnée."""
+        return self.playlist_service.export_m3u8(
+            playlist_paths,
+            custom_folder=custom_folder,
+            persist_as_default=persist_as_default,
+        )
+
+    def set_default_export_folder(self, folder_path: str) -> None:
+        """Définit la destination d'export par défaut persistante."""
+        self.playlist_service.export_service.set_default_export_folder(folder_path)
+

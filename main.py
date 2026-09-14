@@ -71,10 +71,11 @@ def main(page: ft.Page) -> None:
         font_bold = get_asset_path("fonts/CinzelDecorative-Bold.ttf")
         font_regular = get_asset_path("fonts/CinzelDecorative-Regular.ttf")
         fonts_dict = {}
+        is_web = getattr(page, "web", False) or bool(os.environ.get("FLET_FORCE_WEB_SERVER"))
         if font_bold and font_bold.exists():
-            fonts_dict["Cinzel Decorative Bold"] = str(font_bold)
+            fonts_dict["Cinzel Decorative Bold"] = "/fonts/CinzelDecorative-Bold.ttf" if is_web else str(font_bold)
         if font_regular and font_regular.exists():
-            fonts_dict["Cinzel Decorative Regular"] = str(font_regular)
+            fonts_dict["Cinzel Decorative Regular"] = "/fonts/CinzelDecorative-Regular.ttf" if is_web else str(font_regular)
         if fonts_dict:
             page.fonts = fonts_dict
 
@@ -228,6 +229,8 @@ def main(page: ft.Page) -> None:
                 layout.settings_view.update_export_folder(folder_path)
                 _show_toast(f"Dossier d'exportation mis à jour : {folder_path}")
 
+        dialog = None  # Référence au modal actif (nécessaire pour update_export_location)
+
         def handle_start_recommendation() -> None:
             if app_state.is_processing:
                 _show_toast("Un calcul de recommandation est déjà en cours. Veuillez patienter.", is_error=False)
@@ -259,28 +262,84 @@ def main(page: ft.Page) -> None:
 
             def on_success(export_res) -> None:
                 async def _open_modal() -> None:
-                    def _do_open_folder() -> None:
-                        success = open_folder(export_res.folder_path)
+                    # ── Helpers synchrones sûrs ───────────────────────────────────────────
+
+                    def _do_open_folder(folder: str) -> None:
+                        success = open_folder(folder)
                         if not success:
                             _show_toast("Impossible d'ouvrir le dossier de destination.", is_error=True)
 
-                    async def _do_change_folder() -> None:
-                        page.pop_dialog()
-                        await handle_pick_export_folder()
+                    async def _do_export_to() -> None:
+                        """Export ponctuel vers un dossier choisi par l'utilisateur.
+                        Ne modifie pas le dossier d'export par défaut persistant.
+                        """
+                        new_dir = await file_picker.get_directory_path(
+                            dialog_title="Exporter vers… (dossier de destination ponctuel)"
+                        )
+                        if not new_dir:
+                            return
+                        result = rec_controller.export_playlist(
+                            export_res.playlist_paths,
+                            custom_folder=new_dir,
+                            persist_as_default=False,
+                        )
+                        if result.success:
+                            is_default = (
+                                new_dir == app_state.session.export_folder_path
+                            )
+                            dialog.update_export_location(
+                                folder_path=result.folder_path,
+                                file_path=result.file_path,
+                                file_name=result.file_name,
+                                is_default=is_default,
+                            )
+                            _show_toast(f"Playlist exportée dans : {result.folder_path}")
+                        else:
+                            _show_toast(result.message, is_error=True)
 
+                    def _do_set_as_default(folder: str) -> None:
+                        """Mémorise le dossier actuel comme dossier d'export par défaut."""
+                        rec_controller.set_default_export_folder(folder)
+                        layout.settings_view.update_export_folder(folder)
+                        dialog.mark_as_default()
+                        _show_toast(f"Dossier par défaut mis à jour : {folder}")
+
+                    def _do_regenerate() -> None:
+                        page.pop_dialog()
+                        handle_start_recommendation()
+
+                    async def _do_change_library() -> None:
+                        """Ferme le modal et ouvre le sélecteur de bibliothèque musicale source."""
+                        page.pop_dialog()
+                        await handle_pick_folder()
+
+                    # Détermine si l'export est dans le dossier par défaut persistant
+                    is_default = (
+                        export_res.folder_path == app_state.session.export_folder_path
+                        or not app_state.session.export_folder_path
+                    )
+
+                    nonlocal dialog
                     dialog = ResultDialog(
                         count=export_res.track_count,
                         file_name=export_res.file_name,
                         file_path=export_res.file_path,
                         folder_path=export_res.folder_path,
+                        playlist_paths=export_res.playlist_paths,
+                        lambda_mmr=app_state.session.lambda_mmr,
+                        is_default_folder=is_default,
                         on_launch_vlc=_launch_vlc,
                         on_open_folder=_do_open_folder,
-                        on_change_folder=_do_change_folder,
+                        on_export_to=_do_export_to,
+                        on_set_as_default=_do_set_as_default,
+                        on_regenerate=_do_regenerate,
+                        on_change_library=_do_change_library,
                         on_close=lambda: page.pop_dialog(),
                     )
                     page.show_dialog(dialog)
 
                 page.run_task(_open_modal)
+
 
             def on_error(err: str) -> None:
                 # Traduit les erreurs techniques en messages utilisateur intelligibles
@@ -350,6 +409,17 @@ def main(page: ft.Page) -> None:
                 root_stack.update()
                 layout.update_all()
                 page.update()
+                # Signal MAIN_UI_READY via fichier d'état (AIC_CAPTURE_MODE=1 uniquement)
+                if os.environ.get("AIC_CAPTURE_MODE") == "1":
+                    _state_file = os.environ.get("AIC_STATE_FILE", "")
+                    if _state_file:
+                        try:
+                            import time as _t
+                            pathlib.Path(_state_file).write_text(
+                                f"MAIN_UI_READY|{int(_t.time() * 1000)}", encoding="utf-8"
+                            )
+                        except Exception:
+                            pass
             except Exception as e:
                 logger.error(f"Erreur lors du retrait du Splash Screen : {e}", exc_info=True)
 
@@ -365,6 +435,19 @@ def main(page: ft.Page) -> None:
 
         page.add(root_stack)
         logger.info("SPLASH: ATTACHED")
+
+        # ── Signal de synchronisation Capture (AIC_CAPTURE_MODE=1 uniquement) ──
+        if os.environ.get("AIC_CAPTURE_MODE") == "1":
+            _state_file = os.environ.get("AIC_STATE_FILE", "")
+            if _state_file:
+                try:
+                    import time as _t
+                    pathlib.Path(_state_file).write_text(
+                        f"INIT|{int(_t.time() * 1000)}", encoding="utf-8"
+                    )
+                    logger.info("[CAPTURE MODE] AIC_STATE_FILE initialisé (state=INIT)")
+                except Exception as e:
+                    logger.debug(f"[CAPTURE MODE] Impossible d'écrire AIC_STATE_FILE : {e}")
 
         async def run_splash_task() -> None:
             try:

@@ -63,11 +63,16 @@ class PlaylistService:
         self,
         playlist_paths: List[str],
         custom_folder: Optional[str] = None,
+        persist_as_default: bool = False,
     ) -> ExportResult:
         """
         Exporte la playlist de manière sécurisée via PlaylistExportService.
         """
-        return self.export_service.export_playlist(playlist_paths, custom_folder=custom_folder)
+        return self.export_service.export_playlist(
+            playlist_paths,
+            custom_folder=custom_folder,
+            persist_as_default=persist_as_default,
+        )
 
     def launch_vlc(self, playlist_path: str = "playlist.m3u8") -> Tuple[bool, str]:
         vlc_path = app_state.session.vlc_custom_path or find_vlc()
