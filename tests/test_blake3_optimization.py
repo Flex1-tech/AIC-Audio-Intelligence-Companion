@@ -2,19 +2,19 @@
 tests/test_blake3_optimization.py
 ---------------------------------
 Tests unitaires pour la suppression du double hachage BLAKE3 et la validation des flux de hash.
+
+NOTE : Ce fichier n'importe aucun module lourd (numpy, lancedb, extraction…)
+au niveau module afin de ne pas polluer sys.modules avant l'exécution de
+test_import_main_lightweight. Tous les imports lourds sont effectués à
+l'intérieur des fixtures.
 """
 
 import tempfile
 import shutil
 from pathlib import Path
 from unittest.mock import patch
-import numpy as np
 import pytest
-import lancedb
 
-import extraction
-from extraction import get_file_hash, process_files_batch, recommend_playlist
-from schema import TrackEmbeddingModel
 from domain.track import Track
 from core.state import app_state
 from controllers.library_controller import LibraryController
@@ -22,6 +22,12 @@ from controllers.library_controller import LibraryController
 
 @pytest.fixture
 def temp_lancedb_and_files():
+    import numpy as np
+    import lancedb
+    import extraction
+    from extraction import get_file_hash
+    from schema import TrackEmbeddingModel
+
     temp_dir = Path(tempfile.mkdtemp(prefix="aic_test_blake3_suite_"))
     db = lancedb.connect(str(temp_dir / "test_lancedb"))
     table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel)
@@ -57,6 +63,8 @@ def temp_lancedb_and_files():
 
 
 def test_process_files_batch_reuses_track_hashes(temp_lancedb_and_files):
+    import extraction
+    from extraction import process_files_batch
     table = temp_lancedb_and_files["table"]
     file1 = temp_lancedb_and_files["file1"]
     hash1 = temp_lancedb_and_files["hash1"]
@@ -71,6 +79,8 @@ def test_process_files_batch_reuses_track_hashes(temp_lancedb_and_files):
 
 
 def test_process_files_batch_fallback_when_no_hashes(temp_lancedb_and_files):
+    import extraction
+    from extraction import process_files_batch
     table = temp_lancedb_and_files["table"]
     file1 = temp_lancedb_and_files["file1"]
 
@@ -84,6 +94,8 @@ def test_process_files_batch_fallback_when_no_hashes(temp_lancedb_and_files):
 
 
 def test_process_files_batch_fallback_when_hash_missing_for_file(temp_lancedb_and_files):
+    import extraction
+    from extraction import process_files_batch
     table = temp_lancedb_and_files["table"]
     file1 = temp_lancedb_and_files["file1"]
 
