@@ -33,14 +33,25 @@ class PlaylistService:
 
         start_time = time.time()
 
-        # Prépare le dict path_dict {path: is_liked} requis par extraction.py
+        # Prépare le dict path_dict {path: is_liked} et les hashes déjà calculés
         path_dict = {track.file_path: track.is_liked for track in app_state.library.tracks.values()}
+        track_hashes = {
+            track.file_path: track.file_hash
+            for track in app_state.library.tracks.values()
+            if track.file_hash
+        }
 
         session = self.provider.get_session()
         table = self.repository.get_table()
 
-        # Exécution de recommend_playlist (qui calcule aussi process_files_batch)
-        recommended_paths = recommend_playlist(path_dict=path_dict, session=session, table=table, lambda_mmr=lambda_mmr)
+        # Exécution de recommend_playlist avec réutilisation du file_hash
+        recommended_paths = recommend_playlist(
+            path_dict=path_dict,
+            session=session,
+            table=table,
+            lambda_mmr=lambda_mmr,
+            track_hashes=track_hashes,
+        )
 
         duration_ms = (time.time() - start_time) * 1000.0
         app_state.last_inference_duration_ms = duration_ms

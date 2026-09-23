@@ -321,21 +321,28 @@ def get_existing_embeddings(hashes: list[str], table: lancedb.table.Table) -> di
 
 
 def process_files_batch(
-    path_dict: dict, session: ort.InferenceSession, table: lancedb.table.Table
+    path_dict: dict,
+    session: ort.InferenceSession,
+    table: lancedb.table.Table,
+    track_hashes: dict[str, str] | None = None,
 ) -> dict[str, np.ndarray]:
     """
     Traite tous les fichiers en batch :
+    - Réutilise les hashes BLAKE3 précalculés si disponibles (évite le double hachage disque)
     - 1 seule requête DB pour récupérer les embeddings existants
     - Calcul ONNX uniquement pour les nouveaux
     - 1 seul insert pour tous les nouveaux
     """
-    # 1. Hash tous les fichiers
+    # 1. Récupère ou calcule le hash de tous les fichiers
     file_metas = {}
     for path in path_dict:
         f = Path(path)
         if not f.is_file():
             continue
-        file_metas[path] = {"hash": get_file_hash(path), "file": f}
+        h = track_hashes.get(path) if track_hashes else None
+        if not h:
+            h = get_file_hash(path)
+        file_metas[path] = {"hash": h, "file": f}
 
     # 2. Une seule requête pour tout ce qui est déjà en base
     all_hashes = [m["hash"] for m in file_metas.values()]
@@ -612,6 +619,7 @@ def recommend_playlist(
     session: ort.InferenceSession,
     table: lancedb.table.Table,
     lambda_mmr: float = 0.7,
+    track_hashes: dict[str, str] | None = None,
 ) -> list[str]:
     """
     Génère une playlist complète (tous les non-likés du dictionnaire)
@@ -622,6 +630,7 @@ def recommend_playlist(
         session: Session ONNX Runtime
         table: Table LanceDB
         lambda_mmr: Ratio MMR (0.7 = 70% pertinence, 30% diversité)
+        track_hashes: Dictionnaire optionnel {chemin_fichier: file_hash} précalculé à l'import
 
     Returns:
         Liste des chemins des chansons recommandées (tous les non-likés, classés)
@@ -629,7 +638,7 @@ def recommend_playlist(
 
     # Traite tous les fichiers en batch pour récupérer ou calculer leurs
     # vecteurs, et les stocker en base si besoin
-    all_vectors = process_files_batch(path_dict, session, table)  # {path: vector}
+    all_vectors = process_files_batch(path_dict, session, table, track_hashes=track_hashes)  # {path: vector}
     liked_vectors = [all_vectors[path] for path, liked in path_dict.items() if liked and path in all_vectors]
 
     if not liked_vectors:

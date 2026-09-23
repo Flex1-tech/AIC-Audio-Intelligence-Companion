@@ -39,6 +39,12 @@ class LibraryController:
             for track in valid_tracks:
                 if track.file_path not in app_state.library.tracks:
                     app_state.library.tracks[track.file_path] = track
+                else:
+                    existing = app_state.library.tracks[track.file_path]
+                    if existing.file_hash != track.file_hash:
+                        existing.file_hash = track.file_hash
+                        existing.file_size_bytes = track.file_size_bytes
+                        existing.in_database = False
 
             app_state.is_processing = False
             app_state.processing_status_message = "Prêt"
@@ -71,6 +77,12 @@ class LibraryController:
             for track in valid_tracks:
                 if track.file_path not in app_state.library.tracks:
                     app_state.library.tracks[track.file_path] = track
+                else:
+                    existing = app_state.library.tracks[track.file_path]
+                    if existing.file_hash != track.file_hash:
+                        existing.file_hash = track.file_hash
+                        existing.file_size_bytes = track.file_size_bytes
+                        existing.in_database = False
 
             if folder_path not in app_state.library.folder_paths:
                 app_state.library.folder_paths.append(folder_path)
