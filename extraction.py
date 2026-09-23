@@ -539,64 +539,70 @@ def mmr_ranking(
     query_vector: np.ndarray,
     candidates: list[dict],
     lambda_param: float = 0.7,
+    k: int | None = None,
 ) -> list[dict]:
     """
-    Classe TOUS les candidats par ordre MMR (du meilleur au pire).
+    Classe les candidats par ordre MMR (Maximal Marginal Relevance) vectorisé.
+
+    Algorithme incrémental O(N) par sélection : maintient le vecteur de diversité
+    maximale sans réévaluation cubique/quadratique en boucle Python.
 
     Args:
-        query_vector: Vecteur moyen des likés
-        candidates: Liste de dicts avec 'file_path' et 'vector'
+        query_vector: Vecteur moyen des likés (1D ndarray L2-normalisé)
+        candidates: Liste de dicts avec au moins 'vector' et optionnellement 'file_path'
         lambda_param: 0.7 = 70% pertinence, 30% diversité
+        k: Nombre maximal de candidats à retourner (None = tous les candidats classés)
 
     Returns:
-        Liste des candidats classés par MMR (tous les candidats, reordonnés)
+        Liste des candidats classés par MMR (du meilleur au pire)
     """
     if not candidates:
         return []
 
     n = len(candidates)
+    num_to_select = n if k is None or k > n else max(0, k)
+    if num_to_select == 0:
+        return []
 
-    # Convertir les vecteurs en matrice numpy
+    # Matrice numpy des embeddings candidats (n, D)
     candidate_vectors = np.stack([c["vector"] for c in candidates])
 
     # Similarité cosinus avec le query (produit scalaire car L2-normalisé)
-    query_sims = candidate_vectors @ query_vector  # shape: (n_candidates,)
+    query_sims = candidate_vectors @ query_vector  # shape: (n,)
 
-    # Matrice de similarité entre candidats
-    sim_matrix = candidate_vectors @ candidate_vectors.T  # shape: (n, n)
-    np.fill_diagonal(sim_matrix, -np.inf)  # s'auto-exclure
+    # Matrice de similarité inter-candidats (n, n)
+    sim_matrix = candidate_vectors @ candidate_vectors.T
+    np.fill_diagonal(sim_matrix, -1.0)  # auto-similarité minorée, valeurs bornées dans [-1, 1]
 
     selected = []
-    selected_indices = set()
-    remaining = set(range(n))
+    selected_mask = np.zeros(n, dtype=bool)
 
-    # Itérativement : à chaque tour, choisir le meilleur MMR parmi les restants
-    while remaining:
-        best_mmr_score = -np.inf
-        best_idx = None
+    # 1. Sélection du premier élément : uniquement la pertinence avec le query
+    first_idx = int(np.argmax(lambda_param * query_sims))
+    selected.append(candidates[first_idx])
+    selected_mask[first_idx] = True
 
-        for idx in remaining:
-            # Pertinence : similitude avec le query
-            relevance = query_sims[idx]
+    if num_to_select == 1:
+        return selected
 
-            # Diversité : max similitude avec les déjà sélectionnés
-            # Si c'est le premier, diversity = 0 (pas encore de sélectionnés)
-            if selected_indices:
-                diversity = np.max(sim_matrix[idx, list(selected_indices)])
-            else:
-                diversity = 0.0
+    # Vecteur de diversité maximale initialisé par rapport au 1er élément sélectionné
+    max_diversity = sim_matrix[:, first_idx].copy()
+    diversity_weight = 1.0 - lambda_param
 
-            # Score MMR
-            mmr_score = lambda_param * relevance - (1 - lambda_param) * diversity
+    # 2. Sélections itératives incrémentales vectorisées
+    for _ in range(1, num_to_select):
+        if diversity_weight == 0.0:
+            scores = query_sims.copy()
+        else:
+            scores = lambda_param * query_sims - diversity_weight * max_diversity
+        scores[selected_mask] = -np.inf
 
-            if mmr_score > best_mmr_score:
-                best_mmr_score = mmr_score
-                best_idx = idx
+        best_idx = int(np.argmax(scores))
+        selected.append(candidates[best_idx])
+        selected_mask[best_idx] = True
 
-        if best_idx is not None:
-            selected.append(candidates[best_idx])
-            selected_indices.add(best_idx)
-            remaining.remove(best_idx)
+        # Mise à jour O(N) du vecteur de similarité maximale avec les sélectionnés
+        max_diversity = np.maximum(max_diversity, sim_matrix[:, best_idx])
 
     return selected
 
