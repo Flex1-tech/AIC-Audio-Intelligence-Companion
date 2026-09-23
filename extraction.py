@@ -375,7 +375,8 @@ def process_files_batch(
         table.add(to_insert)
 
         if not has_vector_index(table) and len(table) >= 500:
-            table.create_index(vector_column_name="vector", metric="cosine")
+            from lancedb.index import IvfPq
+            table.create_index(vector_column_name="vector", config=IvfPq(distance_type="cosine"))
 
     return results  # {path: vector}
 
@@ -781,15 +782,20 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
     - v1 : file_hash, file_name, file_path, file_size_bytes, vector[200], title, artist, duration_seconds
     - v2 : file_hash, file_name, file_path, file_size_bytes, taggram[50], vector[200]
     """
+
     import lancedb
     from lancedb.index import BTree
     from schema import TrackEmbeddingModel
 
     db = lancedb.connect(db_path)
-    existing_tables = _get_existing_tables(db)
+    
+    # list_tables() renvoie un objet
+    result = db.list_tables()
+    existing_tables = result.tables if hasattr(result, 'tables') else result
 
     if "audio_embeddings" not in existing_tables:
         # Première utilisation : création directe avec le schéma v2
+
         table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel, exist_ok=True)
     else:
         table = db.open_table("audio_embeddings")
@@ -801,11 +807,16 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
         # version == "v2" → table déjà à jour, rien à faire
 
     # Index scalaire sur file_hash (idempotent, <1ms si déjà indexé)
-    if not any("file_hash" in idx.columns for idx in table.list_indices()):
-        table.create_index("file_hash", config=BTree(), replace=True)
+    # list_indices() renvoie des objets
+    try:
+        indices = table.list_indices()
+        has_hash = any("file_hash" in getattr(idx, 'columns', []) for idx in indices)
+        if not has_hash:
+            table.create_index("file_hash", config=BTree(), replace=True)
+    except Exception as e:
+        log.warning(f"[DB] Index erreur: {e}")
 
     return table
-
 
 def make_m3u(playlist_paths: list[str], output_path: str) -> None:
     """Génère un fichier .m3u à partir d'une liste de chemins de fichiers audio."""
