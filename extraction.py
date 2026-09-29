@@ -127,9 +127,9 @@ def extract_representative_batch(
 
         chroma_mean = np.mean(chroma)
 
-        # Zero Crossing Rate
+        # Zero Crossing Rate (vectorisé direct)
 
-        zcr = np.mean(librosa.feature.zero_crossing_rate(segment))
+        zcr = float(np.mean(np.abs(np.diff(np.signbit(segment)))))
 
         # Feature Vector
 
@@ -278,6 +278,8 @@ def load_audio(path: str, sr: int = 16000) -> np.ndarray:
     cmd = [
         "ffmpeg",
         "-nostdin",
+        "-threads",
+        "0",
         "-loglevel",
         "error",
         "-i",
