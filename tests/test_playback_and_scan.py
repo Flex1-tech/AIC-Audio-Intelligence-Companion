@@ -386,7 +386,7 @@ def test_playback_default_windows():
         dummy_file = f.name
 
     try:
-        with patch("os.startfile") as mock_startfile:
+        with patch("os.startfile", create=True) as mock_startfile:
             success, msg = service.play_with_default_app(dummy_file)
             assert success is True
             assert "par défaut" in msg
@@ -746,7 +746,7 @@ def test_playback_service_launch_failure_reports_error():
         dummy_file = f.name
 
     try:
-        with patch("os.startfile", side_effect=OSError("Access denied")):
+        with patch("os.startfile", create=True, side_effect=OSError("Access denied")):
             success, msg = service.play_with_default_app(dummy_file)
             assert success is False
             assert "Access denied" in msg
