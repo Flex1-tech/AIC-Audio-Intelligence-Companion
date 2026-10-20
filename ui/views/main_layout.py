@@ -24,6 +24,8 @@ class MainLayout(ft.Column):
         on_reset=None,
         on_theme_toggle=None,
         on_pick_export_folder=None,
+        on_play_track=None,
+        on_explore_track=None,
     ):
         self.header_bar = HeaderBar(on_theme_toggle=on_theme_toggle)
         self.sidebar = Sidebar(selected_index=0, on_change=self._on_navigation_change)
@@ -34,6 +36,8 @@ class MainLayout(ft.Column):
             on_like_track=on_like_track,
             on_delete_track=on_delete_track,
             on_search=on_search,
+            on_play_track=on_play_track,
+            on_explore_track=on_explore_track,
         )
         self.metrics_view = AIMetricsView()
         self.settings_view = SettingsView(on_pick_export_folder=on_pick_export_folder)

@@ -104,8 +104,8 @@ class TestPlaylistExportService:
         assert result.success
         assert result.playlist_paths == tracks
 
-    def test_m3u8_uses_absolute_uris_in_custom_folder(self, tmp_path):
-        """Le fichier .m3u8 doit contenir des URIs file:// absolues, indépendantes du dossier cible."""
+    def test_m3u8_uses_absolute_paths_in_custom_folder(self, tmp_path):
+        """Le fichier .m3u8 doit contenir des chemins absolus natifs, indépendants du dossier cible."""
         from services.playlist_export_service import make_m3u
 
         export_dir = tmp_path / "exports"
@@ -126,16 +126,15 @@ class TestPlaylistExportService:
         assert "#EXTM3U" in content
         assert "song1" in content
         assert "song2" in content
-        # Toutes les lignes d'entrée doivent être des URIs absolues file://
+        # Toutes les lignes d'entrée doivent être des chemins absolus natifs
         lines = [ln for ln in content.splitlines() if ln and not ln.startswith("#")]
         for line in lines:
-            assert line.startswith("file:///") or line.startswith("file://"), (
-                f"L'URI n'est pas absolue : {line!r}"
-            )
-        # Les URIs ne doivent PAS contenir le chemin du dossier export
+            p = Path(line)
+            assert p.is_absolute(), f"Le chemin n'est pas absolu : {line!r}"
+        # Les chemins ne doivent PAS contenir le chemin du dossier export
         for line in lines:
             assert str(export_dir) not in line, (
-                f"L'URI contient le dossier d'export alors qu'elle devrait pointer vers la source : {line!r}"
+                f"Le chemin contient le dossier d'export alors qu'il devrait pointer vers la source : {line!r}"
             )
 
     def test_empty_playlist_returns_failure(self, tmp_path):

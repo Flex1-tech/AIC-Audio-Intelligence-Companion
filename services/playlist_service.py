@@ -8,11 +8,12 @@ from core.state import app_state
 
 
 from services.playlist_export_service import PlaylistExportService, ExportResult
+from services.playback_service import PlaybackService
 
 
 class PlaylistService:
     """
-    Service de recommandation MMR, génération de playlists .m3u8 et exécution de VLC.
+    Service de recommandation MMR, génération de playlists .m3u8 et lecture externe.
     """
 
     def __init__(
@@ -20,10 +21,12 @@ class PlaylistService:
         provider: MusicnnProvider = None,
         repository: TrackRepository = None,
         export_service: PlaylistExportService = None,
+        playback_service: PlaybackService = None,
     ):
         self.provider = provider or MusicnnProvider()
         self.repository = repository or TrackRepository()
         self.export_service = export_service or PlaylistExportService()
+        self.playback_service = playback_service or PlaybackService()
 
     def generate_recommendations(self, lambda_mmr: float = 0.7) -> List[str]:
         """
@@ -86,16 +89,17 @@ class PlaylistService:
         )
 
     def launch_vlc(self, playlist_path: str = "playlist.m3u8") -> Tuple[bool, str]:
-        vlc_path = app_state.session.vlc_custom_path or find_vlc()
-        if not vlc_path:
-            return (
-                False,
-                "VLC est introuvable. Veuillez l'installer ou préciser son chemin.",
-            )
+        """Lance la playlist avec VLC (ou bascule vers l'application par défaut si VLC est absent)."""
+        return self.playback_service.play_playlist(playlist_path, prefer_vlc=True)
 
-        try:
-            subprocess.Popen([vlc_path, playlist_path])
-            app_state.log_action("VLC_LAUNCHED", f"VLC lancé avec la playlist {playlist_path}")
-            return True, "VLC lancé avec succès !"
-        except Exception as e:
-            return False, f"Erreur lors du lancement de VLC : {e}"
+    def play_playlist_default(self, playlist_path: str = "playlist.m3u8") -> Tuple[bool, str]:
+        """Lance la playlist avec le lecteur par défaut du système."""
+        return self.playback_service.play_with_default_app(playlist_path)
+
+    def open_with_dialog(self, file_path: str) -> Tuple[bool, str]:
+        """Ouvre le dialogue 'Ouvrir avec…' du système."""
+        return self.playback_service.open_with_dialog(file_path)
+
+    def show_in_explorer(self, file_path: str) -> Tuple[bool, str]:
+        """Affiche et sélectionne le fichier dans l'Explorateur."""
+        return self.playback_service.show_in_explorer(file_path)

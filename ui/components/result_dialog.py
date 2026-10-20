@@ -45,12 +45,15 @@ class ResultDialog(ft.AlertDialog):
         lambda_mmr: float = 0.7,
         is_default_folder: bool = True,
         on_launch_vlc: Optional[Callable[[], Any]] = None,
+        on_open_with: Optional[Callable[[], Any]] = None,
         on_open_folder: Optional[Callable[[str], Any]] = None,
         on_export_to: Optional[Callable[[], Any]] = None,
         on_set_as_default: Optional[Callable[[str], Any]] = None,
         on_regenerate: Optional[Callable[[], Any]] = None,
         on_change_library: Optional[Callable[[], Any]] = None,
         on_close: Optional[Callable[[], Any]] = None,
+        on_play_track: Optional[Callable[[str], Any]] = None,
+        on_explore_track: Optional[Callable[[str], Any]] = None,
         on_change_folder: Optional[Callable[[], Any]] = None,  # Rétrocompatibilité
     ):
         self.count = count
@@ -62,12 +65,15 @@ class ResultDialog(ft.AlertDialog):
         self._is_current_default = is_default_folder
 
         self._on_launch_vlc = on_launch_vlc
+        self._on_open_with = on_open_with
         self._on_open_folder = on_open_folder
         self._on_export_to = on_export_to or on_change_folder
         self._on_set_as_default = on_set_as_default
         self._on_regenerate = on_regenerate
         self._on_change_library = on_change_library
         self._on_close = on_close
+        self._on_play_track = on_play_track
+        self._on_explore_track = on_explore_track
         self._on_change_folder = on_change_folder
 
         # Calcul de la durée totale estimée
@@ -193,7 +199,7 @@ class ResultDialog(ft.AlertDialog):
                         ),
                         ft.Container(height=4),
 
-                        # 2. Hero Action : Écouter avec VLC (Action Principale #1)
+                        # 2. Hero Action : Écouter la playlist (Action Principale #1)
                         ft.Container(
                             content=ft.FilledButton(
                                 content=ft.Row(
@@ -204,7 +210,7 @@ class ResultDialog(ft.AlertDialog):
                                             color=ObsidianColors.TEXT_ON_PRIMARY,
                                         ),
                                         ft.Text(
-                                            "Écouter avec VLC",
+                                            "Écouter la playlist",
                                             size=15,
                                             weight=ft.FontWeight.BOLD,
                                             color=ObsidianColors.TEXT_ON_PRIMARY,
@@ -222,6 +228,7 @@ class ResultDialog(ft.AlertDialog):
                                     padding=ft.Padding(16, 12, 16, 12),
                                     mouse_cursor=ft.MouseCursor.CLICK,
                                 ),
+                                tooltip="Lire la playlist (VLC ou lecteur par défaut)",
                                 on_click=self._handle_vlc,
                             ),
                             width=520,
@@ -285,6 +292,38 @@ class ResultDialog(ft.AlertDialog):
                                                     mouse_cursor=ft.MouseCursor.CLICK,
                                                 ),
                                                 on_click=self._handle_open_folder,
+                                            ),
+                                            ft.OutlinedButton(
+                                                content=ft.Row(
+                                                    [
+                                                        ft.Icon(
+                                                            ft.Icons.OPEN_IN_NEW_ROUNDED,
+                                                            size=15,
+                                                            color=ObsidianColors.TEXT_PRIMARY,
+                                                        ),
+                                                        ft.Text(
+                                                            "Ouvrir avec…",
+                                                            size=12,
+                                                            color=ObsidianColors.TEXT_PRIMARY,
+                                                        ),
+                                                    ],
+                                                    spacing=6,
+                                                    tight=True,
+                                                ),
+                                                style=ft.ButtonStyle(
+                                                    shape=ft.RoundedRectangleBorder(radius=Radii.SM),
+                                                    side={
+                                                        ft.ControlState.DEFAULT: ft.BorderSide(
+                                                            1, ObsidianColors.BORDER_DARK
+                                                        ),
+                                                        ft.ControlState.HOVERED: ft.BorderSide(
+                                                            1, ObsidianColors.TEXT_SECONDARY
+                                                        ),
+                                                    },
+                                                    mouse_cursor=ft.MouseCursor.CLICK,
+                                                ),
+                                                tooltip="Choisir une application pour lire la playlist",
+                                                on_click=self._handle_open_with,
                                             ),
                                             ft.OutlinedButton(
                                                 content=ft.Row(
@@ -470,10 +509,30 @@ class ResultDialog(ft.AlertDialog):
                                 overflow=ft.TextOverflow.ELLIPSIS,
                                 expand=True,
                             ),
-                            ft.Text(
-                                f"Score MMR : {mmr_str}" if mmr_str else "",
-                                size=10,
-                                color=ObsidianColors.TEXT_MUTED,
+                            ft.Row(
+                                [
+                                    ft.Text(
+                                        f"Score MMR : {mmr_str}" if mmr_str else "",
+                                        size=10,
+                                        color=ObsidianColors.TEXT_MUTED,
+                                    ),
+                                    ft.IconButton(
+                                        icon=ft.Icons.PLAY_ARROW_ROUNDED,
+                                        icon_size=16,
+                                        icon_color=ObsidianColors.TEXT_SECONDARY,
+                                        tooltip="Écouter ce morceau",
+                                        on_click=lambda _e, p=path: self._safe_dispatch(self._on_play_track, p),
+                                    ),
+                                    ft.IconButton(
+                                        icon=ft.Icons.FOLDER_OPEN_ROUNDED,
+                                        icon_size=16,
+                                        icon_color=ObsidianColors.TEXT_SECONDARY,
+                                        tooltip="Afficher dans l'Explorateur",
+                                        on_click=lambda _e, p=path: self._safe_dispatch(self._on_explore_track, p),
+                                    ),
+                                ],
+                                spacing=2,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -598,6 +657,9 @@ class ResultDialog(ft.AlertDialog):
 
     def _handle_vlc(self, _e=None) -> None:
         self._safe_dispatch(self._on_launch_vlc)
+
+    def _handle_open_with(self, _e=None) -> None:
+        self._safe_dispatch(self._on_open_with)
 
     def _handle_open_folder(self, _e=None) -> None:
         self._safe_dispatch(self._on_open_folder, self.folder_path)

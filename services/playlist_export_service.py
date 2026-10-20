@@ -7,13 +7,14 @@ from core.state import app_state
 
 
 def make_m3u(playlist_paths: List[str], output_path: str) -> None:
-    """Génère un fichier .m3u à partir d'une liste de chemins de fichiers audio."""
+    """Génère un fichier .m3u/.m3u8 à partir d'une liste de chemins de fichiers audio (chemins absolus natifs en UTF-8)."""
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("#EXTM3U\n")
         for path in playlist_paths:
             p = Path(path)
+            resolved = str(p if p.is_absolute() else p.resolve())
             f.write(f"#EXTINF:-1,{p.stem}\n")
-            f.write((p if p.is_absolute() else p.resolve()).as_uri() + "\n")
+            f.write(resolved + "\n")
 
 
 @dataclass

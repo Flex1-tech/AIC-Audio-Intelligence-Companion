@@ -55,7 +55,28 @@ class RecommendationController:
         threading.Thread(target=_worker, daemon=True).start()
 
     def launch_vlc(self) -> tuple[bool, str]:
+        """Lance la playlist avec VLC (ou bascule sur l'app par défaut)."""
         return self.playlist_service.launch_vlc(app_state.session.last_generated_playlist_path)
+
+    def play_playlist_default(self) -> tuple[bool, str]:
+        """Lance la playlist avec l'application par défaut."""
+        return self.playlist_service.play_playlist_default(app_state.session.last_generated_playlist_path)
+
+    def open_playlist_with_dialog(self) -> tuple[bool, str]:
+        """Ouvre le dialogue 'Ouvrir avec…' pour la playlist."""
+        return self.playlist_service.open_with_dialog(app_state.session.last_generated_playlist_path)
+
+    def show_playlist_in_explorer(self) -> tuple[bool, str]:
+        """Affiche et sélectionne la playlist dans l'Explorateur."""
+        return self.playlist_service.show_in_explorer(app_state.session.last_generated_playlist_path)
+
+    def play_track(self, file_path: str) -> tuple[bool, str]:
+        """Ouvre un morceau individuel avec le lecteur par défaut."""
+        return self.playlist_service.playback_service.play_track(file_path)
+
+    def show_track_in_explorer(self, file_path: str) -> tuple[bool, str]:
+        """Affiche et sélectionne un morceau individuel dans l'Explorateur."""
+        return self.playlist_service.playback_service.show_in_explorer(file_path)
 
     def export_playlist(
         self,

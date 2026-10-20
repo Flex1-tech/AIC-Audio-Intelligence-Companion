@@ -196,6 +196,16 @@ def main(page: ft.Page) -> None:
                 return
             library_controller.remove_track(file_path)
 
+        def handle_play_track(file_path: str) -> None:
+            success, msg = library_controller.play_track(file_path)
+            if not success:
+                _show_toast(msg, is_error=True)
+
+        def handle_explore_track(file_path: str) -> None:
+            success, msg = library_controller.show_in_explorer(file_path)
+            if not success:
+                _show_toast(msg, is_error=True)
+
         def handle_search(query: str) -> None:
             library_controller.set_search_query(query)
 
@@ -329,12 +339,15 @@ def main(page: ft.Page) -> None:
                         lambda_mmr=app_state.session.lambda_mmr,
                         is_default_folder=is_default,
                         on_launch_vlc=_launch_vlc,
+                        on_open_with=_open_with_playlist,
                         on_open_folder=_do_open_folder,
                         on_export_to=_do_export_to,
                         on_set_as_default=_do_set_as_default,
                         on_regenerate=_do_regenerate,
                         on_change_library=_do_change_library,
                         on_close=lambda: page.pop_dialog(),
+                        on_play_track=_play_playlist_track,
+                        on_explore_track=_explore_playlist_track,
                     )
                     page.show_dialog(dialog)
 
@@ -371,6 +384,23 @@ def main(page: ft.Page) -> None:
             success, msg = rec_controller.launch_vlc()
             _show_toast(msg, is_error=not success)
 
+        def _open_with_playlist() -> None:
+            if not app_state.session.last_generated_playlist_path:
+                return
+            success, msg = rec_controller.open_playlist_with_dialog()
+            if not success:
+                _show_toast(msg, is_error=True)
+
+        def _play_playlist_track(file_path: str) -> None:
+            success, msg = rec_controller.play_track(file_path)
+            if not success:
+                _show_toast(msg, is_error=True)
+
+        def _explore_playlist_track(file_path: str) -> None:
+            success, msg = rec_controller.show_track_in_explorer(file_path)
+            if not success:
+                _show_toast(msg, is_error=True)
+
         layout = MainLayout(
             on_pick_files=handle_pick_files,
             on_pick_folder=handle_pick_folder,
@@ -381,6 +411,8 @@ def main(page: ft.Page) -> None:
             on_reset=handle_reset,
             on_theme_toggle=handle_theme_toggle,
             on_pick_export_folder=handle_pick_export_folder,
+            on_play_track=handle_play_track,
+            on_explore_track=handle_explore_track,
         )
 
         splash_active = True

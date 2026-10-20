@@ -129,3 +129,18 @@ class LibraryController:
     def toggle_liked_filter(self) -> None:
         app_state.session.filter_liked_only = not app_state.session.filter_liked_only
         app_state.notify()
+
+    def play_track(self, file_path: str) -> tuple[bool, str]:
+        """Ouvre un morceau de la bibliothèque avec l'application par défaut."""
+        from services.playback_service import PlaybackService
+        return PlaybackService().play_track(file_path)
+
+    def show_in_explorer(self, file_path: str) -> tuple[bool, str]:
+        """Affiche et sélectionne le morceau dans l'Explorateur Windows."""
+        from services.playback_service import PlaybackService
+        return PlaybackService().show_in_explorer(file_path)
+
+    def open_with_dialog(self, file_path: str) -> tuple[bool, str]:
+        """Ouvre le dialogue 'Ouvrir avec…' pour ce morceau."""
+        from services.playback_service import PlaybackService
+        return PlaybackService().open_with_dialog(file_path)
