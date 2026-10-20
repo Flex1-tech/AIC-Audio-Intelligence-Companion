@@ -128,4 +128,3 @@ class PlaylistExportService:
         """Définit et mémorise le dossier d'export par défaut dans les préférences."""
         app_state.session.export_folder_path = str(folder_path)
         app_state.notify()
-

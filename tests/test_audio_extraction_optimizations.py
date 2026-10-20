@@ -40,9 +40,9 @@ def test_zcr_vectorized_synthetic_cases():
             # Tolérance numérique : librosa applique un padding de bord de 1024 échantillons
             # aux deux extrémités (mode='edge'), créant un écart d'environ 1-2% sur les signaux
             # courts de 32000 échantillons à transitions fréquentes.
-            assert abs(zcr_librosa - zcr_vectorized) < 0.03, (
-                f"Écart ZCR trop grand pour '{name}': {zcr_librosa} vs {zcr_vectorized}"
-            )
+            assert (
+                abs(zcr_librosa - zcr_vectorized) < 0.03
+            ), f"Écart ZCR trop grand pour '{name}': {zcr_librosa} vs {zcr_vectorized}"
 
 
 def test_load_audio_command_includes_threads_flag():
@@ -76,8 +76,22 @@ def test_load_audio_bit_exactness_with_real_file_if_available():
 
     # Décodage baseline sans -threads 0
     cmd_base = [
-        "ffmpeg", "-nostdin", "-loglevel", "error", "-i", sample_file,
-        "-vn", "-ac", "1", "-ar", "16000", "-f", "f32le", "-acodec", "pcm_f32le", "-"
+        "ffmpeg",
+        "-nostdin",
+        "-loglevel",
+        "error",
+        "-i",
+        sample_file,
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        "-f",
+        "f32le",
+        "-acodec",
+        "pcm_f32le",
+        "-",
     ]
     res_base = subprocess.run(cmd_base, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     audio_base = np.frombuffer(res_base.stdout, dtype=np.float32)
@@ -120,4 +134,3 @@ def test_compute_embedding_real_track_if_available():
     assert emb.shape == (200,)
     assert taggram.shape == (50,)
     assert abs(np.linalg.norm(emb) - 1.0) < 1e-4
-

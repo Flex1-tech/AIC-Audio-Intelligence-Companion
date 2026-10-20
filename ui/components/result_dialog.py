@@ -19,7 +19,7 @@ async def _await_coroutine(coro: Any) -> Any:
 class ResultDialog(ft.AlertDialog):
     """
     Modal de découverte post-recommandation Obsidian Horizon.
-    
+
     Hiérarchie UX stricte :
     1. Célébration & Statut (Playlist générée et automatiquement exportée)
     2. Hero Action : « Écouter avec VLC »
@@ -198,7 +198,6 @@ class ResultDialog(ft.AlertDialog):
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
                         ft.Container(height=4),
-
                         # 2. Hero Action : Écouter la playlist (Action Principale #1)
                         ft.Container(
                             content=ft.FilledButton(
@@ -234,7 +233,6 @@ class ResultDialog(ft.AlertDialog):
                             width=520,
                         ),
                         ft.Container(height=2),
-
                         # 3. Cartouche d'Export Actuel
                         ft.Container(
                             content=ft.Column(
@@ -369,7 +367,6 @@ class ResultDialog(ft.AlertDialog):
                             bgcolor=ObsidianColors.SURFACE_ELEVATED,
                             border=ft.Border.all(1, ObsidianColors.BORDER_DARK),
                         ),
-
                         # 4. Progressive Disclosure : Liste des morceaux
                         ft.Container(
                             content=ft.Column(
@@ -579,9 +576,7 @@ class ResultDialog(ft.AlertDialog):
         self.file_name = file_name
         self._is_current_default = is_default
 
-        self._export_status_text.value = (
-            "Exportée automatiquement dans :" if is_default else "Exportée dans :"
-        )
+        self._export_status_text.value = "Exportée automatiquement dans :" if is_default else "Exportée dans :"
         self._export_path_text.value = self._format_display_path(folder_path, file_name)
         self._export_path_text.tooltip = file_path or folder_path
         self._set_default_btn.visible = not is_default
@@ -636,18 +631,14 @@ class ResultDialog(ft.AlertDialog):
                 if page:
                     page.run_task(callback, *args, **kwargs)
                 else:
-                    logger.warning(
-                        "Impossible de dispatcher la coroutine : page Flet non disponible."
-                    )
+                    logger.warning("Impossible de dispatcher la coroutine : page Flet non disponible.")
             else:
                 res = callback(*args, **kwargs)
                 if inspect.iscoroutine(res):
                     if page:
                         page.run_task(_await_coroutine, res)
                     else:
-                        logger.warning(
-                            "Impossible d'attendre la coroutine : page Flet non disponible."
-                        )
+                        logger.warning("Impossible d'attendre la coroutine : page Flet non disponible.")
                         res.close()
         except Exception as err:
             logger.error(f"Erreur callback ResultDialog : {err}", exc_info=True)

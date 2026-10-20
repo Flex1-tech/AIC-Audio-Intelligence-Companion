@@ -40,6 +40,7 @@ from tools.capture.capture_app import (
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+
 def _make_png(tmp_path: pathlib.Path, filename: str, size: tuple, color: tuple) -> pathlib.Path:
     """Crée un PNG synthétique de taille et couleur données."""
     p = tmp_path / filename
@@ -77,6 +78,7 @@ def _make_png_with_zone(
 
 # ── Tests build_output_filename ────────────────────────────────────────────────
 
+
 def test_build_output_filename_presets():
     """Vérifie la nomenclature canonique des fichiers pour les presets standard (PNG)."""
     # 4K screenshots
@@ -108,6 +110,7 @@ def test_build_output_filename_video():
 
 
 # ── Tests CaptureConfig ────────────────────────────────────────────────────────
+
 
 def test_capture_config_target_dimensions():
     """Vérifie les propriétés calculées de CaptureConfig."""
@@ -149,13 +152,17 @@ def test_capture_config_diag_dir():
     """Vérifie que diag_dir est bien sous output/.diagnostics/."""
     output = pathlib.Path("tools/capture/output")
     cfg = CaptureConfig(
-        width=1920, height=1080, scale=2.0,
-        screen="dashboard", output_dir=output,
+        width=1920,
+        height=1080,
+        scale=2.0,
+        screen="dashboard",
+        output_dir=output,
     )
     assert cfg.diag_dir == output / ".diagnostics"
 
 
 # ── Tests find_free_port ───────────────────────────────────────────────────────
+
 
 def test_find_free_port():
     """Vérifie que find_free_port retourne un numéro de port TCP valide."""
@@ -165,6 +172,7 @@ def test_find_free_port():
 
 
 # ── Tests verify_image ─────────────────────────────────────────────────────────
+
 
 def test_verify_image_success(tmp_path: pathlib.Path):
     """Vérifie qu'une image valide et de dimension exacte est validée sans erreur."""
@@ -192,6 +200,7 @@ def test_verify_image_blank_rejection(tmp_path: pathlib.Path):
 
 # ── Tests verify_video ─────────────────────────────────────────────────────────
 
+
 def test_verify_video_too_small(tmp_path: pathlib.Path):
     """Vérifie qu'un fichier vidéo incomplet ou corrompu (<10 Ko) est rejeté."""
     test_file = tmp_path / "corrupt.webm"
@@ -202,12 +211,13 @@ def test_verify_video_too_small(tmp_path: pathlib.Path):
 
 # ── Tests parse_webm_resolution ────────────────────────────────────────────────
 
+
 def test_parse_webm_resolution_synthetic(tmp_path: pathlib.Path):
     """Vérifie le parseur EBML sur une séquence binaire synthétique."""
     test_file = tmp_path / "test.webm"
     content = bytearray(b"\x00" * 32)
-    content += bytes([0xB0, 0x82, 0x07, 0x80])   # PixelWidth = 1920
-    content += bytes([0xBA, 0x82, 0x04, 0x38])   # PixelHeight = 1080
+    content += bytes([0xB0, 0x82, 0x07, 0x80])  # PixelWidth = 1920
+    content += bytes([0xBA, 0x82, 0x04, 0x38])  # PixelHeight = 1080
     content += b"\x00" * 100
     test_file.write_bytes(content)
 
@@ -216,6 +226,7 @@ def test_parse_webm_resolution_synthetic(tmp_path: pathlib.Path):
 
 
 # ── Tests détection de pixels ──────────────────────────────────────────────────
+
 
 def test_count_cyan_pixels_exact_color():
     """Vérifie que _count_cyan_pixels détecte le cyan AIC exact (#30C4EF)."""
@@ -257,6 +268,7 @@ def test_count_bright_pixels_bright():
 
 # ── Tests validate_screenshot_is_not_splash ────────────────────────────────────
 
+
 def test_validate_screenshot_not_splash_pass_with_cyan_rail(tmp_path: pathlib.Path):
     """
     Vérifie qu'un screenshot avec rail de navigation cyan (#30C4EF) passe la validation.
@@ -265,14 +277,15 @@ def test_validate_screenshot_not_splash_pass_with_cyan_rail(tmp_path: pathlib.Pa
     cr, cg, cb = _CYAN_TARGET
     # Image 1920x1080 avec rail de navigation peint en cyan
     test_file = _make_png_with_zone(
-        tmp_path, "dashboard_fhd.png",
+        tmp_path,
+        "dashboard_fhd.png",
         canvas_size=(1920, 1080),
-        canvas_color=(10, 15, 26),        # Fond sombre (comme AIC)
+        canvas_color=(10, 15, 26),  # Fond sombre (comme AIC)
         zone_x=_ZONE_NAV_RAIL["x"],
         zone_y=_ZONE_NAV_RAIL["y"],
         zone_w=_ZONE_NAV_RAIL["w"],
         zone_h=_ZONE_NAV_RAIL["h"],
-        zone_color=(cr, cg, cb),          # Cyan AIC exact
+        zone_color=(cr, cg, cb),  # Cyan AIC exact
     )
     # Ne doit PAS lever d'exception
     validate_screenshot_is_not_splash(test_file, scale=1.0)
@@ -284,14 +297,15 @@ def test_validate_screenshot_not_splash_pass_with_bright_header(tmp_path: pathli
     Simule une image 4K (3840x2160, scale=2) avec le header peint en blanc.
     """
     test_file = _make_png_with_zone(
-        tmp_path, "settings_4k.png",
+        tmp_path,
+        "settings_4k.png",
         canvas_size=(3840, 2160),
         canvas_color=(10, 15, 26),
-        zone_x=int(_ZONE_HEADER["x"] * 2),   # ×scale=2
+        zone_x=int(_ZONE_HEADER["x"] * 2),  # ×scale=2
         zone_y=int(_ZONE_HEADER["y"] * 2),
         zone_w=int(_ZONE_HEADER["w"] * 2),
         zone_h=int(_ZONE_HEADER["h"] * 2),
-        zone_color=(220, 220, 220),            # Header lumineux
+        zone_color=(220, 220, 220),  # Header lumineux
     )
     validate_screenshot_is_not_splash(test_file, scale=2.0)
 
@@ -307,6 +321,7 @@ def test_validate_screenshot_not_splash_fail_on_splash(tmp_path: pathlib.Path):
 
 
 # ── Tests validate_screenshots_are_distinct ────────────────────────────────────
+
 
 def test_validate_screenshots_are_distinct_pass(tmp_path: pathlib.Path):
     """Vérifie que deux screenshots visuellement différents passent la validation."""

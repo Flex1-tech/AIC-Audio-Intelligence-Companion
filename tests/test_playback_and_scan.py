@@ -18,12 +18,12 @@ import tempfile
 import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import pytest
 
 
 # ---------------------------------------------------------------------------
 # 1. Tests Scan de Dossier & Pipeline de Validation
 # ---------------------------------------------------------------------------
+
 
 def test_scan_directory_empty_folder():
     """Un dossier vide retourne 0 chemins découverts et 0 tracks sans planter."""
@@ -102,9 +102,13 @@ def test_scan_directory_with_video_container_with_audio():
         video_file.write_bytes(b"\x1a\x45\xdf\xa3" + b"\x00" * 200)
 
         service = LibraryService()
-        mock_track = Track(file_path=str(video_file), file_name="clip.webm", duration_seconds=240.0, audio_format="WEBM")
+        mock_track = Track(
+            file_path=str(video_file), file_name="clip.webm", duration_seconds=240.0, audio_format="WEBM"
+        )
 
-        with patch.object(service.validation_service, "validate_file_paths", return_value=([mock_track], 0)) as mock_val:
+        with patch.object(
+            service.validation_service, "validate_file_paths", return_value=([mock_track], 0)
+        ) as mock_val:
             tracks, invalid_count = service.process_folder_import(str(temp_dir))
             assert len(tracks) == 1
             assert tracks[0].file_name == "clip.webm"
@@ -172,7 +176,6 @@ def test_scan_directory_handles_permission_error():
 
         service = LibraryService()
 
-        orig_walk = os.walk
         def mock_walk(top, *args, **kwargs):
             yield (str(temp_dir), ["forbidden_dir"], ["valid.mp3"])
             raise PermissionError("Access is denied")
@@ -212,8 +215,10 @@ def test_scan_preserves_step_3b_ffprobe_bypass():
         val_service = AudioValidationService(repository=mock_repo)
         lib_service = LibraryService(validation_service=val_service)
 
-        with patch("services.audio_validation_service.is_audio_file", return_value=True), \
-             patch("services.audio_validation_service.is_valid_media") as mock_ffprobe:
+        with (
+            patch("services.audio_validation_service.is_audio_file", return_value=True),
+            patch("services.audio_validation_service.is_valid_media") as mock_ffprobe,
+        ):
             tracks, invalid = lib_service.process_folder_import(str(temp_dir))
             mock_ffprobe.assert_not_called()
             assert len(tracks) == 1
@@ -226,6 +231,7 @@ def test_scan_preserves_step_3b_ffprobe_bypass():
 # ---------------------------------------------------------------------------
 # 2. Tests Export M3U8 (Chemins Absolus Natifs & Caractères Spéciaux)
 # ---------------------------------------------------------------------------
+
 
 def test_m3u8_native_absolute_paths_on_windows():
     """make_m3u() écrit des chemins natifs Windows (C:\\...) au lieu de file:///."""
@@ -283,6 +289,7 @@ def test_m3u8_handles_apostrophes_spaces_and_accents():
 # 3. Tests Service de Lecture Externe Multiplateforme (PlaybackService)
 # ---------------------------------------------------------------------------
 
+
 def test_playback_service_vlc_available():
     """Quand VLC est disponible, play_playlist le lance en tâche de fond sans shell=True."""
     from services.playback_service import PlaybackService
@@ -318,7 +325,9 @@ def test_playback_service_vlc_absent_fallback_to_default():
 
     try:
         with patch("services.playback_service.find_vlc", return_value=None):
-            with patch.object(service, "play_with_default_app", return_value=(True, "Lecture lancée avec l'application par défaut")) as mock_default:
+            with patch.object(
+                service, "play_with_default_app", return_value=(True, "Lecture lancée avec l'application par défaut")
+            ) as mock_default:
                 success, msg = service.play_playlist(dummy_file, prefer_vlc=True)
                 assert success is True
                 assert "VLC non détecté" in msg
@@ -339,7 +348,9 @@ def test_playback_service_vlc_error_fallback_to_default():
     try:
         with patch("services.playback_service.find_vlc", return_value="/usr/bin/vlc"):
             with patch("subprocess.Popen", side_effect=OSError("Exec format error")):
-                with patch.object(service, "play_with_default_app", return_value=(True, "Lecteur par défaut")) as mock_default:
+                with patch.object(
+                    service, "play_with_default_app", return_value=(True, "Lecteur par défaut")
+                ) as mock_default:
                     success, msg = service.play_playlist(dummy_file, prefer_vlc=True)
                     assert success is True
                     mock_default.assert_called_once()
@@ -418,7 +429,10 @@ def test_playback_default_linux_xdg_open():
         dummy_file = f.name
 
     try:
-        with patch("services.playback_service.which", side_effect=lambda cmd: "/usr/bin/xdg-open" if cmd == "xdg-open" else None):
+        with patch(
+            "services.playback_service.which",
+            side_effect=lambda cmd: "/usr/bin/xdg-open" if cmd == "xdg-open" else None,
+        ):
             with patch("subprocess.Popen") as mock_popen:
                 success, msg = service.play_with_default_app(dummy_file)
                 assert success is True
@@ -442,6 +456,7 @@ def test_playback_default_linux_gio_fallback():
         dummy_file = f.name
 
     try:
+
         def mock_which(cmd):
             if cmd == "gio":
                 return "/usr/bin/gio"
@@ -537,6 +552,7 @@ def test_playback_service_open_with_dialog_linux_zenity():
         dummy_file = f.name
 
     try:
+
         def mock_which(cmd):
             if cmd == "zenity":
                 return "/usr/bin/zenity"
@@ -633,6 +649,7 @@ def test_playback_service_show_in_explorer_linux_nautilus():
         dummy_file = f.name
 
     try:
+
         def mock_which(cmd):
             if cmd == "nautilus":
                 return "/usr/bin/nautilus"
@@ -659,6 +676,7 @@ def test_playback_service_show_in_explorer_linux_fallback_parent():
         dummy_file = f.name
 
     try:
+
         def mock_which(cmd):
             if cmd == "xdg-open":
                 return "/usr/bin/xdg-open"

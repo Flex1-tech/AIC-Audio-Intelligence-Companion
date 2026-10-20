@@ -5,7 +5,6 @@ Tests unitaires pour l'algorithme MMR vectorisé.
 """
 
 import numpy as np
-import pytest
 from extraction import mmr_ranking
 
 

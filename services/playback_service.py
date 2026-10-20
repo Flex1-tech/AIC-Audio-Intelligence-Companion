@@ -27,7 +27,6 @@ import platform
 import subprocess
 import logging
 from shutil import which
-from pathlib import Path
 from typing import Tuple, Optional
 
 from core.state import app_state
@@ -135,7 +134,9 @@ class PlaybackService:
                 subprocess.Popen([opener, "open", norm_path])
             else:
                 subprocess.Popen([opener, norm_path])
-            app_state.log_action("PLAYBACK_DEFAULT", f"Ouvert avec le lecteur par défaut Linux ({opener}) : {norm_path}")
+            app_state.log_action(
+                "PLAYBACK_DEFAULT", f"Ouvert avec le lecteur par défaut Linux ({opener}) : {norm_path}"
+            )
             return True, "Lecture lancée avec l'application par défaut."
         except (FileNotFoundError, PermissionError, OSError) as err:
             log.error(f"[PLAYBACK] Erreur d'ouverture Linux ({opener}) pour {norm_path} : {err}")
@@ -174,11 +175,11 @@ class PlaybackService:
     def _open_with_macos(self, norm_path: str) -> Tuple[bool, str]:
         osascript_bin = which("osascript") or "/usr/bin/osascript"
         script = (
-            'on run argv\n'
-            '    set filePath to item 1 of argv\n'
+            "on run argv\n"
+            "    set filePath to item 1 of argv\n"
             '    set appPath to choose application with prompt "Choisir une application pour ouvrir ce fichier :"\n'
             '    tell application "Finder" to open (POSIX file filePath) using appPath\n'
-            'end run'
+            "end run"
         )
         try:
             subprocess.Popen([osascript_bin, "-e", script, norm_path])

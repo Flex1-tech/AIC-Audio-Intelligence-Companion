@@ -24,7 +24,6 @@ from controllers.library_controller import LibraryController
 def temp_lancedb_and_files():
     import numpy as np
     import lancedb
-    import extraction
     from extraction import get_file_hash
     from schema import TrackEmbeddingModel
 
@@ -41,14 +40,18 @@ def temp_lancedb_and_files():
     hash2 = get_file_hash(str(file2))
 
     # Indexer track1 en base
-    table.add([{
-        "file_name": file1.name,
-        "file_path": str(file1),
-        "file_hash": hash1,
-        "file_size_bytes": file1.stat().st_size,
-        "taggram": np.zeros(50, dtype=np.float32),
-        "vector": np.random.randn(200).astype(np.float32),
-    }])
+    table.add(
+        [
+            {
+                "file_name": file1.name,
+                "file_path": str(file1),
+                "file_hash": hash1,
+                "file_size_bytes": file1.stat().st_size,
+                "taggram": np.zeros(50, dtype=np.float32),
+                "vector": np.random.randn(200).astype(np.float32),
+            }
+        ]
+    )
 
     yield {
         "temp_dir": temp_dir,
@@ -63,8 +66,8 @@ def temp_lancedb_and_files():
 
 
 def test_process_files_batch_reuses_track_hashes(temp_lancedb_and_files):
-    import extraction
     from extraction import process_files_batch
+
     table = temp_lancedb_and_files["table"]
     file1 = temp_lancedb_and_files["file1"]
     hash1 = temp_lancedb_and_files["hash1"]
@@ -81,6 +84,7 @@ def test_process_files_batch_reuses_track_hashes(temp_lancedb_and_files):
 def test_process_files_batch_fallback_when_no_hashes(temp_lancedb_and_files):
     import extraction
     from extraction import process_files_batch
+
     table = temp_lancedb_and_files["table"]
     file1 = temp_lancedb_and_files["file1"]
 
@@ -96,6 +100,7 @@ def test_process_files_batch_fallback_when_no_hashes(temp_lancedb_and_files):
 def test_process_files_batch_fallback_when_hash_missing_for_file(temp_lancedb_and_files):
     import extraction
     from extraction import process_files_batch
+
     table = temp_lancedb_and_files["table"]
     file1 = temp_lancedb_and_files["file1"]
 

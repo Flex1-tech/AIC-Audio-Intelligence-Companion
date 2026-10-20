@@ -75,7 +75,9 @@ def main(page: ft.Page) -> None:
         if font_bold and font_bold.exists():
             fonts_dict["Cinzel Decorative Bold"] = "/fonts/CinzelDecorative-Bold.ttf" if is_web else str(font_bold)
         if font_regular and font_regular.exists():
-            fonts_dict["Cinzel Decorative Regular"] = "/fonts/CinzelDecorative-Regular.ttf" if is_web else str(font_regular)
+            fonts_dict["Cinzel Decorative Regular"] = (
+                "/fonts/CinzelDecorative-Regular.ttf" if is_web else str(font_regular)
+            )
         if fonts_dict:
             page.fonts = fonts_dict
 
@@ -294,9 +296,7 @@ def main(page: ft.Page) -> None:
                             persist_as_default=False,
                         )
                         if result.success:
-                            is_default = (
-                                new_dir == app_state.session.export_folder_path
-                            )
+                            is_default = new_dir == app_state.session.export_folder_path
                             dialog.update_export_location(
                                 folder_path=result.folder_path,
                                 file_path=result.file_path,
@@ -352,7 +352,6 @@ def main(page: ft.Page) -> None:
                     page.show_dialog(dialog)
 
                 page.run_task(_open_modal)
-
 
             def on_error(err: str) -> None:
                 # Traduit les erreurs techniques en messages utilisateur intelligibles
@@ -447,6 +446,7 @@ def main(page: ft.Page) -> None:
                     if _state_file:
                         try:
                             import time as _t
+
                             pathlib.Path(_state_file).write_text(
                                 f"MAIN_UI_READY|{int(_t.time() * 1000)}", encoding="utf-8"
                             )
@@ -474,9 +474,8 @@ def main(page: ft.Page) -> None:
             if _state_file:
                 try:
                     import time as _t
-                    pathlib.Path(_state_file).write_text(
-                        f"INIT|{int(_t.time() * 1000)}", encoding="utf-8"
-                    )
+
+                    pathlib.Path(_state_file).write_text(f"INIT|{int(_t.time() * 1000)}", encoding="utf-8")
                     logger.info("[CAPTURE MODE] AIC_STATE_FILE initialisé (state=INIT)")
                 except Exception as e:
                     logger.debug(f"[CAPTURE MODE] Impossible d'écrire AIC_STATE_FILE : {e}")

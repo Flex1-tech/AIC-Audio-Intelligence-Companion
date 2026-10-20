@@ -94,4 +94,3 @@ class RecommendationController:
     def set_default_export_folder(self, folder_path: str) -> None:
         """Définit la destination d'export par défaut persistante."""
         self.playlist_service.export_service.set_default_export_folder(folder_path)
-

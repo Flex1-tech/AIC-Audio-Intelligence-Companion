@@ -55,4 +55,3 @@ class LibraryService:
         """
         paths = self.scan_directory(folder_path)
         return self.validation_service.validate_file_paths(paths)
-

@@ -30,6 +30,7 @@ import pytest
 # Fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def temp_setup():
     """
@@ -65,14 +66,18 @@ def temp_setup():
     hash_b = get_file_hash(str(file_b))
 
     # Indexer track_a en base (simuler un fichier déjà validé et indexé)
-    table.add([{
-        "file_name": file_a.name,
-        "file_path": str(file_a),
-        "file_hash": hash_a,
-        "file_size_bytes": file_a.stat().st_size,
-        "taggram": np.zeros(50, dtype=np.float32),
-        "vector": np.random.randn(200).astype(np.float32),
-    }])
+    table.add(
+        [
+            {
+                "file_name": file_a.name,
+                "file_path": str(file_a),
+                "file_hash": hash_a,
+                "file_size_bytes": file_a.stat().st_size,
+                "taggram": np.zeros(50, dtype=np.float32),
+                "vector": np.random.randn(200).astype(np.float32),
+            }
+        ]
+    )
 
     val_service = AudioValidationService(repository=repo)
 
@@ -94,13 +99,16 @@ def temp_setup():
 # Tests de base
 # ---------------------------------------------------------------------------
 
+
 def test_known_file_skips_ffprobe(temp_setup):
     """Fichier inchangé et connu dans LanceDB → ffprobe non appelé."""
     file_a = temp_setup["file_a"]
     val_service = temp_setup["val_service"]
 
-    with patch("services.audio_validation_service.is_audio_file", return_value=True), \
-         patch("services.audio_validation_service.is_valid_media") as mock_valid:
+    with (
+        patch("services.audio_validation_service.is_audio_file", return_value=True),
+        patch("services.audio_validation_service.is_valid_media") as mock_valid,
+    ):
         tracks, invalid = val_service.validate_file_paths([str(file_a)])
         mock_valid.assert_not_called()
 
@@ -114,8 +122,10 @@ def test_new_file_calls_ffprobe(temp_setup):
     file_b = temp_setup["file_b"]
     val_service = temp_setup["val_service"]
 
-    with patch("services.audio_validation_service.is_audio_file", return_value=True), \
-         patch("services.audio_validation_service.is_valid_media", return_value=True) as mock_valid:
+    with (
+        patch("services.audio_validation_service.is_audio_file", return_value=True),
+        patch("services.audio_validation_service.is_valid_media", return_value=True) as mock_valid,
+    ):
         tracks, invalid = val_service.validate_file_paths([str(file_b)])
         mock_valid.assert_called_once()
 
@@ -134,8 +144,10 @@ def test_modified_file_calls_ffprobe(temp_setup):
     hash_new = get_file_hash(str(file_a))
     assert hash_new != temp_setup["hash_a"], "Le hash devrait avoir changé"
 
-    with patch("services.audio_validation_service.is_audio_file", return_value=True), \
-         patch("services.audio_validation_service.is_valid_media", return_value=True) as mock_valid:
+    with (
+        patch("services.audio_validation_service.is_audio_file", return_value=True),
+        patch("services.audio_validation_service.is_valid_media", return_value=True) as mock_valid,
+    ):
         tracks, invalid = val_service.validate_file_paths([str(file_a)])
         mock_valid.assert_called_once()
 
@@ -151,8 +163,10 @@ def test_corrupted_file_rejected(temp_setup):
     corrupt = temp_dir / "corrupt.mp3"
     corrupt.write_bytes(b"random trash bytes for corrupted test" * 100)
 
-    with patch("services.audio_validation_service.is_audio_file", return_value=True), \
-         patch("services.audio_validation_service.is_valid_media", return_value=False):
+    with (
+        patch("services.audio_validation_service.is_audio_file", return_value=True),
+        patch("services.audio_validation_service.is_valid_media", return_value=False),
+    ):
         tracks, invalid = val_service.validate_file_paths([str(corrupt)])
 
     assert len(tracks) == 0
@@ -169,8 +183,10 @@ def test_renamed_file_updates_path_no_ffprobe(temp_setup):
     renamed = temp_dir / "track_a_renamed.mp3"
     shutil.copy(str(file_a), str(renamed))
 
-    with patch("services.audio_validation_service.is_audio_file", return_value=True), \
-         patch("services.audio_validation_service.is_valid_media") as mock_valid:
+    with (
+        patch("services.audio_validation_service.is_audio_file", return_value=True),
+        patch("services.audio_validation_service.is_valid_media") as mock_valid,
+    ):
         tracks, invalid = val_service.validate_file_paths([str(renamed)])
         mock_valid.assert_not_called()
 
@@ -198,8 +214,10 @@ def test_fallback_when_lookup_fails(temp_setup):
     val_service = temp_setup["val_service"]
 
     with patch.object(val_service.repository, "find_existing_hashes", side_effect=RuntimeError("DB down")):
-        with patch("services.audio_validation_service.is_audio_file", return_value=True), \
-             patch("services.audio_validation_service.is_valid_media", return_value=True) as mock_valid:
+        with (
+            patch("services.audio_validation_service.is_audio_file", return_value=True),
+            patch("services.audio_validation_service.is_valid_media", return_value=True) as mock_valid,
+        ):
             tracks, invalid = val_service.validate_file_paths([str(file_a)])
             mock_valid.assert_called_once()
 
@@ -211,11 +229,11 @@ def test_skip_ffprobe_false_always_calls_ffprobe(temp_setup):
     file_a = temp_setup["file_a"]
     val_service = temp_setup["val_service"]
 
-    with patch("services.audio_validation_service.is_audio_file", return_value=True), \
-         patch("services.audio_validation_service.is_valid_media", return_value=True) as mock_valid:
-        tracks, invalid = val_service.validate_file_paths(
-            [str(file_a)], skip_ffprobe_for_known=False
-        )
+    with (
+        patch("services.audio_validation_service.is_audio_file", return_value=True),
+        patch("services.audio_validation_service.is_valid_media", return_value=True) as mock_valid,
+    ):
+        tracks, invalid = val_service.validate_file_paths([str(file_a)], skip_ffprobe_for_known=False)
         mock_valid.assert_called_once()
 
     assert len(tracks) == 1
@@ -224,6 +242,7 @@ def test_skip_ffprobe_false_always_calls_ffprobe(temp_setup):
 # ---------------------------------------------------------------------------
 # Tests de garanties architecturales
 # ---------------------------------------------------------------------------
+
 
 def test_batch_lookup_called_exactly_once(temp_setup):
     """Le lookup LanceDB est effectué en UN SEUL appel batch pour toute la liste."""
@@ -240,13 +259,13 @@ def test_batch_lookup_called_exactly_once(temp_setup):
 
     val_service.repository.find_existing_hashes = counting_find
 
-    with patch("services.audio_validation_service.is_audio_file", return_value=True), \
-         patch("services.audio_validation_service.is_valid_media", return_value=True):
+    with (
+        patch("services.audio_validation_service.is_audio_file", return_value=True),
+        patch("services.audio_validation_service.is_valid_media", return_value=True),
+    ):
         val_service.validate_file_paths([str(file_a), str(file_b)])
 
-    assert lookup_call_count["count"] == 1, (
-        f"Lookup DB appelé {lookup_call_count['count']} fois au lieu de 1 !"
-    )
+    assert lookup_call_count["count"] == 1, f"Lookup DB appelé {lookup_call_count['count']} fois au lieu de 1 !"
 
 
 def test_mixed_batch_known_and_unknown(temp_setup):
@@ -261,8 +280,10 @@ def test_mixed_batch_known_and_unknown(temp_setup):
         ffprobe_calls_on.append(path)
         return True
 
-    with patch("services.audio_validation_service.is_audio_file", return_value=True), \
-         patch("services.audio_validation_service.is_valid_media", side_effect=mock_valid):
+    with (
+        patch("services.audio_validation_service.is_audio_file", return_value=True),
+        patch("services.audio_validation_service.is_valid_media", side_effect=mock_valid),
+    ):
         tracks, invalid = val_service.validate_file_paths([str(file_a), str(file_b)])
 
     assert str(file_a) not in ffprobe_calls_on, "ffprobe appelé sur track_a (connu) !"
@@ -293,12 +314,8 @@ def test_generation_no_extra_blake3(temp_setup):
 
     extraction.get_file_hash = counting_hash
     try:
-        extraction.process_files_batch(
-            path_dict, session=None, table=table, track_hashes=track_hashes
-        )
+        extraction.process_files_batch(path_dict, session=None, table=table, track_hashes=track_hashes)
     finally:
         extraction.get_file_hash = orig
 
-    assert blake3_calls["count"] == 0, (
-        f"BLAKE3 recalculé {blake3_calls['count']} fois pendant la génération !"
-    )
+    assert blake3_calls["count"] == 0, f"BLAKE3 recalculé {blake3_calls['count']} fois pendant la génération !"

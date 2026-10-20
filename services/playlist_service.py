@@ -1,7 +1,5 @@
-import subprocess
 import time
 from typing import List, Tuple, Optional
-from utils.audio_utils import find_vlc
 from providers.musicnn_provider import MusicnnProvider
 from repositories.track_repository import TrackRepository
 from core.state import app_state
@@ -39,9 +37,7 @@ class PlaylistService:
         # Prépare le dict path_dict {path: is_liked} et les hashes déjà calculés
         path_dict = {track.file_path: track.is_liked for track in app_state.library.tracks.values()}
         track_hashes = {
-            track.file_path: track.file_hash
-            for track in app_state.library.tracks.values()
-            if track.file_hash
+            track.file_path: track.file_hash for track in app_state.library.tracks.values() if track.file_hash
         }
 
         session = self.provider.get_session()

@@ -64,11 +64,11 @@ WORKSPACE_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 
 # ── Couleurs discriminantes (RGB) ─────────────────────────────────────────────
 # Cyan du rail de navigation AIC (icône active)
-_CYAN_TARGET = (48, 196, 239)   # #30C4EF
-_CYAN_TOLERANCE = 35            # Tolérance ±35 sur chaque canal
+_CYAN_TARGET = (48, 196, 239)  # #30C4EF
+_CYAN_TOLERANCE = 35  # Tolérance ±35 sur chaque canal
 
 # Seuil de luminosité "non-noir" pour la zone header
-_HEADER_MIN_LUMINOSITY = 40     # Pixel lumineux au-dessus de ce seuil → UI visible
+_HEADER_MIN_LUMINOSITY = 40  # Pixel lumineux au-dessus de ce seuil → UI visible
 
 # Couleur de fond du splash (#0A0F1A → R=10, G=15, B=26)
 _SPLASH_BG = (10, 15, 26)
@@ -77,8 +77,8 @@ _SPLASH_BG_TOLERANCE = 20
 # ── Zones discriminantes (coordonnées CSS, viewport 1920×1080) ────────────────
 # Les coordonnées CSS sont indépendantes du scale factor.
 # La conversion en pixels physiques se fait via scale dans capture_clip_pixels().
-_ZONE_NAV_RAIL = {"x": 0, "y": 80, "w": 72, "h": 600}    # Rail de navigation gauche
-_ZONE_HEADER = {"x": 550, "y": 4, "w": 600, "h": 44}      # Zone header badges/titre
+_ZONE_NAV_RAIL = {"x": 0, "y": 80, "w": 72, "h": 600}  # Rail de navigation gauche
+_ZONE_HEADER = {"x": 550, "y": 4, "w": 600, "h": 44}  # Zone header badges/titre
 
 # Définition des écrans applicatifs, patterns d'onglets et mots-clés uniques d'assertion
 SCREEN_DEFINITIONS = {
@@ -133,7 +133,7 @@ class CaptureConfig(NamedTuple):
     filename: str | None = None
     headed: bool = False
     timeout: float = 45.0
-    wait_splash: float = 30.0   # Timeout MAX (pas délai fixe) — la détection est dynamique
+    wait_splash: float = 30.0  # Timeout MAX (pas délai fixe) — la détection est dynamique
     port: int = 0
     splash_video: bool = False
 
@@ -204,7 +204,7 @@ def parse_webm_resolution(file_path: pathlib.Path) -> tuple[int, int] | None:
                     idx += 3
                     continue
                 elif length == 0x82:
-                    width = int.from_bytes(data[idx + 2: idx + 4], "big")
+                    width = int.from_bytes(data[idx + 2 : idx + 4], "big")
                     idx += 4
                     continue
             if data[idx] == 0xBA and height is None:
@@ -214,7 +214,7 @@ def parse_webm_resolution(file_path: pathlib.Path) -> tuple[int, int] | None:
                     idx += 3
                     continue
                 elif length == 0x82:
-                    height = int.from_bytes(data[idx + 2: idx + 4], "big")
+                    height = int.from_bytes(data[idx + 2 : idx + 4], "big")
                     idx += 4
                     continue
             idx += 1
@@ -295,6 +295,7 @@ def verify_video(file_path: pathlib.Path, min_size_kb: float = 10.0) -> dict:
 
 # ── Détection visuelle ────────────────────────────────────────────────────────
 
+
 def _zone_to_clip(zone_css: dict, scale: float) -> dict:
     """
     Convertit une zone CSS (pixels logiques viewport) en clip physiques pour Playwright.
@@ -341,6 +342,7 @@ def capture_region_from_page(page, zone_css: dict) -> Image.Image | None:
         clip = _zone_to_clip(zone_css, scale=1.0)
         raw = page.screenshot(clip=clip, type="png")
         from io import BytesIO
+
         img = Image.open(BytesIO(raw)).convert("RGB")
         return img
     except Exception as e:
@@ -399,10 +401,12 @@ def read_aic_state(page, state_file: pathlib.Path | None = None) -> tuple[str, i
             pass
 
     try:
-        result = page.evaluate("""() => {
+        result = page.evaluate(
+            """() => {
             if (!window.__AIC__) return {state: 'UNAVAILABLE', elapsed_ms: 0};
             return {state: window.__AIC__.state, elapsed_ms: window.__AIC__.elapsed_ms || 0};
-        }""")
+        }"""
+        )
         return result.get("state", "UNKNOWN"), result.get("elapsed_ms", 0)
     except Exception:
         return "UNKNOWN", 0
@@ -500,7 +504,7 @@ def validate_screenshot_is_not_splash(file_path: pathlib.Path, scale: float) -> 
     # Critère 2 : Header (pixels lumineux)
     header_crop = crop_zone(_ZONE_HEADER)
     bright_count = _count_bright_pixels(header_crop, min_lum=_HEADER_MIN_LUMINOSITY)
-    total_header = _ZONE_HEADER["w"] * _ZONE_HEADER["h"] * (sc ** 2)
+    total_header = _ZONE_HEADER["w"] * _ZONE_HEADER["h"] * (sc**2)
     header_ok = (bright_count / max(total_header, 1)) > 0.08
 
     if not nav_ok and not header_ok:
@@ -556,6 +560,7 @@ def validate_screenshots_are_distinct(paths: list[pathlib.Path], min_diff_ratio:
 
 # ── Serveur Flet Web ──────────────────────────────────────────────────────────
 
+
 @contextlib.contextmanager
 def flet_web_server(
     port: int,
@@ -603,9 +608,7 @@ def flet_web_server(
     try:
         while time.time() - start_time < timeout:
             if process.poll() is not None:
-                raise RuntimeError(
-                    f"Le processus Flet s'est arrêté prématurément avec le code {process.returncode}"
-                )
+                raise RuntimeError(f"Le processus Flet s'est arrêté prématurément avec le code {process.returncode}")
             try:
                 with urllib.request.urlopen(url, timeout=1.0) as resp:
                     if resp.status == 200:
@@ -638,14 +641,16 @@ def flet_web_server(
 def enable_flutter_semantics(page) -> bool:
     """Active l'arbre sémantique accessible de Flutter Web."""
     try:
-        return page.evaluate("""() => {
+        return page.evaluate(
+            """() => {
             const el = document.querySelector('flt-semantics-placeholder');
             if (el) {
                 el.click();
                 return true;
             }
             return false;
-        }""")
+        }"""
+        )
     except Exception as e:
         logger.debug(f"Impossible d'activer la sémantique Flutter : {e}")
         return False
@@ -654,12 +659,14 @@ def enable_flutter_semantics(page) -> bool:
 def get_current_screen_text(page) -> str:
     """Récupère l'intégralité du texte sémantique actuellement visible dans le DOM."""
     try:
-        return page.evaluate("""() => {
+        return page.evaluate(
+            """() => {
             const nodes = Array.from(document.querySelectorAll('flt-semantics, [aria-label]'));
             const text1 = nodes.map(n => (n.innerText || '') + ' ' + (n.getAttribute('aria-label') || '')).join(' ');
             const text2 = document.body ? (document.body.innerText || '') : '';
             return (text1 + ' ' + text2).toLowerCase();
-        }""")
+        }"""
+        )
     except Exception:
         return ""
 
@@ -721,7 +728,7 @@ def navigate_to_screen(page, screen_name: str, config: CaptureConfig, timeout: f
     # ── Phase 2 : Stabilisation du rendu Canvas ────────────────────────────────
     # La sémantique peut précéder le rendu Canvas de quelques frames.
     # On attend que le splash ne soit plus visible ET que le Canvas soit stable.
-    time.sleep(1.0)   # Stabilisation de base après navigation
+    time.sleep(1.0)  # Stabilisation de base après navigation
 
     # Si le splash est encore visible à ce stade (ne devrait pas arriver ici
     # car on est déjà dans l'UI principale), c'est une anomalie.
@@ -764,6 +771,7 @@ def capture_single_screen(
 
 
 # ── Pipeline screenshots ──────────────────────────────────────────────────────
+
 
 def run_capture_screenshots(config: CaptureConfig, screens_to_capture: list[str]) -> list[dict]:
     """Exécute le pipeline de captures d'écrans statiques V3."""
@@ -823,6 +831,7 @@ def run_capture_screenshots(config: CaptureConfig, screens_to_capture: list[str]
 
 # ── Pipeline vidéo splash ─────────────────────────────────────────────────────
 
+
 def _save_diagnostic_frame(page, diag_dir: pathlib.Path, label: str) -> pathlib.Path | None:
     """
     Capture une frame de diagnostic et la sauvegarde dans diag_dir.
@@ -874,8 +883,8 @@ def run_capture_splash_video(config: CaptureConfig) -> dict:
     )
     final_video_path = config.output_dir / filename
 
-    bootstrap_duration = None      # Temps avant SPLASH_STARTED
-    splash_duration = None         # Temps de l'animation du splash
+    bootstrap_duration = None  # Temps avant SPLASH_STARTED
+    splash_duration = None  # Temps de l'animation du splash
     diag_frames: list[pathlib.Path] = []
     captured_states: set[str] = set()
 
@@ -916,7 +925,6 @@ def run_capture_splash_video(config: CaptureConfig) -> dict:
                 t_splash_started = None
                 last_state = "UNKNOWN"
                 t_deadline = t_goto + config.timeout
-                last_periodic = t_goto
 
                 while time.time() < t_deadline:
                     time.sleep(0.04)
@@ -952,7 +960,9 @@ def run_capture_splash_video(config: CaptureConfig) -> dict:
                         enable_flutter_semantics(page)
                         if not is_splash_visible(page, config.scale):
                             elapsed_total = time.time() - t_goto
-                            logger.info(f"[VIDEO] Fin du splash détectée visuellement après {elapsed_total:.2f}s (fallback)")
+                            logger.info(
+                                f"[VIDEO] Fin du splash détectée visuellement après {elapsed_total:.2f}s (fallback)"
+                            )
                             time.sleep(0.3)
                             frame = _save_diagnostic_frame(page, diag_dir, "MAIN_UI_VISUAL")
                             if frame:
@@ -1014,6 +1024,7 @@ def run_capture_splash_video(config: CaptureConfig) -> dict:
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
+
 
 def parse_args() -> argparse.Namespace:
     """Parse les arguments en ligne de commande."""
@@ -1190,7 +1201,9 @@ def main() -> int:
             print(f"  RESUME : {len(results)} capture(s) generee(s) avec succes")
             print("=" * 64)
             for res in results:
-                print(f"  [OK] {pathlib.Path(res['file']).name:<28} | {res['width']}x{res['height']} | {res['size_kb']}")
+                print(
+                    f"  [OK] {pathlib.Path(res['file']).name:<28} | {res['width']}x{res['height']} | {res['size_kb']}"
+                )
             print("=" * 64 + "\n")
             return 0
 

@@ -15,6 +15,7 @@ import tempfile
 import threading
 from pathlib import Path
 
+
 def test_import_main_lightweight():
     """
     Vérifie que l'importation de main.py ne charge aucune dépendance IA/ML/DB lourde.
@@ -58,14 +59,10 @@ def test_import_main_lightweight():
         timeout=30,
     )
 
-    assert result.returncode == 0, (
-        f"Le subprocess a échoué :\n{result.stderr}"
-    )
+    assert result.returncode == 0, f"Le subprocess a échoué :\n{result.stderr}"
 
     found_heavy = json.loads(result.stdout.strip())
-    assert not found_heavy, (
-        f"Bibliothèques lourdes importées prématurément au boot : {found_heavy}"
-    )
+    assert not found_heavy, f"Bibliothèques lourdes importées prématurément au boot : {found_heavy}"
 
 
 def test_crossplatform_paths():

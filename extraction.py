@@ -385,6 +385,7 @@ def process_files_batch(
 
         if not has_vector_index(table) and len(table) >= 500:
             from lancedb.index import IvfPq
+
             table.create_index(vector_column_name="vector", config=IvfPq(distance_type="cosine"))
 
     return results  # {path: vector}
@@ -805,10 +806,10 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
     from schema import TrackEmbeddingModel
 
     db = lancedb.connect(db_path)
-    
+
     # list_tables() renvoie un objet
     result = db.list_tables()
-    existing_tables = result.tables if hasattr(result, 'tables') else result
+    existing_tables = result.tables if hasattr(result, "tables") else result
 
     if "audio_embeddings" not in existing_tables:
         # Première utilisation : création directe avec le schéma v2
@@ -827,13 +828,16 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
     # list_indices() renvoie des objets
     try:
         indices = table.list_indices()
-        has_hash = any("file_hash" in getattr(idx, 'columns', []) for idx in indices)
+        has_hash = any("file_hash" in getattr(idx, "columns", []) for idx in indices)
         if not has_hash:
             table.create_index("file_hash", config=BTree(), replace=True)
     except Exception as e:
-        log.warning(f"[DB] Index erreur: {e}")
+        import logging
+
+        logging.getLogger("aic.extraction").warning(f"[DB] Index erreur: {e}")
 
     return table
+
 
 def make_m3u(playlist_paths: list[str], output_path: str) -> None:
     """Génère un fichier .m3u à partir d'une liste de chemins de fichiers audio."""

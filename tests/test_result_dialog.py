@@ -12,14 +12,12 @@ Vérifie :
 5. Absence de RuntimeWarning sur les callbacks du ResultDialog.
 """
 
-import os
-import sys
-import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock, PropertyMock
 
 
 # ── Fixtures de base ──────────────────────────────────────────────────────────
+
 
 def _make_fake_tracks(tmpdir: str) -> list[str]:
     """Crée des fichiers audio factices dans tmpdir et retourne leurs chemins absolus."""
@@ -33,14 +31,17 @@ def _make_fake_tracks(tmpdir: str) -> list[str]:
 
 # ── Tests PlaylistExportService ───────────────────────────────────────────────
 
+
 class TestPlaylistExportService:
     def _get_service(self):
         from services.playlist_export_service import PlaylistExportService
+
         return PlaylistExportService()
 
     def test_export_default_persists_folder(self, tmp_path):
         """Export automatique (persist_as_default=True) doit mettre à jour export_folder_path."""
         from core.state import app_state
+
         original = app_state.session.export_folder_path
 
         service = self._get_service()
@@ -133,9 +134,9 @@ class TestPlaylistExportService:
             assert p.is_absolute(), f"Le chemin n'est pas absolu : {line!r}"
         # Les chemins ne doivent PAS contenir le chemin du dossier export
         for line in lines:
-            assert str(export_dir) not in line, (
-                f"Le chemin contient le dossier d'export alors qu'il devrait pointer vers la source : {line!r}"
-            )
+            assert (
+                str(export_dir) not in line
+            ), f"Le chemin contient le dossier d'export alors qu'il devrait pointer vers la source : {line!r}"
 
     def test_empty_playlist_returns_failure(self, tmp_path):
         """Une playlist vide doit retourner un ExportResult.success=False sans créer de fichier."""
@@ -159,6 +160,7 @@ class TestPlaylistExportService:
 
 
 # ── Tests ResultDialog : Absence de RuntimeWarning ────────────────────────────
+
 
 class TestResultDialogCallbackSafety:
     """Vérifie que les callbacks sync et async ne produisent pas de RuntimeWarning ni de TypeError."""
@@ -215,9 +217,9 @@ class TestResultDialogCallbackSafety:
 
         # Règle stricte Flet 0.86.4 : le handler transmis DOIT être une coroutine function
         handler = mock_page.run_task.call_args[0][0]
-        assert inspect.iscoroutinefunction(handler), (
-            f"Flet 0.86.4 requiert inspect.iscoroutinefunction(handler) == True, reçu {handler}"
-        )
+        assert inspect.iscoroutinefunction(
+            handler
+        ), f"Flet 0.86.4 requiert inspect.iscoroutinefunction(handler) == True, reçu {handler}"
         assert handler is async_callback, "Le callback async natif doit être transmis directement."
 
     def test_wrapper_returning_coroutine_passed_safely(self):
@@ -229,7 +231,8 @@ class TestResultDialogCallbackSafety:
         async def inner_async():
             pass
 
-        wrapper_callback = lambda: inner_async()
+        def wrapper_callback():
+            return inner_async()
 
         dialog = ResultDialog(
             count=5,
@@ -248,9 +251,7 @@ class TestResultDialogCallbackSafety:
 
         handler = mock_page.run_task.call_args[0][0]
         coro_arg = mock_page.run_task.call_args[0][1]
-        assert inspect.iscoroutinefunction(handler), (
-            f"Le handler Flet doit être une coroutine function, reçu {handler}"
-        )
+        assert inspect.iscoroutinefunction(handler), f"Le handler Flet doit être une coroutine function, reçu {handler}"
         assert inspect.iscoroutine(coro_arg), "La coroutine retournée doit être passée en argument."
         coro_arg.close()  # Nettoyage propre
 
@@ -262,7 +263,8 @@ class TestResultDialogCallbackSafety:
         async def inner_async():
             pass
 
-        wrapper_callback = lambda: inner_async()
+        def wrapper_callback():
+            return inner_async()
 
         dialog = ResultDialog(
             count=5,
