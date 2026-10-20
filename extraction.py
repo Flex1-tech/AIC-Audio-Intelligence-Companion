@@ -127,9 +127,9 @@ def extract_representative_batch(
 
         chroma_mean = np.mean(chroma)
 
-        # Zero Crossing Rate
+        # Zero Crossing Rate (vectorisé direct)
 
-        zcr = np.mean(librosa.feature.zero_crossing_rate(segment))
+        zcr = float(np.mean(np.abs(np.diff(np.signbit(segment)))))
 
         # Feature Vector
 
@@ -278,6 +278,8 @@ def load_audio(path: str, sr: int = 16000) -> np.ndarray:
     cmd = [
         "ffmpeg",
         "-nostdin",
+        "-threads",
+        "0",
         "-loglevel",
         "error",
         "-i",
@@ -321,21 +323,28 @@ def get_existing_embeddings(hashes: list[str], table: lancedb.table.Table) -> di
 
 
 def process_files_batch(
-    path_dict: dict, session: ort.InferenceSession, table: lancedb.table.Table
+    path_dict: dict,
+    session: ort.InferenceSession,
+    table: lancedb.table.Table,
+    track_hashes: dict[str, str] | None = None,
 ) -> dict[str, np.ndarray]:
     """
     Traite tous les fichiers en batch :
+    - Réutilise les hashes BLAKE3 précalculés si disponibles (évite le double hachage disque)
     - 1 seule requête DB pour récupérer les embeddings existants
     - Calcul ONNX uniquement pour les nouveaux
     - 1 seul insert pour tous les nouveaux
     """
-    # 1. Hash tous les fichiers
+    # 1. Récupère ou calcule le hash de tous les fichiers
     file_metas = {}
     for path in path_dict:
         f = Path(path)
         if not f.is_file():
             continue
-        file_metas[path] = {"hash": get_file_hash(path), "file": f}
+        h = track_hashes.get(path) if track_hashes else None
+        if not h:
+            h = get_file_hash(path)
+        file_metas[path] = {"hash": h, "file": f}
 
     # 2. Une seule requête pour tout ce qui est déjà en base
     all_hashes = [m["hash"] for m in file_metas.values()]
@@ -375,7 +384,9 @@ def process_files_batch(
         table.add(to_insert)
 
         if not has_vector_index(table) and len(table) >= 500:
-            table.create_index(vector_column_name="vector", metric="cosine")
+            from lancedb.index import IvfPq
+
+            table.create_index(vector_column_name="vector", config=IvfPq(distance_type="cosine"))
 
     return results  # {path: vector}
 
@@ -538,64 +549,70 @@ def mmr_ranking(
     query_vector: np.ndarray,
     candidates: list[dict],
     lambda_param: float = 0.7,
+    k: int | None = None,
 ) -> list[dict]:
     """
-    Classe TOUS les candidats par ordre MMR (du meilleur au pire).
+    Classe les candidats par ordre MMR (Maximal Marginal Relevance) vectorisé.
+
+    Algorithme incrémental O(N) par sélection : maintient le vecteur de diversité
+    maximale sans réévaluation cubique/quadratique en boucle Python.
 
     Args:
-        query_vector: Vecteur moyen des likés
-        candidates: Liste de dicts avec 'file_path' et 'vector'
+        query_vector: Vecteur moyen des likés (1D ndarray L2-normalisé)
+        candidates: Liste de dicts avec au moins 'vector' et optionnellement 'file_path'
         lambda_param: 0.7 = 70% pertinence, 30% diversité
+        k: Nombre maximal de candidats à retourner (None = tous les candidats classés)
 
     Returns:
-        Liste des candidats classés par MMR (tous les candidats, reordonnés)
+        Liste des candidats classés par MMR (du meilleur au pire)
     """
     if not candidates:
         return []
 
     n = len(candidates)
+    num_to_select = n if k is None or k > n else max(0, k)
+    if num_to_select == 0:
+        return []
 
-    # Convertir les vecteurs en matrice numpy
+    # Matrice numpy des embeddings candidats (n, D)
     candidate_vectors = np.stack([c["vector"] for c in candidates])
 
     # Similarité cosinus avec le query (produit scalaire car L2-normalisé)
-    query_sims = candidate_vectors @ query_vector  # shape: (n_candidates,)
+    query_sims = candidate_vectors @ query_vector  # shape: (n,)
 
-    # Matrice de similarité entre candidats
-    sim_matrix = candidate_vectors @ candidate_vectors.T  # shape: (n, n)
-    np.fill_diagonal(sim_matrix, -np.inf)  # s'auto-exclure
+    # Matrice de similarité inter-candidats (n, n)
+    sim_matrix = candidate_vectors @ candidate_vectors.T
+    np.fill_diagonal(sim_matrix, -1.0)  # auto-similarité minorée, valeurs bornées dans [-1, 1]
 
     selected = []
-    selected_indices = set()
-    remaining = set(range(n))
+    selected_mask = np.zeros(n, dtype=bool)
 
-    # Itérativement : à chaque tour, choisir le meilleur MMR parmi les restants
-    while remaining:
-        best_mmr_score = -np.inf
-        best_idx = None
+    # 1. Sélection du premier élément : uniquement la pertinence avec le query
+    first_idx = int(np.argmax(lambda_param * query_sims))
+    selected.append(candidates[first_idx])
+    selected_mask[first_idx] = True
 
-        for idx in remaining:
-            # Pertinence : similitude avec le query
-            relevance = query_sims[idx]
+    if num_to_select == 1:
+        return selected
 
-            # Diversité : max similitude avec les déjà sélectionnés
-            # Si c'est le premier, diversity = 0 (pas encore de sélectionnés)
-            if selected_indices:
-                diversity = np.max(sim_matrix[idx, list(selected_indices)])
-            else:
-                diversity = 0.0
+    # Vecteur de diversité maximale initialisé par rapport au 1er élément sélectionné
+    max_diversity = sim_matrix[:, first_idx].copy()
+    diversity_weight = 1.0 - lambda_param
 
-            # Score MMR
-            mmr_score = lambda_param * relevance - (1 - lambda_param) * diversity
+    # 2. Sélections itératives incrémentales vectorisées
+    for _ in range(1, num_to_select):
+        if diversity_weight == 0.0:
+            scores = query_sims.copy()
+        else:
+            scores = lambda_param * query_sims - diversity_weight * max_diversity
+        scores[selected_mask] = -np.inf
 
-            if mmr_score > best_mmr_score:
-                best_mmr_score = mmr_score
-                best_idx = idx
+        best_idx = int(np.argmax(scores))
+        selected.append(candidates[best_idx])
+        selected_mask[best_idx] = True
 
-        if best_idx is not None:
-            selected.append(candidates[best_idx])
-            selected_indices.add(best_idx)
-            remaining.remove(best_idx)
+        # Mise à jour O(N) du vecteur de similarité maximale avec les sélectionnés
+        max_diversity = np.maximum(max_diversity, sim_matrix[:, best_idx])
 
     return selected
 
@@ -605,6 +622,7 @@ def recommend_playlist(
     session: ort.InferenceSession,
     table: lancedb.table.Table,
     lambda_mmr: float = 0.7,
+    track_hashes: dict[str, str] | None = None,
 ) -> list[str]:
     """
     Génère une playlist complète (tous les non-likés du dictionnaire)
@@ -615,6 +633,7 @@ def recommend_playlist(
         session: Session ONNX Runtime
         table: Table LanceDB
         lambda_mmr: Ratio MMR (0.7 = 70% pertinence, 30% diversité)
+        track_hashes: Dictionnaire optionnel {chemin_fichier: file_hash} précalculé à l'import
 
     Returns:
         Liste des chemins des chansons recommandées (tous les non-likés, classés)
@@ -622,7 +641,7 @@ def recommend_playlist(
 
     # Traite tous les fichiers en batch pour récupérer ou calculer leurs
     # vecteurs, et les stocker en base si besoin
-    all_vectors = process_files_batch(path_dict, session, table)  # {path: vector}
+    all_vectors = process_files_batch(path_dict, session, table, track_hashes=track_hashes)  # {path: vector}
     liked_vectors = [all_vectors[path] for path, liked in path_dict.items() if liked and path in all_vectors]
 
     if not liked_vectors:
@@ -781,15 +800,20 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
     - v1 : file_hash, file_name, file_path, file_size_bytes, vector[200], title, artist, duration_seconds
     - v2 : file_hash, file_name, file_path, file_size_bytes, taggram[50], vector[200]
     """
+
     import lancedb
     from lancedb.index import BTree
     from schema import TrackEmbeddingModel
 
     db = lancedb.connect(db_path)
-    existing_tables = _get_existing_tables(db)
+
+    # list_tables() renvoie un objet
+    result = db.list_tables()
+    existing_tables = result.tables if hasattr(result, "tables") else result
 
     if "audio_embeddings" not in existing_tables:
         # Première utilisation : création directe avec le schéma v2
+
         table = db.create_table("audio_embeddings", schema=TrackEmbeddingModel, exist_ok=True)
     else:
         table = db.open_table("audio_embeddings")
@@ -801,8 +825,16 @@ def initialize_database(db_path: str) -> lancedb.table.Table:
         # version == "v2" → table déjà à jour, rien à faire
 
     # Index scalaire sur file_hash (idempotent, <1ms si déjà indexé)
-    if not any("file_hash" in idx.columns for idx in table.list_indices()):
-        table.create_index("file_hash", config=BTree(), replace=True)
+    # list_indices() renvoie des objets
+    try:
+        indices = table.list_indices()
+        has_hash = any("file_hash" in getattr(idx, "columns", []) for idx in indices)
+        if not has_hash:
+            table.create_index("file_hash", config=BTree(), replace=True)
+    except Exception as e:
+        import logging
+
+        logging.getLogger("aic.extraction").warning(f"[DB] Index erreur: {e}")
 
     return table
 

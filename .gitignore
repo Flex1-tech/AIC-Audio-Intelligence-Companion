@@ -58,3 +58,17 @@ aic_boot_trace.log
 aic_crash.log
 aic-windows-dev-*/
 crash-logs-*/
+
+# ── Captures HD automatisées ──────────────────────────────────────────────────
+tools/capture/output/*.png
+tools/capture/output/*.jpg
+tools/capture/output/*.webm
+tools/capture/output/.temp_video/
+tools/capture/output/.diagnostics/
+
+# ── LanceDB / Base locale ────────────────────────────────────────────────────
+data/
+
+# ── Outils d'analyse locale (non committés) ────────────────────────────────────
+graphify-out/
+AIC_Future.md

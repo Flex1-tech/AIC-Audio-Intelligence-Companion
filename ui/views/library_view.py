@@ -19,12 +19,16 @@ class LibraryView(ft.Container):
         on_like_track=None,
         on_delete_track=None,
         on_search=None,
+        on_play_track=None,
+        on_explore_track=None,
     ):
         self.on_pick_files = on_pick_files
         self.on_pick_folder = on_pick_folder
         self.on_like_track = on_like_track
         self.on_delete_track = on_delete_track
         self.on_search = on_search
+        self.on_play_track = on_play_track
+        self.on_explore_track = on_explore_track
 
         # ── Boutons d'import (références stockées pour les désactiver) ───────
         self._btn_files = ft.FilledButton(
@@ -240,6 +244,8 @@ class LibraryView(ft.Container):
                     track=track,
                     on_like=self.on_like_track,
                     on_delete=self.on_delete_track,
+                    on_play=self.on_play_track,
+                    on_explore=self.on_explore_track,
                 )
                 self.track_list.controls.append(item)
 

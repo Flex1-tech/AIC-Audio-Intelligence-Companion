@@ -9,10 +9,12 @@ class TrackItem(ft.Container):
     Carte réutilisable affichant un morceau audio avec métadonnées, BLAKE3 hash et bouton like.
     """
 
-    def __init__(self, track: Track, on_like=None, on_delete=None):
+    def __init__(self, track: Track, on_like=None, on_delete=None, on_play=None, on_explore=None):
         self.track = track
         self.on_like = on_like
         self.on_delete = on_delete
+        self.on_play = on_play
+        self.on_explore = on_explore
 
         # Heart Icon Button
         self.like_button = ft.IconButton(
@@ -89,9 +91,23 @@ class TrackItem(ft.Container):
                         spacing=12,
                         expand=True,
                     ),
-                    # Droite : Actions (Like & Delete)
+                    # Droite : Actions (Écouter, Explorer, Like & Delete)
                     ft.Row(
                         [
+                            ft.IconButton(
+                                icon=ft.Icons.PLAY_ARROW_ROUNDED,
+                                icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                                icon_size=18,
+                                tooltip="Écouter",
+                                on_click=self._handle_play,
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.FOLDER_OPEN_ROUNDED,
+                                icon_color=ft.Colors.ON_SURFACE_VARIANT,
+                                icon_size=18,
+                                tooltip="Afficher dans l'Explorateur",
+                                on_click=self._handle_explore,
+                            ),
                             self.like_button,
                             ft.IconButton(
                                 icon=ft.Icons.DELETE_OUTLINED,
@@ -101,7 +117,7 @@ class TrackItem(ft.Container):
                                 on_click=self._handle_delete,
                             ),
                         ],
-                        spacing=4,
+                        spacing=2,
                     ),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -124,3 +140,11 @@ class TrackItem(ft.Container):
     def _handle_delete(self, e=None):
         if self.on_delete:
             self.on_delete(self.track.file_path)
+
+    def _handle_play(self, e=None):
+        if self.on_play:
+            self.on_play(self.track.file_path)
+
+    def _handle_explore(self, e=None):
+        if self.on_explore:
+            self.on_explore(self.track.file_path)

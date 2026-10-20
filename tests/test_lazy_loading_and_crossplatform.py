@@ -17,8 +17,16 @@ from pathlib import Path
 
 
 def test_import_main_lightweight():
-    """Vérifie que l'importation de main.py ne charge aucune dépendance IA/ML/DB lourde."""
-    import main  # noqa: F401
+    """
+    Vérifie que l'importation de main.py ne charge aucune dépendance IA/ML/DB lourde.
+
+    Ce test utilise un subprocess isolé pour vérifier sys.modules dans un
+    environnement Python propre (sans pollution des autres tests de la suite).
+    C'est la seule approche correcte pour tester le comportement au démarrage,
+    car sys.modules est global au processus pytest en cours d'exécution.
+    """
+    import subprocess
+    import json
 
     heavy_libs = [
         "numpy",
@@ -35,9 +43,26 @@ def test_import_main_lightweight():
         "audioread",
     ]
 
-    for lib in heavy_libs:
-        is_present = lib in sys.modules or any(m.startswith(lib + ".") for m in sys.modules)
-        assert not is_present, f"La bibliothèque lourde '{lib}' a été importée de manière prématurée au boot !"
+    script = (
+        "import sys, json; "
+        "import main; "
+        f"heavy = {json.dumps(heavy_libs)}; "
+        "found = [h for h in heavy if h in sys.modules "
+        "or any(m.startswith(h+'.') for m in sys.modules)]; "
+        "print(json.dumps(found))"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, f"Le subprocess a échoué :\n{result.stderr}"
+
+    found_heavy = json.loads(result.stdout.strip())
+    assert not found_heavy, f"Bibliothèques lourdes importées prématurément au boot : {found_heavy}"
 
 
 def test_crossplatform_paths():

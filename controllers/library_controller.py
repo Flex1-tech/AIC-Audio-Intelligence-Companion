@@ -39,6 +39,12 @@ class LibraryController:
             for track in valid_tracks:
                 if track.file_path not in app_state.library.tracks:
                     app_state.library.tracks[track.file_path] = track
+                else:
+                    existing = app_state.library.tracks[track.file_path]
+                    if existing.file_hash != track.file_hash:
+                        existing.file_hash = track.file_hash
+                        existing.file_size_bytes = track.file_size_bytes
+                        existing.in_database = False
 
             app_state.is_processing = False
             app_state.processing_status_message = "Prêt"
@@ -71,6 +77,12 @@ class LibraryController:
             for track in valid_tracks:
                 if track.file_path not in app_state.library.tracks:
                     app_state.library.tracks[track.file_path] = track
+                else:
+                    existing = app_state.library.tracks[track.file_path]
+                    if existing.file_hash != track.file_hash:
+                        existing.file_hash = track.file_hash
+                        existing.file_size_bytes = track.file_size_bytes
+                        existing.in_database = False
 
             if folder_path not in app_state.library.folder_paths:
                 app_state.library.folder_paths.append(folder_path)
@@ -117,3 +129,21 @@ class LibraryController:
     def toggle_liked_filter(self) -> None:
         app_state.session.filter_liked_only = not app_state.session.filter_liked_only
         app_state.notify()
+
+    def play_track(self, file_path: str) -> tuple[bool, str]:
+        """Ouvre un morceau de la bibliothèque avec l'application par défaut."""
+        from services.playback_service import PlaybackService
+
+        return PlaybackService().play_track(file_path)
+
+    def show_in_explorer(self, file_path: str) -> tuple[bool, str]:
+        """Affiche et sélectionne le morceau dans l'Explorateur Windows."""
+        from services.playback_service import PlaybackService
+
+        return PlaybackService().show_in_explorer(file_path)
+
+    def open_with_dialog(self, file_path: str) -> tuple[bool, str]:
+        """Ouvre le dialogue 'Ouvrir avec…' pour ce morceau."""
+        from services.playback_service import PlaybackService
+
+        return PlaybackService().open_with_dialog(file_path)
