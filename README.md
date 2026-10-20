@@ -2,7 +2,7 @@
 
 ![GitHub Actions](https://img.shields.io/github/actions/workflow/status/Flex1-tech/AIC-Audio-Intelligence-Companion/build-desktop.yml?branch=main&label=CI%2FCD&logo=github-actions&logoColor=white)
 ![GitHub Release](https://img.shields.io/github/v/release/Flex1-tech/AIC-Audio-Intelligence-Companion?label=Release&logo=github)
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)
 ![Flet](https://img.shields.io/badge/Flet-0.86%2B-blueviolet?logo=flutter&logoColor=white)
 ![AI](https://img.shields.io/badge/AI-MusiCNN-orange?logo=tensorflow&logoColor=white)
 ![ONNX Runtime](https://img.shields.io/badge/ONNX%20Runtime-005CED?logo=onnx&logoColor=white)
@@ -20,7 +20,7 @@ AIC (Audio Intelligence Companion) est une application de recommandation musical
 
 Elle analyse votre bibliothèque multimédia à l'aide du réseau de neurones convolutionnel **MusiCNN**, extrait des représentations acoustiques vectorielles denses (embeddings à 200 dimensions), les indexe dans une base vectorielle embarquée **LanceDB**, puis génère des playlists équilibrées grâce à l'algorithme vectorisé **Maximum Marginal Relevance (MMR)**.
 
-L'application est développée en **Python 3.10+** avec le framework réactif **Flet** et ne requiert aucune connexion internet ni service cloud tiers.
+L'application est développée en **Python 3.12** avec le framework réactif **Flet** et ne requiert aucune connexion internet ni service cloud tiers.
 
 ---
 
@@ -152,7 +152,7 @@ AIC-Audio-Intelligence-Companion/
 
 ## Prérequis
 
-1. **Python 3.12** : version requise (`>=3.12, <3.13`).
+1. **Python 3.12** : version de référence du projet (`>=3.12, <3.13`), requise pour l'environnement `uv`, la suite de tests et le packaging desktop.
 2. **FFmpeg & FFprobe** : requis dans le `PATH` système pour le décodage audio et la validation des flux multimédias.
 3. **VLC Media Player** *(optionnel mais recommandé)* : permet le lancement direct de playlists complexes. En son absence, AIC bascule automatiquement sur le lecteur de médias associé par défaut par le système d'exploitation.
 
@@ -184,12 +184,12 @@ uv run python main.py
 ### 3. Installation alternative avec `venv` et `pip`
 
 ```bash
-# Windows
-python -m venv .venv
+# Windows (avec Python 3.12)
+py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# Linux / macOS
-python3 -m venv .venv
+# Linux / macOS (avec Python 3.12)
+python3.12 -m venv .venv
 source .venv/bin/activate
 
 # Installation des dépendances
