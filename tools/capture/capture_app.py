@@ -41,8 +41,16 @@ import time
 import urllib.request
 from typing import NamedTuple
 
-from PIL import Image, ImageChops
-from playwright.sync_api import sync_playwright
+try:
+    from PIL import Image, ImageChops
+except ImportError:
+    Image = None
+    ImageChops = None
+
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    sync_playwright = None
 
 # Configuration de la sortie console UTF-8 robuste sur Windows
 if hasattr(sys.stdout, "reconfigure"):

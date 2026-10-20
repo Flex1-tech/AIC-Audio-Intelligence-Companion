@@ -19,9 +19,13 @@ Vérifie :
 import pathlib
 
 import pytest
-from PIL import Image
 
-from tools.capture.capture_app import (
+# Skip this test module if Pillow is not installed in the environment (e.g. lightweight CI)
+pytest.importorskip("PIL", reason="Pillow is required for capture tool tests")
+
+from PIL import Image  # noqa: E402
+
+from tools.capture.capture_app import (  # noqa: E402
     CaptureConfig,
     _count_bright_pixels,
     _count_cyan_pixels,
