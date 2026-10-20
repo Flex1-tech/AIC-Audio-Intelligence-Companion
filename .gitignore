@@ -64,6 +64,10 @@ tools/capture/output/*.png
 tools/capture/output/*.jpg
 tools/capture/output/*.webm
 tools/capture/output/.temp_video/
+tools/capture/output/.diagnostics/
+
+# ── LanceDB / Base locale ────────────────────────────────────────────────────
+data/
 
 # ── Outils d'analyse locale (non committés) ────────────────────────────────────
 graphify-out/
