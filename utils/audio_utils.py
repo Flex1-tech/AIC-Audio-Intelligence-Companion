@@ -62,17 +62,25 @@ def run_ffprobe(cmd, timeout=5):
 
 
 def is_valid_media(filepath):
-    """Retourne True si ffprobe valide le fichier comme média lisible (fallback True si ffprobe indisponible)."""
+    """Retourne True si ffprobe valide le fichier comme média lisible contenant au moins un flux audio."""
     try:
         result = run_ffprobe(
             [
                 "ffprobe",
                 "-v",
                 "error",
+                "-select_streams",
+                "a:0",
+                "-show_entries",
+                "stream=codec_type",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
                 filepath,
             ]
         )
-        return result.returncode == 0
+        if result.returncode != 0:
+            return False
+        return result.stdout.strip().lower() == b"audio"
     except Exception:
         return True
 

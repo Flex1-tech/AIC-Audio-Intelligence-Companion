@@ -1,5 +1,5 @@
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 from utils.path_utils import get_default_playlist_dir
@@ -7,13 +7,14 @@ from core.state import app_state
 
 
 def make_m3u(playlist_paths: List[str], output_path: str) -> None:
-    """Génère un fichier .m3u à partir d'une liste de chemins de fichiers audio."""
+    """Génère un fichier .m3u/.m3u8 à partir d'une liste de chemins de fichiers audio (chemins absolus natifs en UTF-8)."""
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("#EXTM3U\n")
         for path in playlist_paths:
             p = Path(path)
+            resolved = str(p if p.is_absolute() else p.resolve())
             f.write(f"#EXTINF:-1,{p.stem}\n")
-            f.write((p if p.is_absolute() else p.resolve()).as_uri() + "\n")
+            f.write(resolved + "\n")
 
 
 @dataclass
@@ -28,6 +29,7 @@ class ExportResult:
     file_name: str
     track_count: int
     message: str
+    playlist_paths: List[str] = field(default_factory=list)
 
 
 class PlaylistExportService:
@@ -58,9 +60,13 @@ class PlaylistExportService:
         self,
         playlist_paths: List[str],
         custom_folder: Optional[str] = None,
+        persist_as_default: bool = False,
     ) -> ExportResult:
         """
         Exporte la liste de pistes audio sous forme de fichier .m3u8 dans le dossier spécifié ou mémorisé.
+        - custom_folder: dossier cible explicite (si None, utilise le dossier par défaut de la session).
+        - persist_as_default: si True, met à jour le dossier par défaut persistant de l'application.
+                              si False (défaut pour un export ponctuel), ne modifie pas les réglages persistants.
         """
         if not playlist_paths:
             return ExportResult(
@@ -70,6 +76,7 @@ class PlaylistExportService:
                 file_name="",
                 track_count=0,
                 message="Aucun morceau dans la playlist à exporter.",
+                playlist_paths=[],
             )
 
         # 1. Résolution du dossier cible
@@ -87,11 +94,14 @@ class PlaylistExportService:
         filename = self.generate_smart_filename(target_dir)
         full_path = target_dir / filename
 
-        # 3. Écriture du fichier .m3u8 (UTF-8)
+        # 3. Écriture du fichier .m3u8 (UTF-8 avec URIs absolues)
         try:
             make_m3u(playlist_paths, str(full_path))
             app_state.session.last_generated_playlist_path = str(full_path)
-            app_state.session.export_folder_path = str(target_dir)
+
+            if persist_as_default:
+                app_state.session.export_folder_path = str(target_dir)
+
             app_state.notify()
 
             return ExportResult(
@@ -101,6 +111,7 @@ class PlaylistExportService:
                 file_name=filename,
                 track_count=len(playlist_paths),
                 message=f"Playlist exportée avec succès ({len(playlist_paths)} morceaux).",
+                playlist_paths=list(playlist_paths),
             )
         except Exception as err:
             return ExportResult(
@@ -110,4 +121,10 @@ class PlaylistExportService:
                 file_name=filename,
                 track_count=len(playlist_paths),
                 message=f"Erreur lors de l'écriture de la playlist : {err}",
+                playlist_paths=list(playlist_paths),
             )
+
+    def set_default_export_folder(self, folder_path: str) -> None:
+        """Définit et mémorise le dossier d'export par défaut dans les préférences."""
+        app_state.session.export_folder_path = str(folder_path)
+        app_state.notify()
