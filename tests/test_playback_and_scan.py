@@ -280,13 +280,12 @@ def test_m3u8_handles_apostrophes_spaces_and_accents():
 
 
 # ---------------------------------------------------------------------------
-# 3. Tests Service de Lecture Externe (PlaybackService)
+# 3. Tests Service de Lecture Externe Multiplateforme (PlaybackService)
 # ---------------------------------------------------------------------------
 
 def test_playback_service_vlc_available():
-    """Quand VLC est disponible, play_playlist le lance en tâche de fond."""
+    """Quand VLC est disponible, play_playlist le lance en tâche de fond sans shell=True."""
     from services.playback_service import PlaybackService
-    import subprocess
 
     service = PlaybackService()
     with tempfile.NamedTemporaryFile(suffix=".m3u8", delete=False) as f:
@@ -299,9 +298,11 @@ def test_playback_service_vlc_available():
                 assert success is True
                 assert "VLC" in msg
                 mock_popen.assert_called_once()
-                args = mock_popen.call_args[0][0]
-                assert args[0] == r"C:\Program Files\VideoLAN\VLC\vlc.exe"
-                assert args[1] == dummy_file
+                args, kwargs = mock_popen.call_args
+                cmd = args[0]
+                assert cmd[0] == r"C:\Program Files\VideoLAN\VLC\vlc.exe"
+                assert cmd[1] == str(Path(dummy_file).resolve())
+                assert kwargs.get("shell") is not True
     finally:
         if os.path.exists(dummy_file):
             os.remove(dummy_file)
@@ -321,14 +322,34 @@ def test_playback_service_vlc_absent_fallback_to_default():
                 success, msg = service.play_playlist(dummy_file, prefer_vlc=True)
                 assert success is True
                 assert "VLC non détecté" in msg
-                mock_default.assert_called_once_with(dummy_file)
+                mock_default.assert_called_once()
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_service_vlc_error_fallback_to_default():
+    """Si VLC échoue au démarrage (ex: FileNotFoundError ou PermissionError), repli vers le lecteur par défaut."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService()
+    with tempfile.NamedTemporaryFile(suffix=".m3u8", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        with patch("services.playback_service.find_vlc", return_value="/usr/bin/vlc"):
+            with patch("subprocess.Popen", side_effect=OSError("Exec format error")):
+                with patch.object(service, "play_with_default_app", return_value=(True, "Lecteur par défaut")) as mock_default:
+                    success, msg = service.play_playlist(dummy_file, prefer_vlc=True)
+                    assert success is True
+                    mock_default.assert_called_once()
     finally:
         if os.path.exists(dummy_file):
             os.remove(dummy_file)
 
 
 def test_playback_service_play_track():
-    """play_track lance l'ouverture du morceau individuel."""
+    """play_track délègue à play_with_default_app."""
     from services.playback_service import PlaybackService
 
     service = PlaybackService()
@@ -345,75 +366,372 @@ def test_playback_service_play_track():
             os.remove(dummy_file)
 
 
-def test_playback_service_open_with_dialog_windows():
-    """open_with_dialog invoque OpenAs_RunDLL sur Windows."""
+def test_playback_default_windows():
+    """Sous Windows, play_with_default_app utilise os.startfile."""
     from services.playback_service import PlaybackService
 
-    service = PlaybackService()
+    service = PlaybackService(system_name="Windows")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        with patch("os.startfile") as mock_startfile:
+            success, msg = service.play_with_default_app(dummy_file)
+            assert success is True
+            assert "par défaut" in msg
+            mock_startfile.assert_called_once_with(str(Path(dummy_file).resolve()))
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_default_macos():
+    """Sous macOS, play_with_default_app lance 'open' sans shell=True."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Darwin")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        with patch("services.playback_service.which", return_value="/usr/bin/open"):
+            with patch("subprocess.Popen") as mock_popen:
+                success, msg = service.play_with_default_app(dummy_file)
+                assert success is True
+                mock_popen.assert_called_once()
+                args, kwargs = mock_popen.call_args
+                cmd = args[0]
+                assert cmd[0] == "/usr/bin/open"
+                assert cmd[1] == str(Path(dummy_file).resolve())
+                assert kwargs.get("shell") is not True
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_default_linux_xdg_open():
+    """Sous Linux, play_with_default_app utilise xdg-open sans shell=True."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Linux")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        with patch("services.playback_service.which", side_effect=lambda cmd: "/usr/bin/xdg-open" if cmd == "xdg-open" else None):
+            with patch("subprocess.Popen") as mock_popen:
+                success, msg = service.play_with_default_app(dummy_file)
+                assert success is True
+                mock_popen.assert_called_once()
+                args, kwargs = mock_popen.call_args
+                cmd = args[0]
+                assert cmd[0] == "/usr/bin/xdg-open"
+                assert cmd[1] == str(Path(dummy_file).resolve())
+                assert kwargs.get("shell") is not True
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_default_linux_gio_fallback():
+    """Sous Linux, si xdg-open est absent mais gio présent, gio open est invoqué."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Linux")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        def mock_which(cmd):
+            if cmd == "gio":
+                return "/usr/bin/gio"
+            return None
+
+        with patch("services.playback_service.which", side_effect=mock_which):
+            with patch("subprocess.Popen") as mock_popen:
+                success, msg = service.play_with_default_app(dummy_file)
+                assert success is True
+                mock_popen.assert_called_once()
+                cmd = mock_popen.call_args[0][0]
+                assert cmd == ["/usr/bin/gio", "open", str(Path(dummy_file).resolve())]
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_default_linux_no_opener_error():
+    """Sous Linux, si aucun utilitaire d'ouverture n'est présent, une erreur claire est renvoyée."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Linux")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        with patch("services.playback_service.which", return_value=None):
+            success, msg = service.play_with_default_app(dummy_file)
+            assert success is False
+            assert "Aucun utilitaire d'ouverture par défaut" in msg
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_service_open_with_dialog_windows():
+    """open_with_dialog invoque OpenAs_RunDLL sur Windows sans shell=True."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Windows")
     with tempfile.NamedTemporaryFile(suffix=".m3u8", delete=False) as f:
         dummy_file = f.name
 
     try:
-        with patch("sys.platform", "win32"):
+        with patch("subprocess.Popen") as mock_popen:
+            success, msg = service.open_with_dialog(dummy_file)
+            assert success is True
+            assert "Ouvrir avec" in msg
+            mock_popen.assert_called_once()
+            args, kwargs = mock_popen.call_args
+            cmd = args[0]
+            assert "rundll32.exe" in cmd[0]
+            assert "OpenAs_RunDLL" in cmd[1]
+            assert cmd[2] == str(Path(dummy_file).resolve())
+            assert kwargs.get("shell") is not True
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_service_open_with_dialog_macos():
+    """Sous macOS, open_with_dialog utilise AppleScript (osascript) sans shell=True."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Darwin")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        with patch("services.playback_service.which", return_value="/usr/bin/osascript"):
             with patch("subprocess.Popen") as mock_popen:
                 success, msg = service.open_with_dialog(dummy_file)
                 assert success is True
-                assert "Ouvrir avec" in msg
+                assert "macOS" in msg
                 mock_popen.assert_called_once()
-                cmd = mock_popen.call_args[0][0]
-                assert "OpenAs_RunDLL" in " ".join(cmd)
+                args, kwargs = mock_popen.call_args
+                cmd = args[0]
+                assert cmd[0] == "/usr/bin/osascript"
+                assert "choose application" in cmd[2]
+                assert cmd[3] == str(Path(dummy_file).resolve())
+                assert kwargs.get("shell") is not True
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_service_open_with_dialog_linux_zenity():
+    """Sous Linux, si zenity est présent, open_with_dialog le lance de façon sécurisée sans shell=True."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Linux")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        def mock_which(cmd):
+            if cmd == "zenity":
+                return "/usr/bin/zenity"
+            return None
+
+        with patch("services.playback_service.which", side_effect=mock_which):
+            with patch("subprocess.Popen") as mock_popen:
+                success, msg = service.open_with_dialog(dummy_file)
+                assert success is True
+                assert "zenity" in msg or "ouvert" in msg
+                mock_popen.assert_called_once()
+                args, kwargs = mock_popen.call_args
+                cmd = args[0]
+                assert sys.executable in cmd[0]
+                assert cmd[1] == "-c"
+                assert cmd[3] == str(Path(dummy_file).resolve())
+                assert cmd[4] == "/usr/bin/zenity"
+                assert kwargs.get("shell") is not True
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_service_open_with_dialog_linux_no_selector_error():
+    """Sous Linux, sans sélecteur graphique, une erreur explicite est retournée sans fallback silencieux."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Linux")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        with patch("services.playback_service.which", return_value=None):
+            success, msg = service.open_with_dialog(dummy_file)
+            # Ne doit PAS réussir silencieusement
+            assert success is False
+            assert "Aucun sélecteur d'application standard" in msg
+            assert "Écouter" in msg
     finally:
         if os.path.exists(dummy_file):
             os.remove(dummy_file)
 
 
 def test_playback_service_show_in_explorer_windows():
-    """show_in_explorer invoque explorer.exe /select sur Windows."""
+    """Sous Windows, show_in_explorer invoque explorer.exe /select,"<path>"."""
     from services.playback_service import PlaybackService
 
-    service = PlaybackService()
+    service = PlaybackService(system_name="Windows")
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         dummy_file = f.name
 
     try:
-        with patch("sys.platform", "win32"):
-            with patch("subprocess.Popen") as mock_popen:
-                success, msg = service.show_in_explorer(dummy_file)
-                assert success is True
-                assert "Explorateur" in msg
-                mock_popen.assert_called_once()
-                cmd = mock_popen.call_args[0][0]
-                assert "explorer.exe" in cmd[0]
-                assert f"/select,{dummy_file}" in cmd[1]
+        with patch("subprocess.Popen") as mock_popen:
+            success, msg = service.show_in_explorer(dummy_file)
+            assert success is True
+            assert "Explorateur" in msg
+            mock_popen.assert_called_once()
+            cmd = mock_popen.call_args[0][0]
+            assert "explorer.exe" in cmd[0]
+            assert f"/select,{str(Path(dummy_file).resolve())}" in cmd[1]
     finally:
         if os.path.exists(dummy_file):
             os.remove(dummy_file)
 
 
+def test_playback_service_show_in_explorer_macos():
+    """Sous macOS, show_in_explorer invoque 'open -R <path>' pour cibler le fichier dans Finder."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Darwin")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        with patch("services.playback_service.which", return_value="/usr/bin/open"):
+            with patch("subprocess.Popen") as mock_popen:
+                success, msg = service.show_in_explorer(dummy_file)
+                assert success is True
+                assert "Finder" in msg
+                mock_popen.assert_called_once()
+                cmd = mock_popen.call_args[0][0]
+                assert cmd == ["/usr/bin/open", "-R", str(Path(dummy_file).resolve())]
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_service_show_in_explorer_linux_nautilus():
+    """Sous Linux avec Nautilus, show_in_explorer invoque nautilus --select <path>."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Linux")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        def mock_which(cmd):
+            if cmd == "nautilus":
+                return "/usr/bin/nautilus"
+            return None
+
+        with patch("services.playback_service.which", side_effect=mock_which):
+            with patch("subprocess.Popen") as mock_popen:
+                success, msg = service.show_in_explorer(dummy_file)
+                assert success is True
+                mock_popen.assert_called_once()
+                cmd = mock_popen.call_args[0][0]
+                assert cmd == ["/usr/bin/nautilus", "--select", str(Path(dummy_file).resolve())]
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_service_show_in_explorer_linux_fallback_parent():
+    """Sous Linux sans gestionnaire direct, fallback vers l'ouverture du dossier parent avec xdg-open."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Linux")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+        dummy_file = f.name
+
+    try:
+        def mock_which(cmd):
+            if cmd == "xdg-open":
+                return "/usr/bin/xdg-open"
+            return None
+
+        with patch("services.playback_service.which", side_effect=mock_which):
+            with patch("subprocess.Popen") as mock_popen:
+                success, msg = service.show_in_explorer(dummy_file)
+                assert success is True
+                assert "Dossier parent" in msg
+                mock_popen.assert_called_once()
+                cmd = mock_popen.call_args[0][0]
+                resolved_parent = str(Path(dummy_file).resolve().parent)
+                assert cmd == ["/usr/bin/xdg-open", resolved_parent]
+    finally:
+        if os.path.exists(dummy_file):
+            os.remove(dummy_file)
+
+
+def test_playback_service_show_in_explorer_unicode_and_spaces():
+    """Vérifie la transmission exacte des chemins avec espaces, apostrophes et Unicode."""
+    from services.playback_service import PlaybackService
+
+    service = PlaybackService(system_name="Darwin")
+    temp_dir = Path(tempfile.mkdtemp(prefix="aic_test_unicode_"))
+    try:
+        special_file = temp_dir / "4Keus - À l'époque & 日本語.mp3"
+        special_file.write_bytes(b"dummy")
+
+        with patch("services.playback_service.which", return_value="/usr/bin/open"):
+            with patch("subprocess.Popen") as mock_popen:
+                success, msg = service.show_in_explorer(str(special_file))
+                assert success is True
+                mock_popen.assert_called_once()
+                cmd = mock_popen.call_args[0][0]
+                assert cmd[2] == str(special_file.resolve())
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 def test_playback_service_nonexistent_file():
-    """play_track ou play_playlist retourne une erreur claire si le fichier est introuvable."""
+    """play_track, open_with ou show_in_explorer retourne une erreur claire si le fichier est introuvable."""
     from services.playback_service import PlaybackService
 
     service = PlaybackService()
-    success, msg = service.play_track(r"C:\nonexistent_song_12345.mp3")
-    assert success is False
-    assert "Fichier introuvable" in msg
+    nonexistent = r"C:\nonexistent_song_12345.mp3"
+
+    s1, m1 = service.play_track(nonexistent)
+    assert s1 is False
+    assert "Fichier introuvable" in m1
+
+    s2, m2 = service.open_with_dialog(nonexistent)
+    assert s2 is False
+    assert "Fichier introuvable" in m2
+
+    s3, m3 = service.show_in_explorer(nonexistent)
+    assert s3 is False
+    assert "Fichier introuvable" in m3
 
 
 def test_playback_service_launch_failure_reports_error():
     """Si le lancement système échoue (ex: PermissionError ou WinError), une erreur intelligible est retournée."""
     from services.playback_service import PlaybackService
 
-    service = PlaybackService()
+    service = PlaybackService(system_name="Windows")
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         dummy_file = f.name
 
     try:
-        with patch("sys.platform", "win32"):
-            with patch("os.startfile", side_effect=OSError("Access denied")):
-                success, msg = service.play_with_default_app(dummy_file)
-                assert success is False
-                assert "Access denied" in msg
+        with patch("os.startfile", side_effect=OSError("Access denied")):
+            success, msg = service.play_with_default_app(dummy_file)
+            assert success is False
+            assert "Access denied" in msg
     finally:
         if os.path.exists(dummy_file):
             os.remove(dummy_file)
