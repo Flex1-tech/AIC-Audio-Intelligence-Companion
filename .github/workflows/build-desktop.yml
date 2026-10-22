@@ -163,6 +163,36 @@ jobs:
             Write-Host "  - $($d.FullName)"
           }
 
+      # ── 7bis. Enforce Flutter JNI dependency override in pyproject.toml ──────
+      - name: "Enforce Flutter JNI dependency override"
+        shell: bash
+        run: |
+          echo "=== ENSURE FLUTTER JNI DEPENDENCY OVERRIDE ==="
+          uv run python -c '
+          import re
+          from pathlib import Path
+
+          p = Path("pyproject.toml")
+          content = p.read_text(encoding="utf-8")
+          section = "[tool.flet.flutter.pubspec.dependency_overrides]"
+
+          if section not in content:
+              print("Section [tool.flet.flutter.pubspec.dependency_overrides] absente. Injection...")
+              content = content.rstrip() + "\n\n" + section + "\njni = \"^1.1.0\"\n"
+          else:
+              if re.search(r"^\s*jni\s*=", content, re.MULTILINE):
+                  print("Clé jni présente. Vérification/Mise à jour vers ^1.1.0...")
+                  content = re.sub(r"^\s*jni\s*=.*$", "jni = \"^1.1.0\"", content, flags=re.MULTILINE)
+              else:
+                  print("Section présente mais clé jni manquante. Ajout de jni = \"^1.1.0\"...")
+                  content = content.replace(section, section + "\njni = \"^1.1.0\"")
+
+          p.write_text(content, encoding="utf-8")
+          print("Configuration JNI garantie avec succès.")
+          '
+          echo "Vérification pyproject.toml :"
+          grep -A 2 -E "\[tool\.flet\.flutter\.pubspec\.dependency_overrides\]" pyproject.toml || true
+
       # ── 8. Build ─────────────────────────────────────────────────────────────
       - name: "flet build ${{ matrix.platform }}"
         id: flet_build
