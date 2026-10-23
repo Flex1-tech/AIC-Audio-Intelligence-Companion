@@ -120,6 +120,41 @@ jobs:
         run: uv sync --group dev
         shell: bash
 
+      - name: "Ensure Flutter JNI override compatibility"
+        if: matrix.needs_linux_deps
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          pyproject = Path("pyproject.toml")
+          text = pyproject.read_text(encoding="utf-8")
+          section_header = "[tool.flet.flutter.pubspec.dependency_overrides]"
+          desired_line = 'jni = "^1.1.0"'
+
+          section_pattern = re.compile(
+              r"(?ms)^\[tool\.flet\.flutter\.pubspec\.dependency_overrides\]\n(?P<body>(?:^(?!\[).*\n?)*)"
+          )
+          match = section_pattern.search(text)
+
+          if not match:
+              if not text.endswith("\n"):
+                  text += "\n"
+              text += f"\n{section_header}\n{desired_line}\n"
+          else:
+              body = match.group("body")
+              if re.search(r"(?m)^jni\s*=", body):
+                  body = re.sub(r"(?m)^jni\s*=.*$", desired_line, body, count=1)
+              else:
+                  if body and not body.endswith("\n"):
+                      body += "\n"
+                  body += f"{desired_line}\n"
+              text = text[: match.start("body")] + body + text[match.end("body") :]
+
+          pyproject.write_text(text, encoding="utf-8")
+          PY
+
       # ── 5. Vérification flet CLI ─────────────────────────────────────────────
       - name: "flet --version"
         run: uv run flet --version
